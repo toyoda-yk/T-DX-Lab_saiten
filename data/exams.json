@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "systemName": "T-DX Lab☆問題演習システム",
+  "exams": [
+    {
+      "id": "info1_mock_01",
+      "title": "共通テスト情報Ⅰ模擬問題集　第1回模擬問題",
+      "subject": "情報Ⅰ",
+      "schoolYear": "2026",
+      "published": true,
+      "totalPoints": 100,
+      "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLScDuGAwGEcoPQ2korl35O0urbI4UZQGRNhvh8tNrzrXnX5Yiw/viewform",
+      "formSubmission": null,
+      "sections": [
+        {"id":"s1","name":"第1問","points":20},
+        {"id":"s2","name":"第2問","points":30},
+        {"id":"s3","name":"第3問","points":25},
+        {"id":"s4","name":"第4問","points":25}
+      ],
+      "questions": [
+        {"id":1,"section":"s1","label":"第1問 問1 ア","answer":"2","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":2,"section":"s1","label":"第1問 問1 イ","answer":"0","points":1,"options":["0","1","2","3","4","5"],"type":"unordered_item","group":"s1_q1_iw","groupAnswers":["0","4"]},
+        {"id":3,"section":"s1","label":"第1問 問1 ウ","answer":"4","points":1,"options":["0","1","2","3","4","5"],"type":"unordered_item","group":"s1_q1_iw","groupAnswers":["0","4"]},
+        {"id":4,"section":"s1","label":"第1問 問2 エ","answer":"3","points":3,"options":["0","1","2","3"],"type":"normal"},
+        {"id":5,"section":"s1","label":"第1問 問2 オ","answer":"3","points":3,"options":["0","1","2","3","4","5","6"],"type":"normal"},
+        {"id":6,"section":"s1","label":"第1問 問3 カ","answer":"2","points":2,"options":["0","1","2"],"type":"normal"},
+        {"id":7,"section":"s1","label":"第1問 問3 キ","answer":"0","points":2,"options":["0","1","2","3","4"],"type":"normal"},
+        {"id":8,"section":"s1","label":"第1問 問3 ク","answer":"3","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":9,"section":"s1","label":"第1問 問4 ケ","answer":"7","points":2,"options":["0","1","2","3","4","5","6","7"],"type":"normal"},
+        {"id":10,"section":"s1","label":"第1問 問4 コ","answer":"3","points":2,"options":["0","1","2","3","4","5","6","7"],"type":"normal"},
+
+        {"id":11,"section":"s2","label":"第2問A 問1 ア","answer":"2","points":0,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"complete_item","group":"s2a_q1","groupPoints":5},
+        {"id":12,"section":"s2","label":"第2問A 問1 イ","answer":"5","points":0,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"complete_item","group":"s2a_q1","groupPoints":5},
+        {"id":13,"section":"s2","label":"第2問A 問1 ウ","answer":"4","points":0,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"complete_item","group":"s2a_q1","groupPoints":5},
+        {"id":14,"section":"s2","label":"第2問A 問2 エ","answer":"0","points":3,"options":["0","1","2","3"],"type":"normal"},
+        {"id":15,"section":"s2","label":"第2問A 問3 オ","answer":"6","points":3,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"normal"},
+        {"id":16,"section":"s2","label":"第2問A 問4 カ","answer":"1","points":2,"options":["0","1","2","3","4","5"],"type":"unordered_item","group":"s2a_q4","groupAnswers":["1","5"]},
+        {"id":17,"section":"s2","label":"第2問A 問4 キ","answer":"5","points":2,"options":["0","1","2","3","4","5"],"type":"unordered_item","group":"s2a_q4","groupAnswers":["1","5"]},
+        {"id":18,"section":"s2","label":"第2問B 問1 ク","answer":"1","points":5,"options":["0","1","2","3"],"type":"normal"},
+        {"id":19,"section":"s2","label":"第2問B 問2 ケ","answer":"2","points":5,"options":["0","1","2"],"type":"normal"},
+        {"id":20,"section":"s2","label":"第2問B 問3 コ","answer":"2","points":0,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"unordered_complete_item","group":"s2b_q3","groupAnswers":["2","3"],"groupPoints":5},
+        {"id":21,"section":"s2","label":"第2問B 問3 サ","answer":"3","points":0,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"unordered_complete_item","group":"s2b_q3","groupAnswers":["2","3"],"groupPoints":5},
+
+        {"id":22,"section":"s3","label":"第3問 問1 ア","answer":"2","points":1,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"normal"},
+        {"id":23,"section":"s3","label":"第3問 問1 イ","answer":"3","points":1,"options":["0","1","2","3","4","5"],"type":"normal"},
+        {"id":24,"section":"s3","label":"第3問 問1 ウ","answer":"3","points":1,"options":["0","1","2","3"],"type":"normal"},
+        {"id":25,"section":"s3","label":"第3問 問2 エ","answer":"1","points":1,"options":["0","1","2","3"],"type":"normal"},
+        {"id":26,"section":"s3","label":"第3問 問2 オ","answer":"0","points":1,"options":["0","1","2","3"],"type":"normal"},
+        {"id":27,"section":"s3","label":"第3問 問2 カ","answer":"2","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":28,"section":"s3","label":"第3問 問2 キ","answer":"0","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":29,"section":"s3","label":"第3問 問2 ク","answer":"2","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":30,"section":"s3","label":"第3問 問2 ケ","answer":"1","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":31,"section":"s3","label":"第3問 問2 コ","answer":"3","points":2,"options":["0","1","2","3"],"type":"normal"},
+        {"id":32,"section":"s3","label":"第3問 問3 サ","answer":"1","points":1,"options":["0","1","2","3"],"type":"normal"},
+        {"id":33,"section":"s3","label":"第3問 問3 シ","answer":"3","points":1,"options":["0","1","2","3","4","5","6","7","8","9"],"type":"normal"},
+        {"id":34,"section":"s3","label":"第3問 問3 ス","answer":"1","points":2,"options":["0","1","2","3","4","5","6","7"],"type":"unordered_item","group":"s3_q3_suse","groupAnswers":["1","4"]},
+        {"id":35,"section":"s3","label":"第3問 問3 セ","answer":"4","points":2,"options":["0","1","2","3","4","5","6","7"],"type":"unordered_item","group":"s3_q3_suse","groupAnswers":["1","4"]},
+        {"id":36,"section":"s3","label":"第3問 問3 ソ","answer":"3","points":2,"options":["0","1","2","3","4","5","6"],"type":"normal"},
+        {"id":37,"section":"s3","label":"第3問 問3 タ","answer":"6","points":2,"options":["0","1","2","3","4","5","6"],"type":"normal"},
+
+        {"id":38,"section":"s4","label":"第4問 問1 ア","answer":"1","points":5,"options":["0","1","2","3"],"type":"normal"},
+        {"id":39,"section":"s4","label":"第4問 問2 イ","answer":"1","points":5,"options":["0","1","2","3"],"type":"normal"},
+        {"id":40,"section":"s4","label":"第4問 問3 ウ","answer":"4","points":5,"options":["0","1","2","3","4","5"],"type":"normal"},
+        {"id":41,"section":"s4","label":"第4問 問4 エ","answer":"2","points":5,"options":["0","1","2","3"],"type":"normal"},
+        {"id":42,"section":"s4","label":"第4問 問5 オ","answer":"0","points":5,"options":["0","1","2","3"],"type":"normal"}
+      ]
+    }
+  ]
+}

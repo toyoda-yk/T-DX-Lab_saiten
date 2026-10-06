@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>教員管理 | T-DX Lab☆問題演習システム</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="future-app teacher-app tdx-v09-teacher">
+<header class="future-app-header portal-header teacher-portal-header">
+  <div class="app-header-inner portal-header-inner">
+    <a class="app-brand portal-brand" href="index.html" aria-label="トップへ">
+      <img src="assets/images/tdx-lab-logo.png" alt="T-DX Lab">
+      <span><strong>T-DX Lab</strong><small>問題演習システム</small></span>
+    </a>
+    <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
+  </div>
+</header>
+
+<main class="app-main teacher-main">
+  <section id="adminGate" class="portal-login-stage teacher-login-stage">
+    <div class="portal-login-copy">
+      <p class="portal-overline teacher-overline">T-DX Lab☆ MANAGEMENT CONSOLE</p>
+      <h1><span>教員用</span>管理コンソール</h1>
+      <p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
+      <p class="portal-sub">試験作成・ログインコード発行・回答分析・公開管理を、ひとつの画面から。</p>
+    </div>
+
+    <div class="portal-login-card teacher-portal-card">
+      <div class="portal-card-head">
+        <span class="portal-card-icon teacher-card-icon">DX</span>
+        <div><small>TEACHER ACCESS</small><h2>教員管理ログイン</h2></div>
+      </div>
+      <div class="field-group"><label for="adminPass">管理用パスワード</label><input id="adminPass" type="password" placeholder="8文字以上"></div>
+      <p class="small portal-login-message">初回のみ、この端末用の管理パスワードを設定します。</p>
+      <button id="adminLoginBtn" class="portal-login-btn teacher-login-btn">管理コンソールを開く <span>›</span></button>
+      <div id="adminMsg" class="small portal-admin-message"></div>
+      <div class="portal-security teacher-security"><span>✓</span><p><strong>管理者端末として使用</strong><br>試作版では管理用パスワードをブラウザ内に保存します。</p></div>
+    </div>
+  </section>
+
+  <div id="adminApp" class="hidden">
+    <section class="future-panel admin-dashboard-card">
+      <div class="section-title app-section-head">
+        <div><span class="section-eyebrow">CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">試験運用を4つの機能から管理します。</p></div>
+        <button id="adminLogoutBtn" class="secondary glass-btn">画面をロック</button>
+      </div>
+      <div class="admin-menu-grid">
+        <button class="admin-menu-card menuBtn active-look" data-target="studentManager"><span class="menu-index">01</span><strong>生徒管理</strong><small>ログインコード・配布票</small></button>
+        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">02</span><strong>試験管理</strong><small>模範解答・試験設定</small></button>
+        <button class="admin-menu-card menuBtn" data-target="analysisManager"><span class="menu-index">03</span><strong>回答分析</strong><small>得点分布・正答率</small></button>
+        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">04</span><strong>公開管理</strong><small>生徒画面への反映</small></button>
+      </div>
+    </section>
+
+    <section id="studentManager" class="future-panel adminSection">
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STUDENT ACCESS</span><h2>生徒ログインコード生成</h2><p>試験ごとに、4桁番号と組み合わせて使う推測されにくい専用コードを発行します。</p></div><div class="admin-symbol">01</div></div>
+      <div class="grid two admin-form-grid">
+        <div>
+          <label>4桁番号一覧</label>
+          <textarea id="studentCodes" placeholder="3101&#10;3102&#10;3103"></textarea>
+          <label>クラス判定に使う先頭桁数</label>
+          <input id="classDigits" type="number" min="1" max="4" value="2">
+        </div>
+        <div>
+          <div class="info-strip teacher-strip"><span>SECURE</span> 公開用users.jsonにはログインコードそのものを保存せず、salt＋hashのみを書き出します。</div>
+          <div class="future-feature-stack">
+            <div><strong>A4縦・2人分</strong><small>切り分けて配布できるログイン票</small></div>
+            <div><strong>試験ごとに再生成</strong><small>過去のコードを次回へ持ち越さない</small></div>
+            <div><strong>教員保管CSV</strong><small>配布用コード原本を別途保存</small></div>
+          </div>
+          <div class="actions"><button id="generateCodesBtn" class="teacher-action">コードを一括生成</button><button id="downloadUsersBtn" class="secondary glass-btn" disabled>users.json</button><button id="downloadSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button><button id="printSlipsBtn" class="orange" disabled>ログイン票印刷</button></div>
+        </div>
+      </div>
+      <div id="generatedPreview" class="table-shell generated-shell"></div>
+      <div id="slips" class="print-only print-slips"></div>
+    </section>
+
+    <section id="examManager" class="future-panel adminSection hidden">
+      <div class="admin-section-hero"><div><span class="section-eyebrow">EXAM BUILDER</span><h2>試験登録</h2><p>模範解答PDFとGoogleフォームをもとに、試験データの下書きを作成します。</p></div><div class="admin-symbol">02</div></div>
+      <div class="grid two admin-form-grid">
+        <div>
+          <label>試験名</label><input id="examName" placeholder="例：2026年度 第1回 共通テスト模試">
+          <label>教科</label><input id="examSubjectInput" placeholder="情報Ⅰ">
+          <label>GoogleフォームURL</label><input id="formUrl" placeholder="https://docs.google.com/forms/...">
+          <label>模範解答PDF</label><input id="answerPdf" type="file" accept="application/pdf">
+          <div class="actions"><button id="readPdfBtn" class="secondary glass-btn">PDFテキストを読み取る</button></div>
+        </div>
+        <div>
+          <label>PDFから読み取った内容（確認用）</label>
+          <textarea id="pdfText" placeholder="PDFを読み取るとここにテキストが表示されます。"></textarea>
+          <div class="info-strip teacher-strip"><span>CHECK</span> PDF自動判定は下書きとして扱い、正答・配点・順不同・完答を教員が確認してから公開します。</div>
+        </div>
+      </div>
+      <div class="actions"><button id="saveDraftExamBtn" class="teacher-action">試験下書きを保存</button></div>
+      <div id="draftExamMsg" class="small muted"></div>
+    </section>
+
+    <section id="analysisManager" class="future-panel adminSection hidden">
+      <div class="admin-section-hero"><div><span class="section-eyebrow">DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">03</div></div>
+      <div class="grid two admin-form-grid">
+        <div><label>試験</label><select id="analysisExam"></select><label>回答CSV / XLSX</label><input id="responseFile" type="file" accept=".csv,.xlsx,.xls"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
+        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>LIVE</span> 4桁番号の先頭（既定2桁）をクラスとして集計します。回答者数に応じて正答率・平均点は再計算されます。</div></div>
+      </div>
+      <div id="analysisOutput" class="hidden analysis-console">
+        <div id="analysisKpis" class="grid four analysis-kpis"></div>
+        <div class="analysis-grid">
+          <div class="analysis-card"><div class="section-eyebrow">SCORE DISTRIBUTION</div><h3>得点分布</h3><div id="histogram" class="chart future-chart"></div></div>
+          <div class="analysis-card"><div class="section-eyebrow">SECTION RATE</div><h3>大問別正答率</h3><div id="sectionAnalysis" class="modern-bars"></div></div>
+        </div>
+        <div class="analysis-card"><div class="section-eyebrow">QUESTION RATE</div><h3>設問別正答率</h3><div class="table-shell"><table><thead><tr><th>設問</th><th>正答率</th><th>正答者 / 回答者</th></tr></thead><tbody id="questionRates"></tbody></table></div></div>
+      </div>
+    </section>
+
+    <section id="publishManager" class="future-panel adminSection hidden">
+      <div class="admin-section-hero"><div><span class="section-eyebrow">PUBLISH CONTROL</span><h2>公開管理</h2><p>登録した試験データを生徒ページへ反映するための公開データを管理します。</p></div><div class="admin-symbol">04</div></div>
+      <div class="publish-diagram">
+        <div><strong>教員管理画面</strong><small>試験設定</small></div><span>→</span><div><strong>exams.json</strong><small>公開データ</small></div><span>→</span><div><strong>生徒画面</strong><small>公開中の試験</small></div>
+      </div>
+      <div class="notice small">GitHub Pagesは静的サイトなので、現段階では公開データを書き出してリポジトリの <code>data/</code> に置く方式です。今後「公開」ボタンからGitHubへ反映する仕組みを接続します。</div>
+      <div class="actions"><button id="exportExamDataBtn" class="teacher-action">exams.jsonを書き出す</button></div>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
+<script src="js/common.js"></script>
+<script src="js/teacher.js"></script>
+</body>
+</html>

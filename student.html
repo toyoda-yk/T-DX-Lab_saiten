@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>生徒用 | T-DX Lab☆問題演習システム</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="future-app student-app tdx-v09-student">
+<header class="future-app-header portal-header">
+  <div class="app-header-inner portal-header-inner">
+    <a class="app-brand portal-brand" href="index.html" aria-label="トップへ">
+      <img src="assets/images/tdx-lab-logo.png" alt="T-DX Lab">
+      <span><strong>T-DX Lab</strong><small>問題演習システム</small></span>
+    </a>
+    <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
+  </div>
+</header>
+
+<main class="app-main">
+  <section id="loginPanel" class="portal-login-stage student-login-stage">
+    <div class="portal-login-copy">
+      <p class="portal-overline">T-DX Lab☆ DIGITAL LEARNING SYSTEM</p>
+      <h1><span>生徒用</span>問題演習ポータル</h1>
+      <p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
+      <p class="portal-sub">配布された4桁番号と、今回の試験専用ログインコードでアクセスします。</p>
+    </div>
+
+    <div class="portal-login-card">
+      <div class="portal-card-head">
+        <span class="portal-card-icon">01</span>
+        <div><small>STUDENT ACCESS</small><h2>生徒ログイン</h2></div>
+      </div>
+      <div class="field-group">
+        <label for="studentCode">4桁番号</label>
+        <input id="studentCode" inputmode="numeric" maxlength="4" placeholder="例：3101">
+      </div>
+      <div class="field-group">
+        <label for="accessCode">専用ログインコード</label>
+        <input id="accessCode" type="password" autocomplete="current-password" placeholder="配布されたコード">
+      </div>
+      <div id="loginMsg" class="small portal-login-message">試作確認用：3101 / DEMO-7KQ3-M9TZ</div>
+      <button id="loginBtn" class="portal-login-btn student-login-btn">ログインして試験を選ぶ <span>›</span></button>
+      <div class="portal-security"><span>✓</span><p><strong>この試験専用のログインコード</strong><br>他の人には見せないでください。</p></div>
+    </div>
+  </section>
+
+  <section id="examListPanel" class="future-panel hidden">
+    <div class="section-title app-section-head">
+      <div>
+        <span class="section-eyebrow">AVAILABLE EXAMS</span>
+        <h2>公開中の試験</h2>
+        <div id="who" class="muted small"></div>
+      </div>
+      <button id="logoutBtn" class="secondary glass-btn">ログアウト</button>
+    </div>
+    <div class="info-strip"><span>●</span> 公開中の試験だけが表示されます。試験ごとに専用ログインコードを使用します。</div>
+    <div id="examList" class="grid two future-exam-grid"></div>
+  </section>
+
+  <section id="examPanel" class="future-panel hidden">
+    <div class="section-title app-section-head">
+      <div>
+        <span id="examSubject" class="badge future-badge"></span>
+        <h2 id="examTitle"></h2>
+      </div>
+      <button id="backBtn" class="secondary glass-btn">試験一覧へ</button>
+    </div>
+    <div class="exam-status-card">
+      <div class="exam-status-label">ANSWER PROGRESS</div>
+      <div class="exam-status-value"><span id="answeredCount">0</span> / <span id="questionCount">0</span> 回答済み</div>
+      <div class="progressbar future-progress"><div id="answerProgress"></div></div>
+    </div>
+    <form id="answerForm" class="future-answer-form"></form>
+    <div class="exam-submit-zone">
+      <div id="submitNote" class="small muted"></div>
+      <button type="button" id="submitBtn" class="orange future-submit">提出して採点する</button>
+    </div>
+  </section>
+
+  <section id="resultPanel" class="hidden">
+    <div id="resultSheet" class="future-panel result-sheet-modern">
+      <div class="score-hero future-score-hero">
+        <span class="badge future-badge">RESULT</span>
+        <h2 id="resultTitle"></h2>
+        <div class="score-orbit"><div><span class="score" id="scoreValue"></span><span class="den"> / 100</span><small>YOUR SCORE</small></div></div>
+        <p id="resultCode" class="muted"></p>
+      </div>
+
+      <div class="result-block">
+        <div class="section-eyebrow">SECTION PERFORMANCE</div>
+        <h3>大問別</h3>
+        <div id="sectionBars" class="modern-bars"></div>
+      </div>
+
+      <div class="result-block">
+        <div class="section-eyebrow">QUESTION REVIEW</div>
+        <h3>問題別結果</h3>
+        <div class="table-shell"><table><thead><tr><th>設問</th><th>あなたの解答</th><th>正答</th><th>結果</th><th>得点</th></tr></thead><tbody id="detailBody"></tbody></table></div>
+      </div>
+
+      <div class="notice small result-notice">この速報版はあなた自身の採点結果です。クラス集計・全体集計が公開された後は、平均・分布・自分の位置を含む最終版に拡張する予定です。</div>
+    </div>
+    <div class="actions no-print result-actions"><button id="pdfBtn" class="future-btn">成績表をPDF保存</button><button id="resultBackBtn" class="secondary glass-btn">試験一覧へ</button></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/student.js"></script>
+</body>
+</html>
