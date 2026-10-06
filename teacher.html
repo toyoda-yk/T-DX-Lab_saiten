@@ -112,13 +112,21 @@
         </div>
 
         <div id="parseSummary" class="grid four analysis-kpis"></div>
-        <div class="review-toolbar">
+        <div class="pdf-review-workspace">
+          <div class="pdf-page-column">
+            <div class="section-title compact-title"><div><h3>模範解答PDF</h3><p class="muted small">実際のPDFを見ながら右側の正答を確認できます。</p></div></div>
+            <div id="pdfPagePreview" class="pdf-page-preview"><div class="notice small">PDFを解析すると、ここに元PDFのページが表示されます。</div></div>
+          </div>
+          <div class="pdf-answer-column">
+            <div class="section-title compact-title"><div><h3>読み取り結果</h3><p class="muted small">生徒回答画面と同じ感覚で、読み取った正答を確認・修正します。</p></div></div>
+            <div class="review-toolbar">
           <label>未設定の選択肢に一括設定 <input id="defaultOptions" value="0,1,2,3"></label>
           <button id="applyDefaultOptionsBtn" class="secondary glass-btn">空欄へ適用</button>
           <button id="checkPointsBtn" class="secondary glass-btn">配点をチェック</button>
+            </div>
+            <div id="examEditorCards" class="exam-preview-editor"></div>
+          </div>
         </div>
-
-        <div id="examEditorCards" class="exam-preview-editor"></div>
         <div id="pointsCheckMsg" class="small muted"></div>
         <div class="actions">
           <button id="registerExamBtn" class="teacher-action">この内容で試験データに登録（非公開）</button>
@@ -177,16 +185,17 @@
         <button id="exportExamDataBtn" class="secondary glass-btn">exams.jsonを書き出す</button>
         <button id="exportUserDataBtn" class="secondary glass-btn">users.jsonを書き出す</button>
         <button id="exportPublishSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button>
-        <button id="printPublishSlipsBtn" class="orange" disabled>ログイン票印刷（A4・2人）</button>
+        <button id="printPublishSlipsBtn" class="orange" disabled>ログイン票PDF（A4・2人）</button>
       </div>
 
-      <div class="notice small">GitHub Pagesは静的サイトなので、現段階では設定後に <code>exams.json</code> と <code>users.json</code> を書き出し、GitHubの <code>data/</code> に置き換えると生徒画面へ反映されます。生徒側には <strong>公開中かつ本人が対象に指定された試験</strong> だけが表示されます。</div>
-      <div id="slips" class="print-only print-slips"></div>
+      <div class="notice small">本番運用では、教員がGitHubを操作する方式にはしません。次の工程で <strong>Googleフォーム＋公開用Googleスプレッドシートを「公開ハブ」</strong> として接続し、この画面の「公開」で生徒画面へ反映できるようにします。下のJSON書き出しは開発・バックアップ用です。</div>
+      <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
     </section>
   </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
 <script src="js/common.js"></script>
 <script src="js/teacher.js"></script>

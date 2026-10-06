@@ -56,7 +56,6 @@ function bind(){
   $('exportUserDataBtn').onclick=exportUserData;
   $('exportPublishSecretsBtn').onclick=exportPublishSecrets;
   $('printPublishSlipsBtn').onclick=printSlips;
-  window.addEventListener('afterprint',()=>document.body.classList.remove('printing-slips'));
 }
 async function adminLogin(){
   const h=await TDX.sha256Hex($('adminPass').value);
@@ -157,16 +156,39 @@ async function generateForExam(examId,codes){
   return secrets;
 }
 function renderSlips(secrets,exam){
-  $('slips').innerHTML=secrets.map((x,i)=>`<section class="slip">
-    <div class="slip-brand"><strong>T-DX Lab☆問題演習システム</strong><span>${esc(exam?.subject||'')}</span></div>
-    <h2>${esc(exam?.title||'')}</h2>
-    <p class="slip-note">この試験専用のログイン票です。ほかの人に見せないでください。</p>
-    <div class="slip-credentials"><div><span>4桁番号</span><strong>${x.studentCode}</strong></div><div><span>専用ログインコード</span><strong class="code">${x.accessCode}</strong></div></div>
-    <p class="small">このコードは上記試験でのみ使用できます。</p>
-    ${i%2===0?'<div class="cutline">✂</div>':''}
-  </section>`).join('')
+  const pages=[];
+  for(let i=0;i<secrets.length;i+=2){
+    const pair=secrets.slice(i,i+2);
+    pages.push(`<section class="slip-page">${pair.map((x,j)=>`<div class="slip-half">
+      <div class="slip-brand"><strong>T-DX Lab☆問題演習システム</strong><span>${esc(exam?.subject||'')}</span></div>
+      <h2>${esc(exam?.title||'')}</h2>
+      <p class="slip-note">この試験専用のログイン票です。ほかの人に見せないでください。</p>
+      <div class="slip-credentials"><div><span>4桁番号</span><strong>${x.studentCode}</strong></div><div><span>専用ログインコード</span><strong class="code">${x.accessCode}</strong></div></div>
+      <p class="small">このコードは上記試験でのみ使用できます。</p>
+      ${j===0?'<div class="cutline">✂ 切り取り線</div>':''}
+    </div>`).join('')}</section>`);
+  }
+  $('slips').innerHTML=pages.join('');
 }
-function printSlips(){document.body.classList.add('printing-slips');requestAnimationFrame(()=>window.print())}
+async function printSlips(){
+  if(!publishSecrets.length){alert('先に対象者コードを生成してください。');return}
+  const exam=exams.find(e=>e.id===$('publishExamSelect').value);
+  renderSlips(publishSecrets,exam);
+  const stage=$('slips');
+  stage.classList.add('pdf-rendering');
+  const filename=`T-DX_Lab_${exam?.title||'試験'}_ログイン票.pdf`.replace(/[\\/:*?"<>|]/g,'_');
+  try{
+    await html2pdf().set({
+      margin:0,
+      filename,
+      image:{type:'jpeg',quality:.98},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'],after:'.slip-page'}
+    }).from(stage).save();
+  }catch(e){console.error(e);alert('ログイン票PDFの生成に失敗しました。ブラウザを再読み込みして再度お試しください。')}
+  finally{stage.classList.remove('pdf-rendering')}
+}
 
 // ===== PDF → editable exam draft =====
 function toHalfWidth(s){return String(s||'').replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/：/g,':').replace(/，/g,',').replace(/＝/g,'=')}
@@ -184,15 +206,60 @@ async function readPdf(){
     const buf=await f.arrayBuffer(),pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
     const pdf=await pdfjs.getDocument({data:buf}).promise;let pages=[];
+    await renderPdfPages(pdf);
     for(let p=1;p<=pdf.numPages;p++){const page=await pdf.getPage(p),tc=await page.getTextContent();pages.push(`--- page ${p} ---\n${extractPageLines(tc.items).join('\n')}`)}
     const text=pages.join('\n');$('pdfText').value=text;analyzePdfText(text);
   }catch(e){console.error(e);alert('PDF読み取りに失敗しました。文字として保存されたPDFか、ネットワーク環境を確認してください。')}
+}
+async function renderPdfPages(pdf){
+  const root=$('pdfPagePreview');if(!root)return;
+  root.innerHTML='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p),viewport=page.getViewport({scale:1.35});
+    const wrap=document.createElement('div');wrap.className='pdf-preview-page';
+    const lab=document.createElement('div');lab.className='pdf-preview-label';lab.textContent=`${p} / ${pdf.numPages}`;
+    const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.width=viewport.width;canvas.height=viewport.height;
+    wrap.append(lab,canvas);root.appendChild(wrap);
+    await page.render({canvasContext:ctx,viewport}).promise;
+  }
 }
 function deriveSection(label,current='第1問'){
   const m=label.match(/第\s*(\d+)\s*問\s*([A-DＡ-Ｄ]?)/);if(!m)return current;
   return `第${m[1]}問${m[2]?m[2].replace('Ａ','A').replace('Ｂ','B').replace('Ｃ','C').replace('Ｄ','D'):''}`;
 }
 function lastKana(label){const m=label.match(/([ア-ン])(?:\s*[（(]|\s*$)/);return m?m[1]:''}
+function tableStyleRows(lines){
+  const rows=[];let currentSection='第1問',counter=0;
+  const sectionMeta={unordered:false,complete:false,points:''};
+  for(const src of lines){
+    const line=src.replace(/[，、]/g,',').replace(/\s+/g,' ').trim();
+    const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);
+    if(sm){currentSection=`第${sm[1]}問${sm[2]||''}`;sectionMeta.unordered=/順序は問わない|順不同/.test(line);sectionMeta.complete=/完答/.test(line);const pm=line.match(/各\s*(\d+(?:\.\d+)?)/);sectionMeta.points=pm?pm[1]:''}
+    const toks=line.split(' ').filter(Boolean);
+    for(let i=0;i<toks.length-1;i++){
+      const k=toks[i],a=toks[i+1];
+      const letters=k.match(/[ア-ン]/g)||[];
+      const nums=(a.match(/\d+/g)||[]);
+      if(!letters.length||!nums.length||nums.length<letters.length)continue;
+      // 見出しや文章を避け、かなグループと数値グループが隣接する表形式だけ採用
+      if(k.length>20||a.length>30)continue;
+      letters.forEach((letter,j)=>{
+        counter++;
+        rows.push({
+          section:currentSection,
+          label:`${currentSection} ${letter}`,
+          answer:String(nums[j]),
+          points:sectionMeta.points,
+          type:sectionMeta.complete?'complete_item':sectionMeta.unordered?'unordered_item':'normal',
+          group:sectionMeta.complete?`c_${currentSection.replace(/\W/g,'')}_${counter}`:'',
+          groupPoints:'',options:'',confidence:'要確認',sourceLine:src
+        });
+      });
+      i++;
+    }
+  }
+  return rows;
+}
 function parseExamText(raw){
   const text=toHalfWidth(raw),lines=text.split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!/^--- page/.test(x));
   const rows=[];let currentSection='第1問';
@@ -215,6 +282,14 @@ function parseExamText(raw){
   rows.forEach((r,idx)=>{const m=r.sourceLine.match(/([ア-ン])\s*と\s*順不同/);if(!m)return;const a=lastKana(r.label),b=m[1];if(!a)return;const g=`u_${r.section.replace(/\W/g,'')}_${[a,b].sort().join('')}`;r.type='unordered_item';r.group=g;rows.forEach(x=>{if(x.section===r.section&&[a,b].includes(lastKana(x.label))){x.type='unordered_item';x.group=g}})});
   // 「ア、イ、ウは完答」のような記述を探して同一大問内へ適用
   for(const line of lines){const m=line.match(/([ア-ン](?:\s*[,、]\s*[ア-ン])+).*?完答/);if(!m)continue;const letters=m[1].match(/[ア-ン]/g)||[];if(letters.length<2)continue;const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/),section=sm?`第${sm[1]}問${sm[2]||''}`:null;const g=`c_${(section||'sec').replace(/\W/g,'')}_${letters.join('')}`;rows.forEach(x=>{if((!section||x.section===section)&&letters.includes(lastKana(x.label))){x.type='complete_item';x.group=g}})}
+  // 表形式PDFは「ア,イ 0,3 2 …」のように抽出されることがあるため、
+  // 通常ルールで十分に取れなければ表形式パーサを併用する。
+  const tableRows=tableStyleRows(lines);
+  if(tableRows.length>rows.length){
+    const dedup=[];const keys=new Set();
+    for(const r of tableRows){const key=`${r.section}|${r.label}|${r.answer}`;if(keys.has(key))continue;keys.add(key);dedup.push(r)}
+    return dedup;
+  }
   return rows;
 }
 function analyzePdfText(text){
@@ -362,7 +437,7 @@ function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
   const selected=selectedAudienceCodes();if($('publishToggle').checked&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
   const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};
-  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。exams.jsonを書き出してGitHubへ反映してください。`;
+  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。現在はブラウザ内に反映済みです。本番公開は次工程でGoogle公開ハブへ自動送信する方式に切り替えます。`;
 }
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
 async function generateAudienceCodes(){
@@ -372,7 +447,7 @@ async function generateAudienceCodes(){
   $('exportPublishSecretsBtn').disabled=false;$('printPublishSlipsBtn').disabled=false;
   $('publishGeneratedPreview').innerHTML=`<h3>${esc(exam.title)}：対象者 ${codes.length}人の試験専用コード</h3><table><thead><tr><th>4桁番号</th><th>ログインコード</th><th>クラス</th></tr></thead><tbody>${publishSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table>${codes.length>20?`<p class="small muted">ほか ${codes.length-20}人</p>`:''}`;
   renderSlips(publishSecrets,exam);
-  $('publishMsg').className='success small';$('publishMsg').textContent='対象者の試験専用ログインコードを生成しました。users.json・教員保管CSV・A4ログイン票を保存してください。';
+  $('publishMsg').className='success small';$('publishMsg').textContent='対象者の試験専用ログインコードを生成しました。教員保管CSVとA4ログイン票PDFを保存してください。公開用データは次工程でGoogle公開ハブへ自動送信する方式に切り替えます。';
 }
 function exportExamData(){TDX.download('exams.json',JSON.stringify(allExamData,null,2))}
 function exportUserData(){TDX.download('users.json',JSON.stringify({version:4,note:'STEP 0で登録した生徒名簿と試験ごとの認証情報。平文ログインコードは含みません。issuedCodeIds は再発行時の重複防止用です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users},null,2))}
