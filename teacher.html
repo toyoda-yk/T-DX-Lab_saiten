@@ -42,49 +42,46 @@
   <div id="adminApp" class="hidden">
     <section class="future-panel admin-dashboard-card">
       <div class="section-title app-section-head">
-        <div><span class="section-eyebrow">CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">試験運用を4つの機能から管理します。</p></div>
+        <div><span class="section-eyebrow">CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">STEP 0 の名簿登録を済ませると、試験ごとの受験者選択が簡単になります。</p></div>
         <button id="adminLogoutBtn" class="secondary glass-btn">画面をロック</button>
       </div>
       <div class="admin-menu-grid">
-        <button class="admin-menu-card menuBtn active-look" data-target="studentManager"><span class="menu-index">01</span><strong>生徒管理</strong><small>ログインコード・配布票</small></button>
-        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">02</span><strong>試験管理</strong><small>模範解答・試験設定</small></button>
-        <button class="admin-menu-card menuBtn" data-target="analysisManager"><span class="menu-index">03</span><strong>回答分析</strong><small>得点分布・正答率</small></button>
-        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">04</span><strong>公開管理</strong><small>生徒画面への反映</small></button>
+        <button class="admin-menu-card menuBtn active-look" data-target="studentManager"><span class="menu-index">STEP 0</span><strong>生徒名簿</strong><small>クラス範囲を一度だけ登録</small></button>
+        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">STEP 1</span><strong>試験作成</strong><small>模範解答PDF・採点設定</small></button>
+        <button class="admin-menu-card menuBtn" data-target="analysisManager"><span class="menu-index">STEP 2</span><strong>回答分析</strong><small>得点分布・正答率</small></button>
+        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">STEP 3</span><strong>公開・受験者</strong><small>対象選択・コード発行</small></button>
       </div>
     </section>
 
     <section id="studentManager" class="future-panel adminSection">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STUDENT ACCESS</span><h2>生徒ログインコード生成</h2><p>試験ごとに、4桁番号と組み合わせて使う推測されにくい専用コードを発行します。</p></div><div class="admin-symbol">01</div></div>
-      <div class="grid two admin-form-grid">
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。試験ごとの受験者選択では、この名簿から選ぶだけです。</p></div><div class="admin-symbol">00</div></div>
+      <input id="classDigits" type="hidden" value="2">
+
+      <div class="grid two admin-form-grid roster-layout">
         <div>
-          <label>ログインコードを発行する試験</label>
-          <select id="codeExamSelect"></select>
-          <label>4桁番号一覧</label>
-          <textarea id="studentCodes" placeholder="3101&#10;3102&#10;3103"></textarea>
-          <label>クラス判定に使う先頭桁数</label>
-          <input id="classDigits" type="number" min="1" max="4" value="2">
+          <div class="section-title compact-title"><div><h3>クラス範囲</h3><p class="muted small">例：3101 ～ 3138 を登録すると、31クラスの3101～3138を自動登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
+          <div id="rosterRangeRows" class="roster-range-list"></div>
+          <div class="actions">
+            <button id="saveRosterBtn" class="teacher-action">この名簿を登録</button>
+            <button id="exportRosterUsersBtn" class="secondary glass-btn">users.jsonを書き出す</button>
+          </div>
+          <div id="rosterMsg" class="small muted"></div>
         </div>
         <div>
-          <div class="info-strip teacher-strip"><span>SECURE</span> 公開用users.jsonにはログインコードそのものを保存せず、salt＋hashのみを書き出します。</div>
-          <div class="future-feature-stack">
-            <div><strong>A4縦・2人分</strong><small>切り分けて配布できるログイン票</small></div>
-            <div><strong>試験ごとに再生成</strong><small>過去のコードを次回へ持ち越さない</small></div>
-            <div><strong>教員保管CSV</strong><small>配布用コード原本を別途保存</small></div>
-          </div>
-          <div class="actions"><button id="generateCodesBtn" class="teacher-action">コードを一括生成</button><button id="downloadUsersBtn" class="secondary glass-btn" disabled>users.json</button><button id="downloadSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button><button id="printSlipsBtn" class="orange" disabled>ログイン票印刷</button></div>
+          <div class="info-strip teacher-strip"><span>ONCE</span> 名簿登録は基本的に年度当初の1回だけ。試験公開時に4桁番号を毎回入力する必要はありません。</div>
+          <div id="rosterSummary" class="grid two roster-summary"></div>
+          <div id="rosterPreview" class="roster-preview"></div>
         </div>
       </div>
-      <div id="generatedPreview" class="table-shell generated-shell"></div>
-      <div id="slips" class="print-only print-slips"></div>
     </section>
 
     <section id="examManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">EXAM BUILDER</span><h2>新規試験作成</h2><p>模範解答PDFを読み取り、採点設定の下書きを自動生成します。読み取り後はこの画面で直接修正できます。</p></div><div class="admin-symbol">02</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>新規試験作成</h2><p>模範解答PDFを読み取り、採点設定の下書きを自動生成します。確認画面は生徒の回答画面に近い形で表示します。</p></div><div class="admin-symbol">01</div></div>
 
       <div class="builder-steps">
         <div class="builder-step active"><b>1</b><span>基本情報・PDF</span></div>
         <div class="builder-step"><b>2</b><span>自動解析</span></div>
-        <div class="builder-step"><b>3</b><span>確認・修正</span></div>
+        <div class="builder-step"><b>3</b><span>生徒画面風に確認</span></div>
         <div class="builder-step"><b>4</b><span>非公開で登録</span></div>
       </div>
 
@@ -95,22 +92,22 @@
           <label>満点</label><input id="examTotalPoints" type="number" min="1" value="100">
           <label>GoogleフォームURL</label><input id="formUrl" placeholder="https://docs.google.com/forms/...">
           <label>模範解答PDF</label><input id="answerPdf" type="file" accept="application/pdf">
-          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを解析して編集表を作る</button></div>
+          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを解析して確認画面を作る</button></div>
         </div>
         <div>
           <div class="info-strip teacher-strip"><span>AUTO</span> 文字として保存されたPDFなら、試験名・大問・設問・正答・「順不同」「完答」などを可能な範囲で自動抽出します。</div>
           <div class="future-feature-stack">
-            <div><strong>自動抽出 → 教員確認</strong><small>完全自動登録にはせず、公開前に必ず確認できます。</small></div>
-            <div><strong>その場で修正</strong><small>設問名・正答・配点・採点方式・グループ・選択肢を編集可能。</small></div>
-            <div><strong>画像PDFは要確認</strong><small>スキャンPDFは文字を取得できない場合があります。その場合は行追加で補えます。</small></div>
+            <div><strong>生徒画面に近い見た目</strong><small>正答の選択肢を色付きで確認し、読み取りミスを見つけやすくします。</small></div>
+            <div><strong>必要な所だけ修正</strong><small>設問名・正答・配点・採点方式・グループ・選択肢をその場で変更できます。</small></div>
+            <div><strong>詳細設定は折りたたみ</strong><small>通常は正答確認に集中し、特殊採点だけ必要に応じて開きます。</small></div>
           </div>
-          <details class="pdf-raw-details"><summary>PDFから取得したテキストを確認</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。"></textarea></details>
+          <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。"></textarea></details>
         </div>
       </div>
 
       <section id="examReviewPanel" class="exam-review-panel hidden">
         <div class="section-title">
-          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">黄色の「要確認」を中心に見てください。すべてのセルはここで修正できます。</p></div>
+          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">生徒が回答する画面と同じ感覚で、青く選択されているものが現在読み取った正答です。違っていれば正しい選択肢をクリックしてください。</p></div>
           <div class="review-actions-top"><button id="addQuestionRowBtn" class="secondary glass-btn">＋ 設問を追加</button><button id="reparseTextBtn" class="secondary glass-btn">テキストから再解析</button></div>
         </div>
 
@@ -121,12 +118,7 @@
           <button id="checkPointsBtn" class="secondary glass-btn">配点をチェック</button>
         </div>
 
-        <div class="table-shell exam-editor-shell">
-          <table class="exam-editor-table">
-            <thead><tr><th>#</th><th>大問</th><th>設問名</th><th>正答</th><th>配点</th><th>採点方式</th><th>グループ</th><th>グループ点</th><th>選択肢</th><th>状態</th><th></th></tr></thead>
-            <tbody id="examEditorBody"></tbody>
-          </table>
-        </div>
+        <div id="examEditorCards" class="exam-preview-editor"></div>
         <div id="pointsCheckMsg" class="small muted"></div>
         <div class="actions">
           <button id="registerExamBtn" class="teacher-action">この内容で試験データに登録（非公開）</button>
@@ -137,10 +129,10 @@
     </section>
 
     <section id="analysisManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">03</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 2 / DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答CSV / XLSX</label><input id="responseFile" type="file" accept=".csv,.xlsx,.xls"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
-        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>LIVE</span> 4桁番号の先頭（既定2桁）をクラスとして集計します。回答者数に応じて正答率・平均点は再計算されます。</div></div>
+        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>LIVE</span> 登録済み4桁番号の先頭2桁をクラスとして集計します。回答者数に応じて正答率・平均点は再計算されます。</div></div>
       </div>
       <div id="analysisOutput" class="hidden analysis-console">
         <div id="analysisKpis" class="grid four analysis-kpis"></div>
@@ -153,28 +145,18 @@
     </section>
 
     <section id="publishManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">PUBLISH CONTROL</span><h2>試験公開・受験者設定</h2><p>公開する試験と、その試験を受験できるクラス・生徒を同じ画面で設定します。</p></div><div class="admin-symbol">04</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 3 / PUBLISH CONTROL</span><h2>試験公開・受験者設定</h2><p>STEP 0で登録済みの名簿から、クラス全員または特定の生徒だけを選んで公開します。</p></div><div class="admin-symbol">03</div></div>
 
       <div class="grid two admin-form-grid">
         <div>
           <label>対象試験</label>
           <select id="publishExamSelect"></select>
           <label class="publish-switch-row"><input id="publishToggle" type="checkbox"> <span>この試験を生徒画面に公開する</span></label>
-          <label>受験対象となる4桁番号一覧</label>
-          <textarea id="publishRoster" placeholder="3101&#10;3102&#10;3103&#10;3201&#10;3202"></textarea>
-          <div class="actions">
-            <button id="buildAudienceBtn" class="secondary glass-btn">クラス・生徒一覧を作成</button>
-            <button id="selectAllAudienceBtn" class="secondary glass-btn">全員選択</button>
-            <button id="clearAudienceBtn" class="secondary glass-btn">選択解除</button>
-          </div>
+          <div class="actions"><button id="selectAllAudienceBtn" class="secondary glass-btn">登録生徒を全員選択</button><button id="clearAudienceBtn" class="secondary glass-btn">選択解除</button></div>
         </div>
         <div>
-          <div class="info-strip teacher-strip"><span>TARGET</span> クラス全員をまとめて選択することも、選択科目などで4桁番号ごとに個別指定することもできます。</div>
-          <div class="future-feature-stack">
-            <div><strong>クラス単位</strong><small>例：31組・32組を全員対象</small></div>
-            <div><strong>個人単位</strong><small>例：選択科目受講者だけを4桁番号で指定</small></div>
-            <div><strong>組み合わせ可能</strong><small>31組全員＋3203＋3208 のような設定も可能</small></div>
-          </div>
+          <div class="info-strip teacher-strip"><span>TARGET</span> 名簿を入力し直す必要はありません。クラス全員をチェックするか、選択科目なら必要な4桁番号だけ選択します。</div>
+          <div id="registeredRosterSummary" class="future-feature-stack"></div>
         </div>
       </div>
 
@@ -184,12 +166,9 @@
         <div>
           <span class="section-eyebrow">PUBLISH & ACCESS</span>
           <h3>公開設定と試験専用ログインコード</h3>
-          <p class="muted small">対象者を確定後、この試験専用のランダムコードを発行します。</p>
+          <p class="muted small">対象者を確定後、この試験だけで使うランダムコードを発行します。</p>
         </div>
-        <div class="actions">
-          <button id="applyPublishBtn" class="teacher-action">公開設定を反映</button>
-          <button id="generateAudienceCodesBtn" class="orange">対象者コードを生成</button>
-        </div>
+        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="generateAudienceCodesBtn" class="orange">対象者コードを生成</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
       <div id="publishGeneratedPreview" class="table-shell generated-shell"></div>
@@ -198,10 +177,11 @@
         <button id="exportExamDataBtn" class="secondary glass-btn">exams.jsonを書き出す</button>
         <button id="exportUserDataBtn" class="secondary glass-btn">users.jsonを書き出す</button>
         <button id="exportPublishSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button>
-        <button id="printPublishSlipsBtn" class="orange" disabled>ログイン票印刷</button>
+        <button id="printPublishSlipsBtn" class="orange" disabled>ログイン票印刷（A4・2人）</button>
       </div>
 
-      <div class="notice small">GitHub Pagesは静的サイトなので、現段階では「公開設定を反映」後に <code>exams.json</code> と <code>users.json</code> を書き出し、GitHubの <code>data/</code> に置き換えると生徒画面へ反映されます。生徒側には <strong>公開中かつ本人が対象に指定された試験</strong> だけが表示されます。</div>
+      <div class="notice small">GitHub Pagesは静的サイトなので、現段階では設定後に <code>exams.json</code> と <code>users.json</code> を書き出し、GitHubの <code>data/</code> に置き換えると生徒画面へ反映されます。生徒側には <strong>公開中かつ本人が対象に指定された試験</strong> だけが表示されます。</div>
+      <div id="slips" class="print-only print-slips"></div>
     </section>
   </div>
 </main>

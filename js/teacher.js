@@ -1,8 +1,9 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
-let exams=[],usersData={version:3,users:[],issuedCodeIds:[]},generated=null,analysisRows=[],analysisExam=null,allExamData=null;
+let exams=[],usersData={version:4,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
 let publishRoster=[],publishSecrets=[];
 let editorRows=[];
+let rosterRanges=[];
 
 async function init(){
   [allExamData,usersData]=await Promise.all([
@@ -12,33 +13,127 @@ async function init(){
   exams=allExamData.exams||[];
   usersData.users=usersData.users||[];
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
+  usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{}});
+  rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
+  if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   refreshExamSelects();
   bind();
+  renderRosterRanges();
+  renderRosterSummary();
   loadPublishExam();
 }
 function refreshExamSelects(){
   const opts=exams.map(e=>`<option value="${e.id}">${e.title}</option>`).join('');
-  ['analysisExam','codeExamSelect','publishExamSelect'].forEach(id=>{if($(id)) $(id).innerHTML=opts});
+  ['analysisExam','publishExamSelect'].forEach(id=>{if($(id)) $(id).innerHTML=opts});
 }
 function bind(){
   $('adminLoginBtn').onclick=adminLogin;
   $('adminPass').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin()});
-  $('adminLogoutBtn').onclick=()=>{$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');$('adminPass').value=''};
+  $('adminLogoutBtn').onclick=()=>{$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');$('adminPass').value='';window.scrollTo({top:0,behavior:'smooth'})};
   document.querySelectorAll('.menuBtn').forEach(b=>b.onclick=()=>showSection(b.dataset.target));
-  $('generateCodesBtn').onclick=generateCodes;$('downloadUsersBtn').onclick=downloadUsers;$('downloadSecretsBtn').onclick=downloadSecrets;$('printSlipsBtn').onclick=()=>window.print();
-  $('readPdfBtn').onclick=readPdf;$('reparseTextBtn').onclick=()=>analyzePdfText($('pdfText').value);$('addQuestionRowBtn').onclick=()=>addEditorRow();$('applyDefaultOptionsBtn').onclick=applyDefaultOptions;$('checkPointsBtn').onclick=checkPoints;$('saveDraftExamBtn').onclick=saveDraft;$('registerExamBtn').onclick=registerExam;
-  $('analyzeBtn').onclick=analyzeFile;$('classFilter').onchange=renderAnalysis;
-  $('publishExamSelect').onchange=loadPublishExam;$('buildAudienceBtn').onclick=buildAudience;$('selectAllAudienceBtn').onclick=()=>setAllAudience(true);$('clearAudienceBtn').onclick=()=>setAllAudience(false);$('applyPublishBtn').onclick=applyPublish;$('generateAudienceCodesBtn').onclick=generateAudienceCodes;
-  $('exportExamDataBtn').onclick=exportExamData;$('exportUserDataBtn').onclick=exportUserData;$('exportPublishSecretsBtn').onclick=exportPublishSecrets;$('printPublishSlipsBtn').onclick=()=>window.print();
+
+  $('addRosterRangeBtn').onclick=()=>{rosterRanges.push({start:'',end:''});renderRosterRanges()};
+  $('saveRosterBtn').onclick=saveRoster;
+  $('exportRosterUsersBtn').onclick=exportUserData;
+
+  $('readPdfBtn').onclick=readPdf;
+  $('reparseTextBtn').onclick=()=>analyzePdfText($('pdfText').value);
+  $('addQuestionRowBtn').onclick=()=>addEditorRow();
+  $('applyDefaultOptionsBtn').onclick=applyDefaultOptions;
+  $('checkPointsBtn').onclick=checkPoints;
+  $('saveDraftExamBtn').onclick=saveDraft;
+  $('registerExamBtn').onclick=registerExam;
+
+  $('analyzeBtn').onclick=analyzeFile;
+  $('classFilter').onchange=renderAnalysis;
+
+  $('publishExamSelect').onchange=loadPublishExam;
+  $('selectAllAudienceBtn').onclick=()=>setAllAudience(true);
+  $('clearAudienceBtn').onclick=()=>setAllAudience(false);
+  $('applyPublishBtn').onclick=applyPublish;
+  $('generateAudienceCodesBtn').onclick=generateAudienceCodes;
+  $('exportExamDataBtn').onclick=exportExamData;
+  $('exportUserDataBtn').onclick=exportUserData;
+  $('exportPublishSecretsBtn').onclick=exportPublishSecrets;
+  $('printPublishSlipsBtn').onclick=printSlips;
+  window.addEventListener('afterprint',()=>document.body.classList.remove('printing-slips'));
 }
 async function adminLogin(){
   const h=await TDX.sha256Hex($('adminPass').value);
   if(h!==ADMIN_HASH){$('adminMsg').className='error small';$('adminMsg').textContent='管理用パスワードが違います。';return}
-  $('adminMsg').className='success small';$('adminMsg').textContent='ログインしました。';
-  $('adminGate').classList.add('hidden');$('adminApp').classList.remove('hidden');showSection('studentManager');
+  $('adminGate').classList.add('hidden');
+  $('adminApp').classList.remove('hidden');
+  $('adminMsg').textContent='';
+  showSection('studentManager');
+  requestAnimationFrame(()=>$('adminApp').scrollIntoView({behavior:'smooth',block:'start'}));
 }
-function showSection(id){document.querySelectorAll('.adminSection').forEach(x=>x.classList.toggle('hidden',x.id!==id));if(id==='publishManager')loadPublishExam()}
-function getOrCreateUser(studentCode,digits){let u=usersData.users.find(x=>x.studentCode===studentCode);if(!u){u={studentCode,classKey:studentCode.slice(0,digits),examCredentials:{}};usersData.users.push(u)}u.classKey=studentCode.slice(0,digits);u.examCredentials=u.examCredentials||{};return u}
+function showSection(id){
+  document.querySelectorAll('.adminSection').forEach(x=>x.classList.toggle('hidden',x.id!==id));
+  document.querySelectorAll('.menuBtn').forEach(x=>x.classList.toggle('active-look',x.dataset.target===id));
+  if(id==='studentManager')renderRosterSummary();
+  if(id==='publishManager')loadPublishExam();
+  requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));
+}
+function getOrCreateUser(studentCode,digits=2){
+  let u=usersData.users.find(x=>x.studentCode===studentCode);
+  if(!u){u={studentCode,classKey:studentCode.slice(0,digits),examCredentials:{}};usersData.users.push(u)}
+  u.classKey=studentCode.slice(0,digits);u.examCredentials=u.examCredentials||{};return u
+}
+function compressRosterRanges(codes){
+  const nums=[...new Set((codes||[]).filter(x=>/^\d{4}$/.test(String(x))).map(Number))].sort((a,b)=>a-b);
+  const out=[];let start=null,prev=null;
+  for(const n of nums){
+    if(start===null){start=prev=n;continue}
+    const sameClass=String(n).padStart(4,'0').slice(0,2)===String(prev).padStart(4,'0').slice(0,2);
+    if(n===prev+1&&sameClass){prev=n;continue}
+    out.push({start:String(start).padStart(4,'0'),end:String(prev).padStart(4,'0')});start=prev=n;
+  }
+  if(start!==null)out.push({start:String(start).padStart(4,'0'),end:String(prev).padStart(4,'0')});
+  return out;
+}
+function renderRosterRanges(){
+  const root=$('rosterRangeRows');if(!root)return;
+  root.innerHTML=rosterRanges.map((r,i)=>`<div class="roster-range-row" data-range="${i}">
+    <div class="roster-class-pill">${r.start&&/^\d{4}$/.test(r.start)?esc(r.start.slice(0,2)):'--'}組</div>
+    <label>最初の4桁<input data-range-k="start" inputmode="numeric" maxlength="4" value="${esc(r.start)}" placeholder="3101"></label>
+    <span class="range-arrow">→</span>
+    <label>最後の4桁<input data-range-k="end" inputmode="numeric" maxlength="4" value="${esc(r.end)}" placeholder="3138"></label>
+    <button type="button" class="row-delete" data-range-del="${i}" title="削除">×</button>
+  </div>`).join('');
+  root.querySelectorAll('[data-range-k]').forEach(el=>el.addEventListener('input',e=>{
+    const row=e.target.closest('[data-range]'),i=Number(row.dataset.range),k=e.target.dataset.rangeK;
+    rosterRanges[i][k]=e.target.value.replace(/\D/g,'').slice(0,4);
+    if(k==='start')row.querySelector('.roster-class-pill').textContent=(rosterRanges[i].start.length===4?rosterRanges[i].start.slice(0,2):'--')+'組';
+  }));
+  root.querySelectorAll('[data-range-del]').forEach(b=>b.onclick=()=>{rosterRanges.splice(Number(b.dataset.rangeDel),1);if(!rosterRanges.length)rosterRanges.push({start:'',end:''});renderRosterRanges()});
+}
+function codesFromRosterRanges(){
+  const codes=[];
+  for(const [i,r] of rosterRanges.entries()){
+    if(!/^\d{4}$/.test(r.start)||!/^\d{4}$/.test(r.end))throw new Error(`クラス範囲${i+1}の4桁番号を確認してください。`);
+    if(r.start.slice(0,2)!==r.end.slice(0,2))throw new Error(`${r.start} ～ ${r.end} は同じクラス（先頭2桁）で指定してください。`);
+    const a=Number(r.start),b=Number(r.end);if(a>b)throw new Error(`${r.start} ～ ${r.end} の順序を確認してください。`);
+    if(b-a>99)throw new Error(`${r.start} ～ ${r.end} の範囲が広すぎます。`);
+    for(let n=a;n<=b;n++)codes.push(String(n).padStart(4,'0'));
+  }
+  return [...new Set(codes)].sort();
+}
+function saveRoster(){
+  try{
+    const codes=codesFromRosterRanges(),old=new Map(usersData.users.map(u=>[u.studentCode,u]));
+    usersData.users=codes.map(code=>{const u=old.get(code)||{studentCode:code,classKey:code.slice(0,2),examCredentials:{}};u.classKey=code.slice(0,2);u.examCredentials=u.examCredentials||{};return u});
+    localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges));
+    $('rosterMsg').className='success small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。年度をまたいで残す場合は users.json を書き出してGitHubの data/ に反映してください。`;
+    renderRosterSummary();loadPublishExam();
+  }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message}
+}
+function renderRosterSummary(){
+  if(!$('rosterSummary'))return;
+  const groups={};usersData.users.forEach(u=>{const c=u.classKey||u.studentCode.slice(0,2);(groups[c]??=[]).push(u.studentCode)});
+  const entries=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b));
+  $('rosterSummary').innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${usersData.users.length}</div></div><div class="kpi"><div class="muted small">クラス</div><div class="value">${entries.length}</div></div>`;
+  $('rosterPreview').innerHTML=entries.length?entries.map(([c,list])=>`<div class="roster-class-preview"><strong>${c}組</strong><span>${list.length}人</span><small>${list[0]} ～ ${list[list.length-1]}</small></div>`).join(''):'<div class="notice small">まだ生徒名簿が登録されていません。</div>';
+}
 async function candidateCollides(pretty){
   const fp=await TDX.sha256Hex(pretty);
   if(usersData.issuedCodeIds.includes(fp)) return true;
@@ -53,19 +148,25 @@ async function createUniqueAccessCode(){
   throw new Error('一意なログインコードを生成できませんでした。');
 }
 async function generateForExam(examId,codes){
-  const digits=Number($('classDigits').value)||2,secrets=[];
+  const secrets=[];
   for(const studentCode of codes){
-    const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty),u=getOrCreateUser(studentCode,digits);
+    const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty),u=getOrCreateUser(studentCode,2);
     u.examCredentials[examId]={salt:v.salt,hash:v.hash,codeId};
     secrets.push({examId,studentCode,accessCode:pretty,classKey:u.classKey});
   }
   return secrets;
 }
-async function generateCodes(){const examId=$('codeExamSelect').value,codes=[...new Set($('studentCodes').value.split(/\s+/).map(s=>s.trim()).filter(Boolean))];if(!examId){alert('試験を選択してください。');return}if(!codes.length||codes.some(c=>!/^\d{4}$/.test(c))){alert('4桁番号を1行に1人ずつ入力してください。');return}const secrets=await generateForExam(examId,codes);generated={users:usersData.users,secrets,examId};$('downloadUsersBtn').disabled=false;$('downloadSecretsBtn').disabled=false;$('printSlipsBtn').disabled=false;renderGenerated()}
-function renderGenerated(){const exam=exams.find(e=>e.id===generated.examId),rows=generated.secrets.slice(0,12).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('');$('generatedPreview').innerHTML=`<h3>${exam?.title||''} 生成結果（先頭12人）</h3><table><thead><tr><th>4桁番号</th><th>試験専用ログインコード</th><th>クラス</th></tr></thead><tbody>${rows}</tbody></table>`;renderSlips(generated.secrets,exam)}
-function renderSlips(secrets,exam){$('slips').innerHTML=secrets.map(x=>`<section class="slip"><h2>T-DX Lab☆問題演習システム</h2><p><strong>${exam?.title||''}</strong></p><p>この試験専用のログイン票です。ほかの人に見せないでください。</p><p>4桁番号</p><div class="code">${x.studentCode}</div><p>専用ログインコード</p><div class="code">${x.accessCode}</div><p class="small">このコードは上記試験専用です。</p><div class="cutline"></div></section>`).join('')}
-function downloadUsers(){exportUserData()}
-function downloadSecrets(){const exam=exams.find(e=>e.id===generated.examId),csv='試験,4桁番号,ログインコード,クラス\n'+generated.secrets.map(x=>`"${exam?.title||''}",${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');TDX.download('T-DX_Lab_ログインコード教員保管.csv','\ufeff'+csv,'text/csv;charset=utf-8')}
+function renderSlips(secrets,exam){
+  $('slips').innerHTML=secrets.map((x,i)=>`<section class="slip">
+    <div class="slip-brand"><strong>T-DX Lab☆問題演習システム</strong><span>${esc(exam?.subject||'')}</span></div>
+    <h2>${esc(exam?.title||'')}</h2>
+    <p class="slip-note">この試験専用のログイン票です。ほかの人に見せないでください。</p>
+    <div class="slip-credentials"><div><span>4桁番号</span><strong>${x.studentCode}</strong></div><div><span>専用ログインコード</span><strong class="code">${x.accessCode}</strong></div></div>
+    <p class="small">このコードは上記試験でのみ使用できます。</p>
+    ${i%2===0?'<div class="cutline">✂</div>':''}
+  </section>`).join('')
+}
+function printSlips(){document.body.classList.add('printing-slips');requestAnimationFrame(()=>window.print())}
 
 // ===== PDF → editable exam draft =====
 function toHalfWidth(s){return String(s||'').replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/：/g,':').replace(/，/g,',').replace(/＝/g,'=')}
@@ -123,12 +224,57 @@ function analyzePdfText(text){
   $('examReviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function blankEditorRow(){return {section:'第1問',label:'',answer:'',points:'',type:'normal',group:'',groupPoints:'',options:'',confidence:'要確認',sourceLine:''}}
-function addEditorRow(row=blankEditorRow()){editorRows.push({...row});renderEditor();setTimeout(()=>$('examEditorBody').lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
+function addEditorRow(row=blankEditorRow()){editorRows.push({...row});renderEditor();setTimeout(()=>$('examEditorCards')?.lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
 function typeOptions(value){return [['normal','通常'],['unordered_item','順不同（各欄採点）'],['complete_item','完答'],['unordered_complete_item','順不同＋完答']].map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}
+function reviewDisplayOptions(r){
+  const explicit=String(r.options||'').split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean);
+  if(explicit.length)return {options:explicit,inferred:false};
+  const n=Number(r.answer);if(Number.isInteger(n)&&n>=0&&n<=12)return {options:Array.from({length:Math.max(4,n+1)},(_,i)=>String(i)),inferred:true};
+  return {options:[],inferred:true};
+}
 function renderEditor(){
-  const body=$('examEditorBody');body.innerHTML=editorRows.map((r,i)=>`<tr data-row="${i}"><td>${i+1}</td><td><input data-k="section" value="${esc(r.section)}"></td><td><input data-k="label" value="${esc(r.label)}"></td><td><input data-k="answer" value="${esc(r.answer)}"></td><td><input data-k="points" type="number" min="0" step="0.5" value="${esc(r.points)}"></td><td><select data-k="type">${typeOptions(r.type)}</select></td><td><input data-k="group" value="${esc(r.group)}" placeholder="例：A"></td><td><input data-k="groupPoints" type="number" min="0" step="0.5" value="${esc(r.groupPoints)}"></td><td><input data-k="options" value="${esc(r.options)}" placeholder="0,1,2,3"></td><td><span class="review-status ${r.confidence==='高'?'ok-status':'warn-status'}">${r.confidence}</span></td><td><button class="row-delete" data-del="${i}" type="button">×</button></td></tr>`).join('');
-  body.querySelectorAll('input,select').forEach(el=>el.addEventListener('change',e=>{const tr=e.target.closest('tr'),i=Number(tr.dataset.row),k=e.target.dataset.k;editorRows[i][k]=e.target.value;editorRows[i].confidence='確認済';updateParseSummary()}));
-  body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{editorRows.splice(Number(b.dataset.del),1);renderEditor()});
+  const root=$('examEditorCards');if(!root)return;
+  let html='',lastSection='';
+  editorRows.forEach((r,i)=>{
+    if(r.section!==lastSection){html+=`<div class="review-section-heading"><span class="section-eyebrow">SECTION</span><h3>${esc(r.section||'大問未設定')}</h3></div>`;lastSection=r.section}
+    const od=reviewDisplayOptions(r),choices=od.options.map(o=>`<button type="button" class="review-choice ${String(r.answer)===String(o)?'is-answer':''}" data-answer-row="${i}" data-answer="${esc(o)}">${esc(o)}</button>`).join('');
+    html+=`<article class="review-question-card ${r.confidence==='要確認'?'needs-review':''}" data-row="${i}">
+      <div class="review-question-top">
+        <span class="review-number">${i+1}</span>
+        <div class="review-question-title">
+          <input class="review-label-input" data-k="label" value="${esc(r.label)}" placeholder="設問名">
+          <div class="review-meta-line"><span class="review-status ${r.confidence==='高'?'ok-status':'warn-status'}">${r.confidence}</span><span>${esc(r.type==='normal'?'通常':r.type.includes('unordered')?'順不同':'完答')}</span>${od.inferred?'<span class="inferred-tag">選択肢は仮表示</span>':''}</div>
+        </div>
+        <button class="row-delete" data-del="${i}" type="button">×</button>
+      </div>
+      <div class="review-answer-zone">
+        <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
+        ${choices?`<div class="choices review-choices">${choices}</div>`:'<div class="notice small">選択肢を認識できていません。下の「詳細設定」で選択肢を入力してください。</div>'}
+      </div>
+      <details class="review-detail-settings">
+        <summary>詳細設定を確認・修正</summary>
+        <div class="review-detail-grid">
+          <label>大問<input data-k="section" value="${esc(r.section)}"></label>
+          <label>正答<input data-k="answer" value="${esc(r.answer)}"></label>
+          <label>配点<input data-k="points" type="number" min="0" step="0.5" value="${esc(r.points)}"></label>
+          <label>採点方式<select data-k="type">${typeOptions(r.type)}</select></label>
+          <label>グループ<input data-k="group" value="${esc(r.group)}" placeholder="例：A"></label>
+          <label>グループ配点<input data-k="groupPoints" type="number" min="0" step="0.5" value="${esc(r.groupPoints)}"></label>
+          <label class="review-options-field">選択肢<input data-k="options" value="${esc(r.options)}" placeholder="0,1,2,3"></label>
+        </div>
+      </details>
+    </article>`;
+  });
+  root.innerHTML=html||'<div class="notice">設問がありません。</div>';
+  root.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('change',e=>{
+    const card=e.target.closest('[data-row]'),i=Number(card.dataset.row),k=e.target.dataset.k;
+    editorRows[i][k]=e.target.value;editorRows[i].confidence='確認済';
+    if(['section','answer','options','type'].includes(k))renderEditor();else updateParseSummary();
+  }));
+  root.querySelectorAll('[data-answer-row]').forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.answerRow);editorRows[i].answer=b.dataset.answer;editorRows[i].confidence='確認済';renderEditor();
+  });
+  root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{editorRows.splice(Number(b.dataset.del),1);renderEditor()});
   updateParseSummary();
 }
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -173,17 +319,62 @@ function renderAnalysis(){if(!analysisRows.length)return;const key=$('classFilte
 function renderHistogram(scores){const bins=Array(10).fill(0);scores.forEach(s=>bins[Math.min(9,Math.floor(s/10))]++);const m=Math.max(...bins,1);$('histogram').innerHTML=bins.map((n,i)=>`<div class="col"><div class="stick" style="height:${Math.max(2,n/m*180)}px" title="${n}人"></div><div class="lab">${i*10}-${i===9?100:i*10+9}<br>${n}人</div></div>`).join('')}
 function renderSections(rows){$('sectionAnalysis').innerHTML=analysisExam.sections.map(s=>{const sum=rows.reduce((a,r)=>a+(r.score.sectionScores[s.id]||0),0),pct=sum/(rows.length*s.points)*100;return `<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div><div>${pct.toFixed(1)}%</div></div>`}).join('')}
 function renderQuestionRates(rows){const body=$('questionRates');body.innerHTML='';analysisExam.questions.forEach(q=>{let ok=0;rows.forEach(r=>{const d=r.score.detail.find(x=>x.q.id===q.id);if(d&&d.correct)ok++});const pct=ok/rows.length*100;body.insertAdjacentHTML('beforeend',`<tr><td>${q.label}</td><td>${pct.toFixed(1)}%</td><td>${ok}/${rows.length}</td></tr>`)})}
-function loadPublishExam(){const exam=exams.find(e=>e.id===$('publishExamSelect')?.value)||exams[0];if(!exam)return;$('publishExamSelect').value=exam.id;$('publishToggle').checked=!!exam.published;const roster=usersData.users.map(u=>u.studentCode).sort();$('publishRoster').value=roster.join('\n');buildAudience();requestAnimationFrame(()=>applyExistingAudience(exam))}
-function parseRoster(){const vals=[...new Set($('publishRoster').value.split(/\s+/).map(s=>s.trim()).filter(Boolean))];if(vals.some(x=>!/^\d{4}$/.test(x))){alert('受験対象一覧は4桁番号を1行に1人ずつ入力してください。');return null}return vals}
-function buildAudience(){const vals=parseRoster();if(!vals)return;publishRoster=vals;const digits=Number($('classDigits').value)||2,groups={};vals.forEach(code=>{const c=code.slice(0,digits);(groups[c]??=[]).push(code)});$('audienceBuilder').innerHTML=Object.entries(groups).sort().map(([c,list])=>`<div class="audience-class"><label class="audience-class-head"><input type="checkbox" class="class-check" data-class="${c}"><span><strong>${c}</strong> クラス全員</span><small>${list.length}人</small></label><div class="audience-students">${list.map(code=>`<label><input type="checkbox" class="student-check" data-class="${c}" value="${code}"><span>${code}</span></label>`).join('')}</div></div>`).join('')||'<div class="notice">4桁番号を入力してください。</div>';document.querySelectorAll('.class-check').forEach(cb=>cb.onchange=()=>{document.querySelectorAll(`.student-check[data-class="${cb.dataset.class}"]`).forEach(x=>x.checked=cb.checked)});document.querySelectorAll('.student-check').forEach(cb=>cb.onchange=syncClassChecks)}
+function loadPublishExam(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value)||exams[0];
+  if(!exam){
+    if($('audienceBuilder'))$('audienceBuilder').innerHTML='<div class="notice">先にSTEP 1で試験を登録してください。</div>';
+    return;
+  }
+  $('publishExamSelect').value=exam.id;$('publishToggle').checked=!!exam.published;
+  buildAudience();renderRegisteredRosterSummary();
+  requestAnimationFrame(()=>applyExistingAudience(exam));
+}
+function renderRegisteredRosterSummary(){
+  if(!$('registeredRosterSummary'))return;
+  const groups={};usersData.users.forEach(u=>{const c=u.classKey||u.studentCode.slice(0,2);(groups[c]??=[]).push(u.studentCode)});
+  const entries=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b));
+  $('registeredRosterSummary').innerHTML=entries.length
+    ? entries.map(([c,list])=>`<div><strong>${c}組：${list.length}人</strong><small>${list[0]} ～ ${list[list.length-1]}</small></div>`).join('')
+    : '<div><strong>名簿未登録</strong><small>STEP 0で生徒名簿を登録してください。</small></div>';
+}
+function buildAudience(){
+  const vals=usersData.users.map(u=>u.studentCode).filter(x=>/^\d{4}$/.test(x)).sort();publishRoster=vals;
+  const groups={};vals.forEach(code=>{const c=code.slice(0,2);(groups[c]??=[]).push(code)});
+  $('audienceBuilder').innerHTML=Object.entries(groups).sort().map(([c,list])=>`<div class="audience-class">
+    <label class="audience-class-head"><input type="checkbox" class="class-check" data-class="${c}"><span><strong>${c}</strong> クラス全員</span><small>${list.length}人</small></label>
+    <div class="audience-students">${list.map(code=>`<label><input type="checkbox" class="student-check" data-class="${c}" value="${code}"><span>${code}</span></label>`).join('')}</div>
+  </div>`).join('')||'<div class="notice">STEP 0で生徒名簿を登録してください。</div>';
+  document.querySelectorAll('.class-check').forEach(cb=>cb.onchange=()=>{document.querySelectorAll(`.student-check[data-class="${cb.dataset.class}"]`).forEach(x=>x.checked=cb.checked)});
+  document.querySelectorAll('.student-check').forEach(cb=>cb.onchange=syncClassChecks);
+}
 function syncClassChecks(){document.querySelectorAll('.class-check').forEach(c=>{const xs=[...document.querySelectorAll(`.student-check[data-class="${c.dataset.class}"]`)];c.checked=xs.length&&xs.every(x=>x.checked);c.indeterminate=xs.some(x=>x.checked)&&!c.checked})}
 function setAllAudience(flag){document.querySelectorAll('#audienceBuilder input[type=checkbox]').forEach(x=>{x.checked=flag;x.indeterminate=false})}
-function applyExistingAudience(exam){const a=exam.access;if(!a||a.mode==='all'){setAllAudience(true);return}document.querySelectorAll('.student-check').forEach(x=>x.checked=(a.students||[]).includes(x.value)||(a.classes||[]).includes(x.dataset.class));syncClassChecks()}
-function collectAudience(){const classes=[],students=[];document.querySelectorAll('.audience-class').forEach(box=>{const cc=box.querySelector('.class-check'),ss=[...box.querySelectorAll('.student-check')];if(cc.checked)classes.push(cc.dataset.class);else ss.filter(x=>x.checked).forEach(x=>students.push(x.value))});return {classes,students}}
-function applyPublish(){const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};$('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / クラス ${a.classes.length}件 / 個別 ${a.students.length}人。exams.jsonを書き出してGitHubへ反映してください。`}
+function applyExistingAudience(exam){
+  const a=exam.access;if(!a||a.mode==='all'){setAllAudience(true);return}
+  document.querySelectorAll('.student-check').forEach(x=>x.checked=(a.students||[]).includes(x.value)||(a.classes||[]).includes(x.dataset.class));syncClassChecks();
+}
+function collectAudience(){
+  const classes=[],students=[];
+  document.querySelectorAll('.audience-class').forEach(box=>{const cc=box.querySelector('.class-check'),ss=[...box.querySelectorAll('.student-check')];if(cc.checked)classes.push(cc.dataset.class);else ss.filter(x=>x.checked).forEach(x=>students.push(x.value))});
+  return {classes,students}
+}
+function applyPublish(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
+  const selected=selectedAudienceCodes();if($('publishToggle').checked&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
+  const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};
+  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。exams.jsonを書き出してGitHubへ反映してください。`;
+}
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
-async function generateAudienceCodes(){const exam=exams.find(e=>e.id===$('publishExamSelect').value),codes=selectedAudienceCodes();if(!exam)return;if(!codes.length){alert('受験対象生徒を選択してください。');return}publishSecrets=await generateForExam(exam.id,codes);$('exportPublishSecretsBtn').disabled=false;$('printPublishSlipsBtn').disabled=false;$('publishGeneratedPreview').innerHTML=`<h3>${exam.title}：対象者 ${codes.length}人の試験専用コード</h3><table><thead><tr><th>4桁番号</th><th>ログインコード</th><th>クラス</th></tr></thead><tbody>${publishSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table>${codes.length>20?`<p class="small muted">ほか ${codes.length-20}人</p>`:''}`;renderSlips(publishSecrets,exam);$('publishMsg').className='success small';$('publishMsg').textContent='対象者の試験専用ログインコードを生成しました。users.json・教員保管CSV・ログイン票を保存してください。'}
+async function generateAudienceCodes(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect').value),codes=selectedAudienceCodes();if(!exam)return;
+  if(!codes.length){alert('受験対象生徒を選択してください。');return}
+  publishSecrets=await generateForExam(exam.id,codes);
+  $('exportPublishSecretsBtn').disabled=false;$('printPublishSlipsBtn').disabled=false;
+  $('publishGeneratedPreview').innerHTML=`<h3>${esc(exam.title)}：対象者 ${codes.length}人の試験専用コード</h3><table><thead><tr><th>4桁番号</th><th>ログインコード</th><th>クラス</th></tr></thead><tbody>${publishSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table>${codes.length>20?`<p class="small muted">ほか ${codes.length-20}人</p>`:''}`;
+  renderSlips(publishSecrets,exam);
+  $('publishMsg').className='success small';$('publishMsg').textContent='対象者の試験専用ログインコードを生成しました。users.json・教員保管CSV・A4ログイン票を保存してください。';
+}
 function exportExamData(){TDX.download('exams.json',JSON.stringify(allExamData,null,2))}
-function exportUserData(){TDX.download('users.json',JSON.stringify({version:3,note:'試験ごとの認証情報。平文ログインコードは含みません。issuedCodeIds は再発行時の重複防止用です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users},null,2))}
+function exportUserData(){TDX.download('users.json',JSON.stringify({version:4,note:'STEP 0で登録した生徒名簿と試験ごとの認証情報。平文ログインコードは含みません。issuedCodeIds は再発行時の重複防止用です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users},null,2))}
 function exportPublishSecrets(){const exam=exams.find(e=>e.id===$('publishExamSelect').value),csv='試験,4桁番号,ログインコード,クラス\n'+publishSecrets.map(x=>`"${exam?.title||''}",${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');TDX.download(`T-DX_Lab_${exam?.title||'試験'}_ログインコード.csv`.replace(/[\\/:*?"<>|]/g,'_'),'\ufeff'+csv,'text/csv;charset=utf-8')}
 init().catch(console.error);
