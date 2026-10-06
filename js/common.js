@@ -38,7 +38,7 @@ window.TDX = (() => {
         peers.forEach(x=>detail.push({q:x,answer:answers[x.id]??'',correct:ok,earned:0,groupAward:ok?q.groupPoints:0}));handled.add(q.group);continue;
       } else if(q.type==='unordered_complete_item' && !handled.has(q.group)){
         const peers=exam.questions.filter(x=>x.group===q.group);const vals=peers.map(x=>String(answers[x.id]??''));const target=[...q.groupAnswers].map(String).sort();
-        const ok=vals.length===target.length && [...vals].sort().every((v,i)=>v===target[i]) && new Set(vals).size===vals.length;
+        const ok=vals.length===target.length && [...vals].sort().every((v,i)=>v===target[i]);
         if(ok){earned=q.groupPoints; total+=earned; sectionScores[q.section]+=earned;}
         peers.forEach(x=>detail.push({q:x,answer:answers[x.id]??'',correct:ok,earned:0,groupAward:ok?q.groupPoints:0}));handled.add(q.group);continue;
       } else if((q.type==='complete_item'||q.type==='unordered_complete_item') && handled.has(q.group)) continue;
