@@ -37,7 +37,8 @@ function bind(){
   $('exportRosterUsersBtn').onclick=exportUserData;
 
   $('readPdfBtn').onclick=readPdf;
-  $('reparseTextBtn').onclick=()=>analyzePdfText($('pdfText').value);
+  $('parsePastedTextBtn').onclick=()=>analyzeAnswerSource('pasted');
+  $('reparseTextBtn').onclick=()=>analyzeAnswerSource($('answerTextInput').value.trim()?'pasted':'pdf');
   $('addQuestionRowBtn').onclick=()=>addEditorRow();
   $('applyDefaultOptionsBtn').onclick=applyDefaultOptions;
   $('checkPointsBtn').onclick=checkPoints;
@@ -190,15 +191,25 @@ async function printSlips(){
   finally{stage.classList.remove('pdf-rendering')}
 }
 
-// ===== PDF → editable exam draft =====
+// ===== PDF / pasted text → editable exam draft =====
 function toHalfWidth(s){return String(s||'').replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/：/g,':').replace(/，/g,',').replace(/＝/g,'=')}
-function extractPageLines(items){
-  const pts=items.filter(x=>x.str&&x.str.trim()).map(x=>({str:x.str.trim(),x:x.transform?.[4]||0,y:x.transform?.[5]||0}));
-  pts.sort((a,b)=>Math.abs(b.y-a.y)>2?b.y-a.y:a.x-b.x);
+function clusterLines(pts){
   const lines=[];
   for(const p of pts){let line=lines.find(l=>Math.abs(l.y-p.y)<2.2);if(!line){line={y:p.y,parts:[]};lines.push(line)}line.parts.push(p)}
   lines.sort((a,b)=>b.y-a.y);
   return lines.map(l=>l.parts.sort((a,b)=>a.x-b.x).map(p=>p.str).join(' '));
+}
+function extractPageLines(items,pageWidth=0){
+  const pts=items.filter(x=>x.str&&x.str.trim()).map(x=>({str:x.str.trim(),x:x.transform?.[4]||0,y:x.transform?.[5]||0}));
+  if(!pageWidth)return clusterLines(pts);
+  const mid=pageWidth*0.5,left=pts.filter(p=>p.x<mid),right=pts.filter(p=>p.x>=mid);
+  // 2段組の解答表では、左右を別々に読む方が視覚上の順序に近くなる。
+  const enoughColumns=left.length>=8&&right.length>=8;
+  if(enoughColumns){
+    const l=clusterLines(left),r=clusterLines(right);
+    return [...l,...r];
+  }
+  return clusterLines(pts);
 }
 async function readPdf(){
   const f=$('answerPdf').files[0];if(!f){alert('PDFを選択してください。');return}
@@ -207,8 +218,12 @@ async function readPdf(){
     pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
     const pdf=await pdfjs.getDocument({data:buf}).promise;let pages=[];
     await renderPdfPages(pdf);
-    for(let p=1;p<=pdf.numPages;p++){const page=await pdf.getPage(p),tc=await page.getTextContent();pages.push(`--- page ${p} ---\n${extractPageLines(tc.items).join('\n')}`)}
-    const text=pages.join('\n');$('pdfText').value=text;analyzePdfText(text);
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p),tc=await page.getTextContent(),w=page.getViewport({scale:1}).width;
+      pages.push(`--- page ${p} ---\n${extractPageLines(tc.items,w).join('\n')}`)
+    }
+    const text=pages.join('\n');$('pdfText').value=text;
+    if($('answerTextInput').value.trim()) analyzeAnswerSource('pasted'); else analyzeAnswerSource('pdf');
   }catch(e){console.error(e);alert('PDF読み取りに失敗しました。文字として保存されたPDFか、ネットワーク環境を確認してください。')}
 }
 async function renderPdfPages(pdf){
@@ -228,128 +243,192 @@ function deriveSection(label,current='第1問'){
   return `第${m[1]}問${m[2]?m[2].replace('Ａ','A').replace('Ｂ','B').replace('Ｃ','C').replace('Ｄ','D'):''}`;
 }
 function lastKana(label){const m=label.match(/([ア-ン])(?:\s*[（(]|\s*$)/);return m?m[1]:''}
+function normalizeLettersToken(s){return (String(s||'').match(/[ア-ン]/g)||[])}
+function normalizeNumberList(s){return (String(s||'').match(/\d+(?:\.\d+)?/g)||[]).map(String)}
 function tableStyleRows(lines){
-  const rows=[];let currentSection='第1問',counter=0;
-  const sectionMeta={unordered:false,complete:false,points:''};
+  const rows=[];let currentSection='第1問',groupSeq=0;
+  let sectionMeta={unordered:false,complete:false,points:''};
   for(const src of lines){
-    const line=src.replace(/[，、]/g,',').replace(/\s+/g,' ').trim();
+    const line=toHalfWidth(src).replace(/[，、]/g,',').replace(/\s+/g,' ').trim();
     const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);
-    if(sm){currentSection=`第${sm[1]}問${sm[2]||''}`;sectionMeta.unordered=/順序は問わない|順不同/.test(line);sectionMeta.complete=/完答/.test(line);const pm=line.match(/各\s*(\d+(?:\.\d+)?)/);sectionMeta.points=pm?pm[1]:''}
+    if(sm){
+      currentSection=`第${sm[1]}問${sm[2]||''}`;
+      sectionMeta={unordered:/順序は問わない|順不同/.test(line),complete:/完答/.test(line),points:''};
+      const pm=line.match(/各\s*(\d+(?:\.\d+)?)/);if(pm)sectionMeta.points=pm[1];
+    }
     const toks=line.split(' ').filter(Boolean);
     for(let i=0;i<toks.length-1;i++){
-      const k=toks[i],a=toks[i+1];
-      const letters=k.match(/[ア-ン]/g)||[];
-      const nums=(a.match(/\d+/g)||[]);
-      if(!letters.length||!nums.length||nums.length<letters.length)continue;
-      // 見出しや文章を避け、かなグループと数値グループが隣接する表形式だけ採用
-      if(k.length>20||a.length>30)continue;
-      letters.forEach((letter,j)=>{
-        counter++;
-        rows.push({
-          section:currentSection,
-          label:`${currentSection} ${letter}`,
-          answer:String(nums[j]),
-          points:sectionMeta.points,
-          type:sectionMeta.complete?'complete_item':sectionMeta.unordered?'unordered_item':'normal',
-          group:sectionMeta.complete?`c_${currentSection.replace(/\W/g,'')}_${counter}`:'',
-          groupPoints:'',options:'',confidence:'要確認',sourceLine:src
-        });
-      });
-      i++;
+      const key=toks[i],ans=toks[i+1];
+      const letters=normalizeLettersToken(key),nums=normalizeNumberList(ans);
+      if(!letters.length||!nums.length)continue;
+      if(key.length>24||ans.length>40)continue;
+      // 直後にある数値を「この行の配点」候補として拾う。
+      const pointTok=toks[i+2]&&/^\d+(?:\.\d+)?$/.test(toks[i+2])?toks[i+2]:'';
+      const unordered=sectionMeta.unordered||/順序は問わない|順不同/.test(line);
+      if(letters.length>1 && nums.length>=letters.length){
+        const answers=nums.slice(0,letters.length),group=`g_${currentSection.replace(/\W/g,'')}_${++groupSeq}`;
+        letters.forEach((letter,j)=>rows.push({
+          section:currentSection,label:`${currentSection} ${letter}`,answer:answers[j]||'',points:'',
+          type:unordered?'unordered_complete_item':'complete_item',group,groupPoints:pointTok||sectionMeta.points||'',
+          options:'',confidence:pointTok?'高':'要確認',sourceLine:src
+        }));
+        i+=pointTok?2:1;continue;
+      }
+      // 単独欄
+      const letter=letters[0],answer=nums[0];
+      rows.push({section:currentSection,label:`${currentSection} ${letter}`,answer,points:pointTok||sectionMeta.points||'',type:'normal',group:'',groupPoints:'',options:'',confidence:pointTok?'高':'要確認',sourceLine:src});
+      i+=pointTok?2:1;
     }
   }
   return rows;
 }
 function parseExamText(raw){
   const text=toHalfWidth(raw),lines=text.split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!/^--- page/.test(x));
-  const rows=[];let currentSection='第1問';
-  const seen=new Set();
+  const rows=[];let currentSection='第1問';const seen=new Set();
   for(let i=0;i<lines.length;i++){
     const line=lines[i].replace(/\s+/g,' ');
     const sec=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);if(sec)currentSection=`第${sec[1]}問${sec[2]||''}`;
     let label='',answer='',confidence='要確認';
-    const explicit=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*(?:正答|答|解答)\s*[:=]?\s*([0-9]+)\b/);
-    const colon=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*[:=]\s*([0-9]+)\b/);
-    const sameLine=line.match(/^((?:第\s*\d+\s*問[A-D]?\s*)+(?:問\s*\d+\s*)?[ア-ン])(?:\s*[（(][^）)]*[）)])?\s+([0-9]+)\s*$/);
+    const explicit=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*(?:正答|答|解答)\s*[:=]?\s*([0-9]+(?:\s*[,、]\s*[0-9]+)*)\b/);
+    const colon=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*[:=]\s*([0-9]+(?:\s*[,、]\s*[0-9]+)*)\b/);
+    const sameLine=line.match(/^((?:第\s*\d+\s*問[A-D]?\s*)+(?:問\s*\d+\s*)?[ア-ン])(?:\s*[（(][^）)]*[）)])?\s+([0-9]+(?:\s*[,、]\s*[0-9]+)*)\s*$/);
     const m=explicit||colon||sameLine;
-    if(m){label=m[1].replace(/\s+/g,' ').trim();answer=m[2];confidence=explicit?'高':'要確認'}
+    if(m){label=m[1].replace(/\s+/g,' ').trim();answer=m[2].replace(/[、\s]+/g,',');confidence=explicit?'高':'要確認'}
     if(!label)continue;
     const section=deriveSection(label,currentSection),key=`${section}|${label}|${answer}`;if(seen.has(key))continue;seen.add(key);
-    const low=line.includes('順不同'),complete=line.includes('完答');
-    rows.push({section,label,answer,points:'',type:complete?'complete_item':low?'unordered_item':'normal',group:'',groupPoints:'',options:'',confidence,sourceLine:line});
+    const low=/順不同|順序は問わない/.test(line),complete=/完答/.test(line);
+    rows.push({section,label,answer,points:'',type:complete?(low?'unordered_complete_item':'complete_item'):low?'unordered_item':'normal',group:'',groupPoints:'',options:'',confidence,sourceLine:line});
   }
   // 「Xと順不同」の組を自動グループ化
-  rows.forEach((r,idx)=>{const m=r.sourceLine.match(/([ア-ン])\s*と\s*順不同/);if(!m)return;const a=lastKana(r.label),b=m[1];if(!a)return;const g=`u_${r.section.replace(/\W/g,'')}_${[a,b].sort().join('')}`;r.type='unordered_item';r.group=g;rows.forEach(x=>{if(x.section===r.section&&[a,b].includes(lastKana(x.label))){x.type='unordered_item';x.group=g}})});
+  rows.forEach((r)=>{const m=r.sourceLine.match(/([ア-ン])\s*と\s*順不同/);if(!m)return;const a=lastKana(r.label),b=m[1];if(!a)return;const g=`u_${r.section.replace(/\W/g,'')}_${[a,b].sort().join('')}`;r.type='unordered_item';r.group=g;rows.forEach(x=>{if(x.section===r.section&&[a,b].includes(lastKana(x.label))){x.type='unordered_item';x.group=g}})});
   // 「ア、イ、ウは完答」のような記述を探して同一大問内へ適用
   for(const line of lines){const m=line.match(/([ア-ン](?:\s*[,、]\s*[ア-ン])+).*?完答/);if(!m)continue;const letters=m[1].match(/[ア-ン]/g)||[];if(letters.length<2)continue;const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/),section=sm?`第${sm[1]}問${sm[2]||''}`:null;const g=`c_${(section||'sec').replace(/\W/g,'')}_${letters.join('')}`;rows.forEach(x=>{if((!section||x.section===section)&&letters.includes(lastKana(x.label))){x.type='complete_item';x.group=g}})}
-  // 表形式PDFは「ア,イ 0,3 2 …」のように抽出されることがあるため、
-  // 通常ルールで十分に取れなければ表形式パーサを併用する。
   const tableRows=tableStyleRows(lines);
-  if(tableRows.length>rows.length){
-    const dedup=[];const keys=new Set();
-    for(const r of tableRows){const key=`${r.section}|${r.label}|${r.answer}`;if(keys.has(key))continue;keys.add(key);dedup.push(r)}
+  // 表形式データが取れた場合はそちらを優先。貼付テキストにも同じロジックを使う。
+  if(tableRows.length>=rows.length && tableRows.length){
+    const dedup=[],keys=new Set();
+    for(const r of tableRows){const key=`${r.section}|${r.label}|${r.answer}|${r.group}`;if(keys.has(key))continue;keys.add(key);dedup.push(r)}
     return dedup;
   }
   return rows;
 }
-function analyzePdfText(text){
+function analyzeAnswerSource(source='pdf'){
+  const text=source==='pasted'?$('answerTextInput').value:$('pdfText').value;
+  if(!text.trim()){alert(source==='pasted'?'模範解答テキストを貼り付けてください。':'先にPDFを読み取ってください。');return}
   editorRows=parseExamText(text);
   if(!editorRows.length) editorRows=[blankEditorRow()];
   $('examReviewPanel').classList.remove('hidden');renderEditor();
   $('examReviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function analyzePdfText(text){$('pdfText').value=text;analyzeAnswerSource('pdf')}
 function blankEditorRow(){return {section:'第1問',label:'',answer:'',points:'',type:'normal',group:'',groupPoints:'',options:'',confidence:'要確認',sourceLine:''}}
 function addEditorRow(row=blankEditorRow()){editorRows.push({...row});renderEditor();setTimeout(()=>$('examEditorCards')?.lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
-function typeOptions(value){return [['normal','通常'],['unordered_item','順不同（各欄採点）'],['complete_item','完答'],['unordered_complete_item','順不同＋完答']].map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}
+function typeOptions(value){return [['normal','通常（1欄ずつ採点）'],['unordered_item','順不同（各欄採点）'],['complete_item','完答（全欄一致で得点）'],['unordered_complete_item','順不同＋完答（全欄一致で得点）']].map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}
 function reviewDisplayOptions(r){
   const explicit=String(r.options||'').split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean);
   if(explicit.length)return {options:explicit,inferred:false};
-  const n=Number(r.answer);if(Number.isInteger(n)&&n>=0&&n<=12)return {options:Array.from({length:Math.max(4,n+1)},(_,i)=>String(i)),inferred:true};
+  const nums=String(r.answer||'').split(/[,、\s]+/).map(x=>Number(x)).filter(Number.isFinite);
+  const n=nums.length?Math.max(...nums):-1;
+  if(Number.isInteger(n)&&n>=0&&n<=12)return {options:Array.from({length:Math.max(4,n+1)},(_,i)=>String(i)),inferred:true};
   return {options:[],inferred:true};
+}
+function groupPeers(index){
+  const r=editorRows[index];
+  if(!r?.group||!['complete_item','unordered_complete_item'].includes(r.type))return [r];
+  return editorRows.filter(x=>x.group===r.group&&x.section===r.section);
+}
+function answerChoiceButtons(r,i){
+  const od=reviewDisplayOptions(r);
+  return {od,html:od.options.map(o=>`<button type="button" class="review-choice ${String(r.answer)===String(o)?'is-answer':''}" data-answer-row="${i}" data-answer="${esc(o)}">${esc(o)}</button>`).join('')};
+}
+function renderGroupCard(rows,indices){
+  const first=rows[0],unordered=first.type==='unordered_complete_item',gp=first.groupPoints||'';
+  const title=rows.map(r=>lastKana(r.label)||r.label).join('・');
+  const subRows=rows.map((r,j)=>{
+    const i=indices[j],c=answerChoiceButtons(r,i);
+    return `<div class="group-answer-row" data-row="${i}">
+      <div class="group-answer-label"><span>${esc(lastKana(r.label)||r.label)}</span><small>正答 ${esc(r.answer||'未設定')}</small></div>
+      <div class="choices review-choices">${c.html||'<span class="muted small">選択肢未設定</span>'}</div>
+    </div>`;
+  }).join('');
+  return `<article class="review-question-card review-group-card ${rows.some(r=>r.confidence==='要確認')?'needs-review':''}" data-group-card="${esc(first.group)}">
+    <div class="review-question-top">
+      <span class="review-number">${indices[0]+1}</span>
+      <div class="review-question-title">
+        <div class="review-group-title">${esc(first.section)} ${esc(title)}</div>
+        <div class="review-meta-line"><span class="review-status ${rows.some(r=>r.confidence==='要確認')?'warn-status':'ok-status'}">${rows.some(r=>r.confidence==='要確認')?'要確認':'確認済'}</span><span>${unordered?'順不同＋完答':'完答'}</span><span class="group-award-badge">${gp?esc(gp)+'点':'配点未設定'}</span></div>
+      </div>
+      <button class="row-delete" data-del-group="${esc(first.group)}" type="button">×</button>
+    </div>
+    <div class="group-explain"><strong>${rows.length}つの解答欄をすべて正解したときだけ得点</strong>${unordered?'。解答の順番は問いません。':'。'}<br><span>各欄の青いボタンが現在の正答です。違う場合は正しい番号をクリックしてください。</span></div>
+    <div class="group-answer-list">${subRows}</div>
+    <details class="review-detail-settings">
+      <summary>詳細設定を確認・修正</summary>
+      <div class="review-detail-grid group-detail-grid">
+        <label>大問<input data-group-k="section" data-group="${esc(first.group)}" value="${esc(first.section)}"></label>
+        <label>採点方式<select data-group-k="type" data-group="${esc(first.group)}">${typeOptions(first.type)}</select></label>
+        <label>グループ配点<input data-group-k="groupPoints" data-group="${esc(first.group)}" type="number" min="0" step="0.5" value="${esc(gp)}"></label>
+        <label>グループID<input value="${esc(first.group)}" disabled></label>
+      </div>
+      <div class="group-detail-rows">${rows.map((r,j)=>`<div class="group-detail-row" data-row="${indices[j]}"><label>設問名<input data-k="label" value="${esc(r.label)}"></label><label>正答<input data-k="answer" value="${esc(r.answer)}"></label><label>選択肢<input data-k="options" value="${esc(r.options)}" placeholder="0,1,2,3"></label></div>`).join('')}</div>
+    </details>
+  </article>`;
+}
+function renderSingleCard(r,i){
+  const c=answerChoiceButtons(r,i),od=c.od;
+  return `<article class="review-question-card ${r.confidence==='要確認'?'needs-review':''}" data-row="${i}">
+    <div class="review-question-top">
+      <span class="review-number">${i+1}</span>
+      <div class="review-question-title">
+        <input class="review-label-input" data-k="label" value="${esc(r.label)}" placeholder="設問名">
+        <div class="review-meta-line"><span class="review-status ${r.confidence==='高'?'ok-status':'warn-status'}">${r.confidence}</span><span>${esc(r.type==='normal'?'通常':r.type.includes('unordered')?'順不同':'完答')}</span>${od.inferred?'<span class="inferred-tag">選択肢は仮表示</span>':''}</div>
+      </div>
+      <button class="row-delete" data-del="${i}" type="button">×</button>
+    </div>
+    <div class="review-answer-zone">
+      <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
+      ${c.html?`<div class="choices review-choices">${c.html}</div>`:'<div class="notice small">選択肢を認識できていません。下の「詳細設定」で選択肢を入力してください。</div>'}
+    </div>
+    <details class="review-detail-settings">
+      <summary>詳細設定を確認・修正</summary>
+      <div class="review-detail-grid">
+        <label>大問<input data-k="section" value="${esc(r.section)}"></label>
+        <label>正答<input data-k="answer" value="${esc(r.answer)}"></label>
+        <label>配点<input data-k="points" type="number" min="0" step="0.5" value="${esc(r.points)}"></label>
+        <label>採点方式<select data-k="type">${typeOptions(r.type)}</select></label>
+        <label>グループ<input data-k="group" value="${esc(r.group)}" placeholder="自動設定"></label>
+        <label>グループ配点<input data-k="groupPoints" type="number" min="0" step="0.5" value="${esc(r.groupPoints)}"></label>
+        <label class="review-options-field">選択肢<input data-k="options" value="${esc(r.options)}" placeholder="0,1,2,3"></label>
+      </div>
+    </details>
+  </article>`;
 }
 function renderEditor(){
   const root=$('examEditorCards');if(!root)return;
-  let html='',lastSection='';
+  let html='',lastSection='';const used=new Set();
   editorRows.forEach((r,i)=>{
+    if(used.has(i))return;
     if(r.section!==lastSection){html+=`<div class="review-section-heading"><span class="section-eyebrow">SECTION</span><h3>${esc(r.section||'大問未設定')}</h3></div>`;lastSection=r.section}
-    const od=reviewDisplayOptions(r),choices=od.options.map(o=>`<button type="button" class="review-choice ${String(r.answer)===String(o)?'is-answer':''}" data-answer-row="${i}" data-answer="${esc(o)}">${esc(o)}</button>`).join('');
-    html+=`<article class="review-question-card ${r.confidence==='要確認'?'needs-review':''}" data-row="${i}">
-      <div class="review-question-top">
-        <span class="review-number">${i+1}</span>
-        <div class="review-question-title">
-          <input class="review-label-input" data-k="label" value="${esc(r.label)}" placeholder="設問名">
-          <div class="review-meta-line"><span class="review-status ${r.confidence==='高'?'ok-status':'warn-status'}">${r.confidence}</span><span>${esc(r.type==='normal'?'通常':r.type.includes('unordered')?'順不同':'完答')}</span>${od.inferred?'<span class="inferred-tag">選択肢は仮表示</span>':''}</div>
-        </div>
-        <button class="row-delete" data-del="${i}" type="button">×</button>
-      </div>
-      <div class="review-answer-zone">
-        <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
-        ${choices?`<div class="choices review-choices">${choices}</div>`:'<div class="notice small">選択肢を認識できていません。下の「詳細設定」で選択肢を入力してください。</div>'}
-      </div>
-      <details class="review-detail-settings">
-        <summary>詳細設定を確認・修正</summary>
-        <div class="review-detail-grid">
-          <label>大問<input data-k="section" value="${esc(r.section)}"></label>
-          <label>正答<input data-k="answer" value="${esc(r.answer)}"></label>
-          <label>配点<input data-k="points" type="number" min="0" step="0.5" value="${esc(r.points)}"></label>
-          <label>採点方式<select data-k="type">${typeOptions(r.type)}</select></label>
-          <label>グループ<input data-k="group" value="${esc(r.group)}" placeholder="例：A"></label>
-          <label>グループ配点<input data-k="groupPoints" type="number" min="0" step="0.5" value="${esc(r.groupPoints)}"></label>
-          <label class="review-options-field">選択肢<input data-k="options" value="${esc(r.options)}" placeholder="0,1,2,3"></label>
-        </div>
-      </details>
-    </article>`;
+    const peers=groupPeers(i);
+    if(peers.length>1&&r.group&&['complete_item','unordered_complete_item'].includes(r.type)){
+      const indices=peers.map(x=>editorRows.indexOf(x));indices.forEach(x=>used.add(x));html+=renderGroupCard(peers,indices);
+    }else{used.add(i);html+=renderSingleCard(r,i)}
   });
   root.innerHTML=html||'<div class="notice">設問がありません。</div>';
   root.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('change',e=>{
-    const card=e.target.closest('[data-row]'),i=Number(card.dataset.row),k=e.target.dataset.k;
+    const row=e.target.closest('[data-row]'),i=Number(row.dataset.row),k=e.target.dataset.k;
     editorRows[i][k]=e.target.value;editorRows[i].confidence='確認済';
-    if(['section','answer','options','type'].includes(k))renderEditor();else updateParseSummary();
+    if(['section','answer','options','type','group'].includes(k))renderEditor();else updateParseSummary();
+  }));
+  root.querySelectorAll('[data-group-k]').forEach(el=>el.addEventListener('change',e=>{
+    const group=e.target.dataset.group,k=e.target.dataset.groupK,v=e.target.value;
+    editorRows.filter(r=>r.group===group).forEach(r=>{r[k]=v;r.confidence='確認済'});renderEditor();
   }));
   root.querySelectorAll('[data-answer-row]').forEach(b=>b.onclick=()=>{
     const i=Number(b.dataset.answerRow);editorRows[i].answer=b.dataset.answer;editorRows[i].confidence='確認済';renderEditor();
   });
   root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{editorRows.splice(Number(b.dataset.del),1);renderEditor()});
+  root.querySelectorAll('[data-del-group]').forEach(b=>b.onclick=()=>{const g=b.dataset.delGroup;editorRows=editorRows.filter(r=>r.group!==g);renderEditor()});
   updateParseSummary();
 }
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -377,7 +456,7 @@ function buildExamFromEditor(){
   return {id:makeExamId(),title,subject,schoolYear:String(new Date().getFullYear()),published:false,totalPoints:target,googleFormUrl,formSubmission:null,access:{mode:'restricted',classes:[],students:[]},sections,questions,createdAt:new Date().toISOString()};
 }
 function saveDraft(){
-  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),pdfText:$('pdfText').value,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
+  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
 function registerExam(){
   try{

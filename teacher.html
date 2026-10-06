@@ -92,7 +92,18 @@
           <label>満点</label><input id="examTotalPoints" type="number" min="1" value="100">
           <label>GoogleフォームURL</label><input id="formUrl" placeholder="https://docs.google.com/forms/...">
           <label>模範解答PDF</label><input id="answerPdf" type="file" accept="application/pdf">
-          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを解析して確認画面を作る</button></div>
+          <div class="answer-source-box">
+            <div class="section-title compact-title"><div><h3>テキスト版模範解答（任意）</h3><p class="muted small">出版社等からテキストデータがある場合はこちらに貼り付けると解析精度が上がります。PDFは左側の確認用表示として併用できます。</p></div></div>
+            <textarea id="answerTextInput" class="answer-text-input" placeholder="例：
+第1問（20点）
+ア,イ 0,3 2
+ウ 3 2
+エ,オ 4,2 4
+...
+
+※ PDFから抽出した生テキストを貼って再解析することもできます。"></textarea>
+          </div>
+          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button><button id="parsePastedTextBtn" class="secondary glass-btn">貼付テキストから解析</button></div>
         </div>
         <div>
           <div class="info-strip teacher-strip"><span>AUTO</span> 文字として保存されたPDFなら、試験名・大問・設問・正答・「順不同」「完答」などを可能な範囲で自動抽出します。</div>
@@ -101,13 +112,13 @@
             <div><strong>必要な所だけ修正</strong><small>設問名・正答・配点・採点方式・グループ・選択肢をその場で変更できます。</small></div>
             <div><strong>詳細設定は折りたたみ</strong><small>通常は正答確認に集中し、特殊採点だけ必要に応じて開きます。</small></div>
           </div>
-          <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。"></textarea></details>
+          <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。ここをコピーして上のテキスト版模範解答へ貼り付け、修正して再解析することもできます。"></textarea></details>
         </div>
       </div>
 
       <section id="examReviewPanel" class="exam-review-panel hidden">
         <div class="section-title">
-          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">生徒が回答する画面と同じ感覚で、青く選択されているものが現在読み取った正答です。違っていれば正しい選択肢をクリックしてください。</p></div>
+          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">生徒が回答する画面と同じ感覚で確認します。完答問題は同じカード内に複数の解答欄をまとめて表示し、青く選択されている値が現在の正答です。</p></div>
           <div class="review-actions-top"><button id="addQuestionRowBtn" class="secondary glass-btn">＋ 設問を追加</button><button id="reparseTextBtn" class="secondary glass-btn">テキストから再解析</button></div>
         </div>
 
