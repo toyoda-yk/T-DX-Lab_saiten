@@ -104,39 +104,55 @@
     </section>
 
     <section id="examManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>新規試験作成</h2><p>模範解答PDFを読み取り、採点設定の下書きを自動生成します。確認画面は生徒の回答画面に近い形で表示します。</p></div><div class="admin-symbol">01</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>新規試験作成</h2><p>模範解答PDFまたはAIで整形したテキストから採点設定を作成します。確認画面は生徒の回答画面に近い形で表示します。</p></div><div class="admin-symbol">01</div></div>
 
       <div class="builder-steps">
-        <div class="builder-step active"><b>1</b><span>基本情報・PDF</span></div>
+        <div class="builder-step active"><b>1</b><span>基本情報・模範解答</span></div>
         <div class="builder-step"><b>2</b><span>自動解析</span></div>
         <div class="builder-step"><b>3</b><span>生徒画面風に確認</span></div>
         <div class="builder-step"><b>4</b><span>非公開で登録</span></div>
       </div>
 
-      <div class="grid two admin-form-grid">
-        <div>
-          <label>試験名</label><input id="examName" placeholder="例：2026年度 第1回 共通テスト模試">
-          <label>教科</label><input id="examSubjectInput" placeholder="例：情報Ⅰ">
-          <label>満点</label><input id="examTotalPoints" type="number" min="1" value="100">
-          <label>GoogleフォームURL</label><input id="formUrl" placeholder="https://docs.google.com/forms/...">
+      <div class="exam-builder-layout-v113">
+        <div class="exam-basics-grid">
+          <label class="exam-name-field">試験名<input id="examName" placeholder="例：2026年度 第1回 共通テスト模試"></label>
+          <label>教科<input id="examSubjectInput" placeholder="例：情報Ⅰ"></label>
+          <label>満点<input id="examTotalPoints" type="number" min="1" value="100"></label>
+          <label class="exam-formurl-field">GoogleフォームURL<input id="formUrl" placeholder="https://docs.google.com/forms/..."></label>
+        </div>
 
-          <div class="choice-range-box">
-            <div class="section-title compact-title">
-              <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字の範囲を先に指定してください。</p></div>
-            </div>
-            <div class="choice-range-grid">
-              <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
-              <div class="range-pair"><label>最小<input id="numberChoiceStart" type="number" min="0" max="99" value="0"></label><span>〜</span><label>最大<input id="numberChoiceEnd" type="number" min="0" max="99" value="9"></label></div>
-              <label class="range-enable"><input id="useLetterChoices" type="checkbox" checked> 英字を使う</label>
-              <div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
-            </div>
-            <div class="choice-preview"><span>この試験の選択肢</span><div id="globalChoicePreview" class="choice-chip-list"></div></div>
+        <div class="choice-range-box choice-range-wide">
+          <div class="section-title compact-title">
+            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字の範囲を先に指定してください。</p></div>
           </div>
+          <div class="choice-range-grid">
+            <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
+            <div class="range-pair"><label>最小<input id="numberChoiceStart" type="number" min="0" max="99" value="0"></label><span>〜</span><label>最大<input id="numberChoiceEnd" type="number" min="0" max="99" value="9"></label></div>
+            <label class="range-enable"><input id="useLetterChoices" type="checkbox" checked> 英字を使う</label>
+            <div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
+          </div>
+          <div class="choice-preview"><span>この試験の選択肢</span><div id="globalChoicePreview" class="choice-chip-list"></div></div>
+        </div>
 
-          <label>模範解答PDF</label><input id="answerPdf" type="file" accept="application/pdf">
-          <div class="answer-source-box">
-            <div class="section-title compact-title"><div><h3>テキスト版模範解答（PDFが読めない場合）</h3><p class="muted small">PDF解析が崩れた場合は「解析をリセット」→ AI等で作ったT-DX Lab形式のテキストを貼り付け →「貼付テキストから解析」の順でやり直せます。</p></div></div>
-            <textarea id="answerTextInput" class="answer-text-input" placeholder="第1問|20
+        <div class="answer-source-layout-v113">
+          <section class="answer-route-card pdf-route-card">
+            <div class="route-card-head">
+              <div><span class="route-kicker">ROUTE A</span><h3>PDFから直接読み取る</h3><p class="muted small">文字として保存された模範解答PDFなら、そのまま解析できます。読み取り結果は後で修正できます。</p></div>
+              <span class="route-badge alt">PDF</span>
+            </div>
+            <label class="route-file-label">模範解答PDF<input id="answerPdf" type="file" accept="application/pdf"></label>
+            <div class="actions route-actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button></div>
+            <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。ここをコピーして右側のテキスト版模範解答へ貼り付け、修正して再解析することもできます。"></textarea></details>
+            <div class="route-note"><strong>PDFが崩れたら？</strong><span>下の「解析をリセット」を押して、右側のAIテキストルートへ切り替えればOKです。</span></div>
+          </section>
+
+          <section class="answer-route-card ai-route-card">
+            <div class="route-card-head">
+              <div><span class="route-kicker">ROUTE B</span><h3>AIで作ったテキストから読み取る</h3><p class="muted small">AIに模範解答PDFを読ませ、T-DX Lab形式で出力したテキストを貼り付けます。複雑な2列表にもおすすめです。</p></div>
+              <span class="route-badge recommend">おすすめ</span>
+            </div>
+            <div class="answer-source-box answer-source-box-v113">
+              <textarea id="answerTextInput" class="answer-text-input" placeholder="第1問|20
 ア,イ|0,3|2|完答
 ウ|3|2|通常
 エ,オ|e,4|2|完答
@@ -145,23 +161,20 @@
 第2問|30
 ア,イ|2,4|3|順不同+完答
 ..."></textarea>
-            <div class="text-format-help">
-              <div><strong>T-DX Lab用テキスト形式</strong><small>1行＝「解答記号｜正答｜配点｜採点方式」。大問は「第1問｜20」のように書きます。</small></div>
-              <div class="actions compact-actions"><button id="copyTextTemplateBtn" type="button" class="secondary glass-btn">入力フォーマットをコピー</button><button id="copyAiPromptBtn" type="button" class="secondary glass-btn">AI読取プロンプトをコピー</button></div>
+              <div class="text-format-help">
+                <div><strong>T-DX Lab用テキスト形式</strong><small>1行＝「解答記号｜正答｜配点｜採点方式」。大問は「第1問｜20」のように書きます。</small></div>
+                <div class="actions compact-actions"><button id="copyTextTemplateBtn" type="button" class="secondary glass-btn">入力フォーマットをコピー</button><button id="copyAiPromptBtn" type="button" class="secondary glass-btn">AI読取プロンプトをコピー</button></div>
+              </div>
             </div>
-          </div>
-          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button><button id="parsePastedTextBtn" class="secondary glass-btn">貼付テキストから解析</button><button id="resetExamParseBtn" class="secondary glass-btn reset-analysis-btn">解析をリセット</button></div>
-          <div id="examSourceMsg" class="small muted"></div>
+            <div class="actions route-actions"><button id="parsePastedTextBtn" class="teacher-action">貼付テキストから解析</button></div>
+          </section>
         </div>
-        <div>
-          <div class="info-strip teacher-strip"><span>AUTO</span> 文字として保存されたPDFなら、試験名・大問・設問・正答・「順不同」「完答」などを可能な範囲で自動抽出します。</div>
-          <div class="future-feature-stack">
-            <div><strong>生徒画面に近い見た目</strong><small>正答の選択肢を色付きで確認し、読み取りミスを見つけやすくします。</small></div>
-            <div><strong>必要な所だけ修正</strong><small>設問名・正答・配点・採点方式・グループ・選択肢をその場で変更できます。</small></div>
-            <div><strong>詳細設定は折りたたみ</strong><small>通常は正答確認に集中し、特殊採点だけ必要に応じて開きます。</small></div>
-          </div>
-          <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。ここをコピーして上のテキスト版模範解答へ貼り付け、修正して再解析することもできます。"></textarea></details>
+
+        <div class="exam-source-footer-v113">
+          <div class="source-reset-help"><strong>読み取りをやり直す</strong><span>現在の解析結果だけを消し、試験名・満点・選択肢範囲は残します。</span></div>
+          <button id="resetExamParseBtn" class="secondary glass-btn reset-analysis-btn">解析をリセット</button>
         </div>
+        <div id="examSourceMsg" class="small muted"></div>
       </div>
 
       <section id="examReviewPanel" class="exam-review-panel hidden">
