@@ -76,7 +76,7 @@ function buildQuickPdfSheet(r){
   const overallRate=totalPoints?Math.round(r.total/totalPoints*100):0;
   const sheet=document.createElement('div');sheet.className='pdf-quick-sheet';
   const header=document.createElement('div');header.className='pdf-quick-header';
-  header.innerHTML='<div><div class="pdf-brand">T-DX Lab☆問題演習システム</div><div class="pdf-kicker">QUICK RESULT / 速報版</div></div><div class="pdf-a4-badge">A4 / 1 PAGE</div>';
+  header.innerHTML='<div><div class="pdf-brand">T-DX Lab☆問題演習システム</div><div class="pdf-kicker">QUICK RESULT / 速報版</div></div><div class="pdf-a4-badge">1 / 2</div>';
   sheet.appendChild(header);
   const title=document.createElement('h1');title.className='pdf-quick-title';title.textContent=currentExam.title;sheet.appendChild(title);
   const meta=document.createElement('div');meta.className='pdf-quick-meta';
@@ -93,22 +93,66 @@ function buildQuickPdfSheet(r){
   const footer=document.createElement('div');footer.className='pdf-quick-footer';footer.textContent='T-DX Lab - 学びを、データで次の一問へ。';sheet.appendChild(footer);
   return sheet;
 }
+function buildQuestionPdfSheet(r){
+  const sheet=document.createElement('div');sheet.className='pdf-question-sheet';
+  const header=document.createElement('div');header.className='pdf-quick-header';
+  header.innerHTML='<div><div class="pdf-brand">T-DX Lab☆問題演習システム</div><div class="pdf-kicker">QUESTION CHECK / 設問別結果</div></div><div class="pdf-a4-badge">2 / 2</div>';
+  sheet.appendChild(header);
+  const title=document.createElement('h1');title.className='pdf-question-title';title.textContent=currentExam.title;sheet.appendChild(title);
+  const correctCount=r.detail.filter(d=>d.correct).length;
+  const wrongCount=r.detail.length-correctCount;
+  const summary=document.createElement('div');summary.className='pdf-question-summary';
+  summary.innerHTML=`<div><span>4桁番号</span><strong>${currentUser.studentCode}</strong></div><div class="good"><span>○ 正解</span><strong>${correctCount}</strong></div><div class="bad"><span>× 不正解</span><strong>${wrongCount}</strong></div><div><span>解答欄</span><strong>${r.detail.length}</strong></div>`;
+  sheet.appendChild(summary);
+  const note=document.createElement('div');note.className='pdf-question-note';note.textContent='各解答欄の判定を一覧で確認できます。完答問題は、グループ全体が正解した場合に○となります。';sheet.appendChild(note);
+  const columnCount=r.detail.length>72?3:2;
+  const grid=document.createElement('div');grid.className=`pdf-question-grid ${columnCount===3?'three-cols':'two-cols'}`;
+  const perCol=Math.ceil(r.detail.length/columnCount);
+  for(let c=0;c<columnCount;c++){
+    const rows=r.detail.slice(c*perCol,(c+1)*perCol);
+    if(!rows.length)continue;
+    const table=document.createElement('table');table.className='pdf-question-table';
+    table.innerHTML='<thead><tr><th>設問</th><th>判定</th></tr></thead><tbody></tbody>';
+    const body=table.querySelector('tbody');
+    rows.forEach(d=>{
+      const tr=document.createElement('tr');
+      const label=document.createElement('td');label.className='pdf-question-label';label.textContent=d.q.label;
+      const mark=document.createElement('td');mark.className=`pdf-question-mark ${d.correct?'ok':'ng'}`;mark.textContent=d.correct?'○':'×';
+      tr.append(label,mark);body.appendChild(tr);
+    });
+    grid.appendChild(table);
+  }
+  sheet.appendChild(grid);
+  const footer=document.createElement('div');footer.className='pdf-quick-footer';footer.textContent='T-DX Lab - 学びを、データで次の一問へ。';sheet.appendChild(footer);
+  return sheet;
+}
+async function capturePdfSheet(sheet){
+  document.body.appendChild(sheet);
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const canvas=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,scrollX:0,scrollY:0});
+  sheet.remove();
+  return canvas;
+}
+function addCanvasToPdfPage(doc,canvas){
+  const pageW=210,pageH=297,margin=8,maxW=pageW-margin*2,maxH=pageH-margin*2,ratio=canvas.width/canvas.height;
+  let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}
+  const x=(pageW-w)/2,y=(pageH-h)/2;
+  doc.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',x,y,w,h,undefined,'FAST');
+}
 async function pdf(){
   if(!lastResult||!currentExam||!currentUser)return;
   const btn=$('pdfBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='PDF作成中…';
-  const name=`${currentExam.subject}_${currentExam.title}_${currentUser.studentCode}_速報版.pdf`.replace(/[\\/:*?"<>|]/g,'_');let sheet=null;
+  const name=`${currentExam.subject}_${currentExam.title}_${currentUser.studentCode}_速報版.pdf`.replace(/[\\/:*?"<>|]/g,'_');
   try{
     if(!window.html2canvas||!window.jspdf?.jsPDF)throw new Error('PDFライブラリを読み込めませんでした。');
-    sheet=buildQuickPdfSheet(lastResult);document.body.appendChild(sheet);
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,scrollX:0,scrollY:0});
+    const first=await capturePdfSheet(buildQuickPdfSheet(lastResult));
+    const second=await capturePdfSheet(buildQuestionPdfSheet(lastResult));
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
-    const pageW=210,pageH=297,margin=8,maxW=pageW-margin*2,maxH=pageH-margin*2,ratio=canvas.width/canvas.height;
-    let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}
-    const x=(pageW-w)/2,y=(pageH-h)/2;
-    doc.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',x,y,w,h,undefined,'FAST');
+    addCanvasToPdfPage(doc,first);
+    doc.addPage('a4','portrait');
+    addCanvasToPdfPage(doc,second);
     doc.save(name);
-  }catch(e){console.error(e);alert(`PDFを作成できませんでした。${e.message||''}`)}finally{if(sheet)sheet.remove();btn.disabled=false;btn.textContent=old}
+  }catch(e){console.error(e);document.querySelectorAll('.pdf-quick-sheet,.pdf-question-sheet').forEach(x=>x.remove());alert(`PDFを作成できませんでした。${e.message||''}`)}finally{btn.disabled=false;btn.textContent=old}
 }
 function parseQrPayload(text){
   const m=String(text||'').trim().match(/^TDX\|(\d{4})\|([A-Z0-9-]{10,})$/i);if(!m)return null;return {studentCode:m[1],accessCode:m[2].toUpperCase()};
