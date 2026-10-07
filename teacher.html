@@ -119,19 +119,39 @@
           <label>教科</label><input id="examSubjectInput" placeholder="例：情報Ⅰ">
           <label>満点</label><input id="examTotalPoints" type="number" min="1" value="100">
           <label>GoogleフォームURL</label><input id="formUrl" placeholder="https://docs.google.com/forms/...">
+
+          <div class="choice-range-box">
+            <div class="section-title compact-title">
+              <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字の範囲を先に指定してください。</p></div>
+            </div>
+            <div class="choice-range-grid">
+              <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
+              <div class="range-pair"><label>最小<input id="numberChoiceStart" type="number" min="0" max="99" value="0"></label><span>〜</span><label>最大<input id="numberChoiceEnd" type="number" min="0" max="99" value="9"></label></div>
+              <label class="range-enable"><input id="useLetterChoices" type="checkbox" checked> 英字を使う</label>
+              <div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
+            </div>
+            <div class="choice-preview"><span>この試験の選択肢</span><div id="globalChoicePreview" class="choice-chip-list"></div></div>
+          </div>
+
           <label>模範解答PDF</label><input id="answerPdf" type="file" accept="application/pdf">
           <div class="answer-source-box">
-            <div class="section-title compact-title"><div><h3>テキスト版模範解答（任意）</h3><p class="muted small">出版社等からテキストデータがある場合はこちらに貼り付けると解析精度が上がります。PDFは左側の確認用表示として併用できます。</p></div></div>
-            <textarea id="answerTextInput" class="answer-text-input" placeholder="例：
-第1問（20点）
-ア,イ 0,3 2
-ウ 3 2
-エ,オ 4,2 4
+            <div class="section-title compact-title"><div><h3>テキスト版模範解答（PDFが読めない場合）</h3><p class="muted small">PDF解析が崩れた場合は「解析をリセット」→ AI等で作ったT-DX Lab形式のテキストを貼り付け →「貼付テキストから解析」の順でやり直せます。</p></div></div>
+            <textarea id="answerTextInput" class="answer-text-input" placeholder="第1問|20
+ア,イ|0,3|2|完答
+ウ|3|2|通常
+エ,オ|e,4|2|完答
 ...
 
-※ PDFから抽出した生テキストを貼って再解析することもできます。"></textarea>
+第2問|30
+ア,イ|2,4|3|順不同+完答
+..."></textarea>
+            <div class="text-format-help">
+              <div><strong>T-DX Lab用テキスト形式</strong><small>1行＝「解答記号｜正答｜配点｜採点方式」。大問は「第1問｜20」のように書きます。</small></div>
+              <div class="actions compact-actions"><button id="copyTextTemplateBtn" type="button" class="secondary glass-btn">入力フォーマットをコピー</button><button id="copyAiPromptBtn" type="button" class="secondary glass-btn">AI読取プロンプトをコピー</button></div>
+            </div>
           </div>
-          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button><button id="parsePastedTextBtn" class="secondary glass-btn">貼付テキストから解析</button></div>
+          <div class="actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button><button id="parsePastedTextBtn" class="secondary glass-btn">貼付テキストから解析</button><button id="resetExamParseBtn" class="secondary glass-btn reset-analysis-btn">解析をリセット</button></div>
+          <div id="examSourceMsg" class="small muted"></div>
         </div>
         <div>
           <div class="info-strip teacher-strip"><span>AUTO</span> 文字として保存されたPDFなら、試験名・大問・設問・正答・「順不同」「完答」などを可能な範囲で自動抽出します。</div>
@@ -151,6 +171,7 @@
         </div>
 
         <div id="parseSummary" class="grid four analysis-kpis"></div>
+        <div id="sectionPointsSummary" class="section-points-summary"></div>
         <div class="pdf-review-workspace">
           <div class="pdf-page-column">
             <div class="section-title compact-title"><div><h3>模範解答PDF</h3><p class="muted small">実際のPDFを見ながら右側の正答を確認できます。</p></div></div>
@@ -159,8 +180,8 @@
           <div class="pdf-answer-column">
             <div class="section-title compact-title"><div><h3>読み取り結果</h3><p class="muted small">生徒回答画面と同じ感覚で、読み取った正答を確認・修正します。</p></div></div>
             <div class="review-toolbar">
-          <label>未設定の選択肢に一括設定 <input id="defaultOptions" value="0,1,2,3"></label>
-          <button id="applyDefaultOptionsBtn" class="secondary glass-btn">空欄へ適用</button>
+          <div class="review-global-options"><span>選択肢</span><strong id="reviewChoiceRangeText">0〜9 / a〜f</strong><small>STEP 1で指定した範囲を全設問に使用</small></div>
+          <button id="applyDefaultOptionsBtn" class="secondary glass-btn">指定範囲を全設問へ再適用</button>
           <button id="checkPointsBtn" class="secondary glass-btn">配点をチェック</button>
             </div>
             <div id="examEditorCards" class="exam-preview-editor"></div>

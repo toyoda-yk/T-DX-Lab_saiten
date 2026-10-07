@@ -3,6 +3,7 @@ const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1
 let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
 let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
+let editorSectionTargets={};
 let rosterRanges=[];
 
 async function init(){
@@ -17,6 +18,7 @@ async function init(){
   rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
   if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   refreshExamSelects();
+  initChoiceRangeControls();
   bind();
   renderRosterRanges();
   renderRosterSummary();
@@ -52,6 +54,9 @@ function bind(){
 
   $('readPdfBtn').onclick=readPdf;
   $('parsePastedTextBtn').onclick=()=>analyzeAnswerSource('pasted');
+  $('resetExamParseBtn').onclick=resetExamParse;
+  $('copyTextTemplateBtn').onclick=copyTextTemplate;
+  $('copyAiPromptBtn').onclick=copyAiPrompt;
   $('reparseTextBtn').onclick=()=>analyzeAnswerSource($('answerTextInput').value.trim()?'pasted':'pdf');
   $('addQuestionRowBtn').onclick=()=>addEditorRow();
   $('applyDefaultOptionsBtn').onclick=applyDefaultOptions;
@@ -477,7 +482,65 @@ async function printAnnualCards(){
 }
 
 // ===== PDF / pasted text → editable exam draft =====
-function toHalfWidth(s){return String(s||'').replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/：/g,':').replace(/，/g,',').replace(/＝/g,'=')}
+function toHalfWidth(s){
+  return String(s||'')
+    .replace(/[０-９Ａ-Ｚａ-ｚ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0))
+    .replace(/[：]/g,':').replace(/[，、]/g,',').replace(/[＝]/g,'=').replace(/[＋]/g,'+').replace(/[｜]/g,'|');
+}
+function initChoiceRangeControls(){
+  const letters='abcdefghijklmnopqrstuvwxyz'.split('');
+  const start=$('letterChoiceStart'),end=$('letterChoiceEnd');
+  if(start&&end){
+    start.innerHTML=letters.map(x=>`<option value="${x}" ${x==='a'?'selected':''}>${x}</option>`).join('');
+    end.innerHTML=letters.map(x=>`<option value="${x}" ${x==='f'?'selected':''}>${x}</option>`).join('');
+  }
+  ['useNumberChoices','numberChoiceStart','numberChoiceEnd','useLetterChoices','letterChoiceStart','letterChoiceEnd'].forEach(id=>{
+    $(id)?.addEventListener('change',()=>{renderGlobalChoicePreview();applyConfiguredOptionsToEmptyRows(false)});
+    $(id)?.addEventListener('input',()=>{renderGlobalChoicePreview()});
+  });
+  renderGlobalChoicePreview();
+}
+function configuredChoices(){
+  const out=[];
+  if($('useNumberChoices')?.checked){
+    let a=Math.max(0,Number($('numberChoiceStart')?.value||0)),b=Math.max(0,Number($('numberChoiceEnd')?.value||9));
+    if(a>b)[a,b]=[b,a];
+    for(let n=a;n<=b&&out.length<100;n++)out.push(String(n));
+  }
+  if($('useLetterChoices')?.checked){
+    const alphabet='abcdefghijklmnopqrstuvwxyz',a=alphabet.indexOf($('letterChoiceStart')?.value||'a'),b=alphabet.indexOf($('letterChoiceEnd')?.value||'f');
+    let lo=Math.max(0,Math.min(a,b)),hi=Math.max(0,Math.max(a,b));
+    for(let i=lo;i<=hi;i++)out.push(alphabet[i]);
+  }
+  return [...new Set(out)];
+}
+function configuredOptionsCsv(){return configuredChoices().join(',')}
+function choiceRangeLabel(){
+  const parts=[];
+  if($('useNumberChoices')?.checked)parts.push(`${$('numberChoiceStart').value}〜${$('numberChoiceEnd').value}`);
+  if($('useLetterChoices')?.checked)parts.push(`${$('letterChoiceStart').value}〜${$('letterChoiceEnd').value}`);
+  return parts.join(' / ')||'未設定';
+}
+function renderGlobalChoicePreview(){
+  const opts=configuredChoices(),root=$('globalChoicePreview');
+  if(root)root.innerHTML=opts.length?opts.map(x=>`<span>${esc(x)}</span>`).join(''):'<em>選択肢を1つ以上指定してください</em>';
+  if($('reviewChoiceRangeText'))$('reviewChoiceRangeText').textContent=choiceRangeLabel();
+}
+function ensureChoicesConfigured(){
+  if(configuredChoices().length)return true;
+  alert('先に、この試験で使う選択肢の数字範囲または英字範囲を指定してください。');
+  $('useNumberChoices')?.focus();return false;
+}
+function applyConfiguredOptionsToEmptyRows(render=true){
+  const csv=configuredOptionsCsv();
+  if(!csv)return;
+  editorRows.forEach(r=>{if(!r.options)r.options=csv});
+  if(render&&editorRows.length)renderEditor();
+}
+function applyConfiguredOptionsToAllRows(){
+  const csv=configuredOptionsCsv();if(!csv){ensureChoicesConfigured();return}
+  editorRows.forEach(r=>r.options=csv);renderEditor();
+}
 function clusterLines(pts){
   const lines=[];
   for(const p of pts){let line=lines.find(l=>Math.abs(l.y-p.y)<2.2);if(!line){line={y:p.y,parts:[]};lines.push(line)}line.parts.push(p)}
@@ -488,17 +551,15 @@ function extractPageLines(items,pageWidth=0){
   const pts=items.filter(x=>x.str&&x.str.trim()).map(x=>({str:x.str.trim(),x:x.transform?.[4]||0,y:x.transform?.[5]||0}));
   if(!pageWidth)return clusterLines(pts);
   const mid=pageWidth*0.5,left=pts.filter(p=>p.x<mid),right=pts.filter(p=>p.x>=mid);
-  // 2段組の解答表では、左右を別々に読む方が視覚上の順序に近くなる。
   const enoughColumns=left.length>=8&&right.length>=8;
-  if(enoughColumns){
-    const l=clusterLines(left),r=clusterLines(right);
-    return [...l,...r];
-  }
+  if(enoughColumns)return [...clusterLines(left),...clusterLines(right)];
   return clusterLines(pts);
 }
 async function readPdf(){
+  if(!ensureChoicesConfigured())return;
   const f=$('answerPdf').files[0];if(!f){alert('PDFを選択してください。');return}
   try{
+    $('examSourceMsg').className='small muted';$('examSourceMsg').textContent='PDFを読み取っています…';
     const buf=await f.arrayBuffer(),pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs');
     pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
     const pdf=await pdfjs.getDocument({data:buf}).promise;let pages=[];
@@ -508,8 +569,9 @@ async function readPdf(){
       pages.push(`--- page ${p} ---\n${extractPageLines(tc.items,w).join('\n')}`)
     }
     const text=pages.join('\n');$('pdfText').value=text;
-    if($('answerTextInput').value.trim()) analyzeAnswerSource('pasted'); else analyzeAnswerSource('pdf');
-  }catch(e){console.error(e);alert('PDF読み取りに失敗しました。文字として保存されたPDFか、ネットワーク環境を確認してください。')}
+    analyzeAnswerSource('pdf');
+    $('examSourceMsg').className='success small';$('examSourceMsg').textContent='PDFを読み取りました。右側の確認画面で正答・配点を確認してください。崩れている場合は「解析をリセット」してテキスト解析へ切り替えられます。';
+  }catch(e){console.error(e);$('examSourceMsg').className='error small';$('examSourceMsg').textContent='PDF読み取りに失敗しました。「解析をリセット」後、AI等で作成したT-DX Lab形式のテキストを貼り付けて解析してください。'}
 }
 async function renderPdfPages(pdf){
   const root=$('pdfPagePreview');if(!root)return;
@@ -523,91 +585,156 @@ async function renderPdfPages(pdf){
     await page.render({canvasContext:ctx,viewport}).promise;
   }
 }
+function resetExamParse(){
+  editorRows=[];editorSectionTargets={};
+  if($('answerPdf'))$('answerPdf').value='';
+  if($('pdfText'))$('pdfText').value='';
+  if($('pdfPagePreview'))$('pdfPagePreview').innerHTML='<div class="notice small">PDF解析をリセットしました。テキスト解析へ切り替える場合は、左側のテキスト欄へT-DX Lab形式の模範解答を貼り付けてください。</div>';
+  if($('examEditorCards'))$('examEditorCards').innerHTML='';
+  if($('parseSummary'))$('parseSummary').innerHTML='';
+  if($('sectionPointsSummary'))$('sectionPointsSummary').innerHTML='';
+  if($('pointsCheckMsg'))$('pointsCheckMsg').textContent='';
+  $('examReviewPanel')?.classList.add('hidden');
+  $('examSourceMsg').className='notice small';$('examSourceMsg').textContent='解析結果をリセットしました。選択肢の範囲と基本情報は残しています。テキスト模範解答を貼り付けて再解析できます。';
+  $('answerTextInput')?.focus();
+}
 function deriveSection(label,current='第1問'){
   const m=label.match(/第\s*(\d+)\s*問\s*([A-DＡ-Ｄ]?)/);if(!m)return current;
   return `第${m[1]}問${m[2]?m[2].replace('Ａ','A').replace('Ｂ','B').replace('Ｃ','C').replace('Ｄ','D'):''}`;
 }
 function lastKana(label){const m=label.match(/([ア-ン])(?:\s*[（(]|\s*$)/);return m?m[1]:''}
 function normalizeLettersToken(s){return (String(s||'').match(/[ア-ン]/g)||[])}
-function normalizeNumberList(s){return (String(s||'').match(/\d+(?:\.\d+)?/g)||[]).map(String)}
+function normalizedChoiceValue(v){
+  let s=toHalfWidth(v).trim();
+  if(/^[A-Za-z]$/.test(s))s=s.toLowerCase();
+  return s;
+}
+function parseAnswerValuesToken(s){
+  const allowed=new Set(configuredChoices().map(normalizedChoiceValue));
+  return toHalfWidth(s).replace(/[、]/g,',').split(',').map(x=>normalizedChoiceValue(x)).filter(x=>x&&allowed.has(x));
+}
+function extractSectionTargets(raw){
+  const lines=toHalfWidth(raw).split(/\r?\n/).map(x=>x.trim()).filter(Boolean),targets={};let pending='';
+  for(const src of lines){
+    const line=src.replace(/\s+/g,' ');
+    let m=line.match(/第\s*(\d+)\s*問\s*([A-D]?)\s*(?:[|]\s*)?(?:[（(]\s*)?(\d+(?:\.\d+)?)\s*(?:点)?\s*[）)]?/);
+    if(m&&(/\||[（(]|点/.test(line))){targets[`第${m[1]}問${m[2]||''}`]=Number(m[3]);pending='';continue}
+    m=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);if(m){pending=`第${m[1]}問${m[2]||''}`;const pm=line.match(/[（(]\s*(\d+(?:\.\d+)?)\s*(?:点)?\s*[）)]/);if(pm){targets[pending]=Number(pm[1]);pending=''};continue}
+    if(pending){const pm=line.match(/^[（(]?\s*(\d+(?:\.\d+)?)\s*(?:点)?\s*[）)]?$/);if(pm){targets[pending]=Number(pm[1]);pending=''}}
+  }
+  return targets;
+}
+function gradingTypeFromText(v,multi=false){
+  const t=String(v||'').replace(/\s+/g,'').replace(/＋/g,'+');
+  if(/順不同.*完答|順序は問わない.*完答/.test(t))return 'unordered_complete_item';
+  if(/順不同|順序は問わない/.test(t))return multi?'unordered_item':'unordered_item';
+  if(/完答/.test(t))return 'complete_item';
+  return multi?'complete_item':'normal';
+}
+function parseStructuredAnswerText(raw){
+  const lines=toHalfWidth(raw).split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!/^#/.test(x));
+  if(!lines.some(x=>x.includes('|')))return null;
+  const rows=[],targets={};let currentSection='第1問',groupSeq=0,recognized=0;
+  for(const src of lines){
+    const parts=src.split('|').map(x=>x.trim());
+    if(parts.length<2)continue;
+    const key=parts[0];
+    if(/^試験名$/.test(key)){if(!$('examName').value.trim())$('examName').value=parts.slice(1).join('|');continue}
+    if(/^教科$/.test(key)){if(!$('examSubjectInput').value.trim())$('examSubjectInput').value=parts.slice(1).join('|');continue}
+    if(/^満点$/.test(key)){const n=Number(parts[1]);if(Number.isFinite(n)&&n>0)$('examTotalPoints').value=n;continue}
+    const sm=key.match(/^第\s*(\d+)\s*問\s*([A-D]?)$/);
+    if(sm){currentSection=`第${sm[1]}問${sm[2]||''}`;const n=Number(parts[1]);if(Number.isFinite(n))targets[currentSection]=n;recognized++;continue}
+    if(parts.length<3)continue;
+    const labels=normalizeLettersToken(key),answers=parts[1].split(/[,、]/).map(normalizedChoiceValue).filter(Boolean),point=parts[2],mode=parts[3]||'';
+    if(!labels.length)continue;
+    const multi=labels.length>1,type=gradingTypeFromText(mode,multi),group=multi?`g_${currentSection.replace(/\W/g,'')}_${++groupSeq}`:'';
+    const allowed=new Set(configuredChoices().map(normalizedChoiceValue));
+    labels.forEach((letter,j)=>{
+      const answer=answers[j]||'',valid=answer&&allowed.has(answer);
+      rows.push({section:currentSection,label:`${currentSection} ${letter}`,answer,
+        points:(multi&&['complete_item','unordered_complete_item'].includes(type))?'':point,
+        type,group,groupPoints:(multi&&['complete_item','unordered_complete_item'].includes(type))?point:'',
+        options:configuredOptionsCsv(),confidence:(valid&&answers.length>=labels.length)?'高':'要確認',sourceLine:src});
+    });
+    recognized++;
+  }
+  return recognized?{rows,targets}:null;
+}
 function tableStyleRows(lines){
   const rows=[];let currentSection='第1問',groupSeq=0;
-  let sectionMeta={unordered:false,complete:false,points:''};
   for(const src of lines){
     const line=toHalfWidth(src).replace(/[，、]/g,',').replace(/\s+/g,' ').trim();
-    const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);
-    if(sm){
-      currentSection=`第${sm[1]}問${sm[2]||''}`;
-      sectionMeta={unordered:/順序は問わない|順不同/.test(line),complete:/完答/.test(line),points:''};
-      const pm=line.match(/各\s*(\d+(?:\.\d+)?)/);if(pm)sectionMeta.points=pm[1];
-    }
+    const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);if(sm)currentSection=`第${sm[1]}問${sm[2]||''}`;
     const toks=line.split(' ').filter(Boolean);
     for(let i=0;i<toks.length-1;i++){
-      const key=toks[i],ans=toks[i+1];
-      const letters=normalizeLettersToken(key),nums=normalizeNumberList(ans);
-      if(!letters.length||!nums.length)continue;
-      if(key.length>24||ans.length>40)continue;
-      // 直後にある数値を「この行の配点」候補として拾う。
+      const key=toks[i],ans=toks[i+1],letters=normalizeLettersToken(key),answers=parseAnswerValuesToken(ans);
+      if(!letters.length||!answers.length||key.length>24||ans.length>40)continue;
       const pointTok=toks[i+2]&&/^\d+(?:\.\d+)?$/.test(toks[i+2])?toks[i+2]:'';
-      const unordered=sectionMeta.unordered||/順序は問わない|順不同/.test(line);
-      if(letters.length>1 && nums.length>=letters.length){
-        const answers=nums.slice(0,letters.length),group=`g_${currentSection.replace(/\W/g,'')}_${++groupSeq}`;
-        letters.forEach((letter,j)=>rows.push({
-          section:currentSection,label:`${currentSection} ${letter}`,answer:answers[j]||'',points:'',
-          type:unordered?'unordered_complete_item':'complete_item',group,groupPoints:pointTok||sectionMeta.points||'',
-          options:'',confidence:pointTok?'高':'要確認',sourceLine:src
-        }));
+      const unordered=/順序は問わない|順不同/.test(line);
+      const eachPoint=(line.match(/各\s*(\d+(?:\.\d+)?)/)||[])[1]||'';
+      if(letters.length>1&&answers.length>=letters.length){
+        const group=`g_${currentSection.replace(/\W/g,'')}_${++groupSeq}`;
+        // 「各2」の記載がある順不同は各欄採点、それ以外の複数欄は1まとまりの完答として扱う。
+        const type=unordered&&eachPoint?'unordered_item':unordered?'unordered_complete_item':'complete_item';
+        letters.forEach((letter,j)=>rows.push({section:currentSection,label:`${currentSection} ${letter}`,answer:answers[j]||'',
+          points:type==='unordered_item'?(eachPoint||''):'',type,group,groupPoints:type==='unordered_item'?'':(pointTok||''),
+          options:configuredOptionsCsv(),confidence:(pointTok||eachPoint)?'高':'要確認',sourceLine:src}));
         i+=pointTok?2:1;continue;
       }
-      // 単独欄
-      const letter=letters[0],answer=nums[0];
-      rows.push({section:currentSection,label:`${currentSection} ${letter}`,answer,points:pointTok||sectionMeta.points||'',type:'normal',group:'',groupPoints:'',options:'',confidence:pointTok?'高':'要確認',sourceLine:src});
+      const letter=letters[0],answer=answers[0];
+      rows.push({section:currentSection,label:`${currentSection} ${letter}`,answer,points:pointTok||'',type:'normal',group:'',groupPoints:'',options:configuredOptionsCsv(),confidence:pointTok?'高':'要確認',sourceLine:src});
       i+=pointTok?2:1;
     }
   }
   return rows;
 }
 function parseExamText(raw){
+  const structured=parseStructuredAnswerText(raw);
+  if(structured)return structured;
   const text=toHalfWidth(raw),lines=text.split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!/^--- page/.test(x));
-  const rows=[];let currentSection='第1問';const seen=new Set();
-  for(let i=0;i<lines.length;i++){
-    const line=lines[i].replace(/\s+/g,' ');
-    const sec=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);if(sec)currentSection=`第${sec[1]}問${sec[2]||''}`;
-    let label='',answer='',confidence='要確認';
-    const explicit=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*(?:正答|答|解答)\s*[:=]?\s*([0-9]+(?:\s*[,、]\s*[0-9]+)*)\b/);
-    const colon=line.match(/^(.{1,80}?(?:第\s*\d+\s*問[A-D]?\s*)?(?:問\s*\d+\s*)?[ア-ンA-Za-z])\s*[:=]\s*([0-9]+(?:\s*[,、]\s*[0-9]+)*)\b/);
-    const sameLine=line.match(/^((?:第\s*\d+\s*問[A-D]?\s*)+(?:問\s*\d+\s*)?[ア-ン])(?:\s*[（(][^）)]*[）)])?\s+([0-9]+(?:\s*[,、]\s*[0-9]+)*)\s*$/);
-    const m=explicit||colon||sameLine;
-    if(m){label=m[1].replace(/\s+/g,' ').trim();answer=m[2].replace(/[、\s]+/g,',');confidence=explicit?'高':'要確認'}
-    if(!label)continue;
-    const section=deriveSection(label,currentSection),key=`${section}|${label}|${answer}`;if(seen.has(key))continue;seen.add(key);
-    const low=/順不同|順序は問わない/.test(line),complete=/完答/.test(line);
-    rows.push({section,label,answer,points:'',type:complete?(low?'unordered_complete_item':'complete_item'):low?'unordered_item':'normal',group:'',groupPoints:'',options:'',confidence,sourceLine:line});
-  }
-  // 「Xと順不同」の組を自動グループ化
-  rows.forEach((r)=>{const m=r.sourceLine.match(/([ア-ン])\s*と\s*順不同/);if(!m)return;const a=lastKana(r.label),b=m[1];if(!a)return;const g=`u_${r.section.replace(/\W/g,'')}_${[a,b].sort().join('')}`;r.type='unordered_item';r.group=g;rows.forEach(x=>{if(x.section===r.section&&[a,b].includes(lastKana(x.label))){x.type='unordered_item';x.group=g}})});
-  // 「ア、イ、ウは完答」のような記述を探して同一大問内へ適用
-  for(const line of lines){const m=line.match(/([ア-ン](?:\s*[,、]\s*[ア-ン])+).*?完答/);if(!m)continue;const letters=m[1].match(/[ア-ン]/g)||[];if(letters.length<2)continue;const sm=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/),section=sm?`第${sm[1]}問${sm[2]||''}`:null;const g=`c_${(section||'sec').replace(/\W/g,'')}_${letters.join('')}`;rows.forEach(x=>{if((!section||x.section===section)&&letters.includes(lastKana(x.label))){x.type='complete_item';x.group=g}})}
-  const tableRows=tableStyleRows(lines);
-  // 表形式データが取れた場合はそちらを優先。貼付テキストにも同じロジックを使う。
-  if(tableRows.length>=rows.length && tableRows.length){
+  const tableRows=tableStyleRows(lines),targets=extractSectionTargets(raw);
+  if(tableRows.length){
     const dedup=[],keys=new Set();
     for(const r of tableRows){const key=`${r.section}|${r.label}|${r.answer}|${r.group}`;if(keys.has(key))continue;keys.add(key);dedup.push(r)}
-    return dedup;
+    return {rows:dedup,targets};
   }
-  return rows;
+  const rows=[];let currentSection='第1問';const seen=new Set();
+  for(const line0 of lines){
+    const line=line0.replace(/\s+/g,' '),sec=line.match(/第\s*(\d+)\s*問\s*([A-D]?)/);if(sec)currentSection=`第${sec[1]}問${sec[2]||''}`;
+    const m=line.match(/^(.{1,80}?[ア-ン])\s*(?:正答|答|解答|[:=])\s*([0-9A-Za-z]+(?:\s*[,、]\s*[0-9A-Za-z]+)*)/);if(!m)continue;
+    const label=m[1].trim(),answers=m[2].split(/[,、]/).map(normalizedChoiceValue),answer=answers[0]||'',section=deriveSection(label,currentSection),key=`${section}|${label}|${answer}`;if(seen.has(key))continue;seen.add(key);
+    rows.push({section,label,answer,points:'',type:'normal',group:'',groupPoints:'',options:configuredOptionsCsv(),confidence:'要確認',sourceLine:line});
+  }
+  return {rows,targets};
 }
 function analyzeAnswerSource(source='pdf'){
+  if(!ensureChoicesConfigured())return;
   const text=source==='pasted'?$('answerTextInput').value:$('pdfText').value;
   if(!text.trim()){alert(source==='pasted'?'模範解答テキストを貼り付けてください。':'先にPDFを読み取ってください。');return}
-  editorRows=parseExamText(text);
-  if(!editorRows.length) editorRows=[blankEditorRow()];
+  const parsed=parseExamText(text);editorRows=parsed.rows||[];editorSectionTargets=parsed.targets||{};
+  if(!editorRows.length)editorRows=[blankEditorRow()];
+  applyConfiguredOptionsToEmptyRows(false);
   $('examReviewPanel').classList.remove('hidden');renderEditor();
+  $('examSourceMsg').className=editorRows.some(r=>r.confidence==='要確認')?'notice small':'success small';
+  $('examSourceMsg').textContent=`${source==='pasted'?'テキスト':'PDF'}から ${editorRows.length}個の解答欄を解析しました。確認画面で正答と配点を確認してください。`;
   $('examReviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function analyzePdfText(text){$('pdfText').value=text;analyzeAnswerSource('pdf')}
-function blankEditorRow(){return {section:'第1問',label:'',answer:'',points:'',type:'normal',group:'',groupPoints:'',options:'',confidence:'要確認',sourceLine:''}}
-function addEditorRow(row=blankEditorRow()){editorRows.push({...row});renderEditor();setTimeout(()=>$('examEditorCards')?.lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
+function blankEditorRow(){return {section:'第1問',label:'',answer:'',points:'',type:'normal',group:'',groupPoints:'',options:configuredOptionsCsv(),confidence:'要確認',sourceLine:''}}
+function addEditorRow(row=blankEditorRow()){editorRows.push({...row,options:row.options||configuredOptionsCsv()});renderEditor();setTimeout(()=>$('examEditorCards')?.lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
+function textFormatTemplate(){
+  return `試験名|（試験名）\n教科|（教科名）\n満点|${$('examTotalPoints')?.value||100}\n\n第1問|20\nア,イ|0,3|2|完答\nウ|3|2|通常\nエ,オ|e,4|2|完答\n\n第2問|30\nア,イ|2,4|3|順不同+完答\nウ,エ,オ|4,8,1|3|完答\n\n# 採点方式は「通常」「完答」「順不同」「順不同+完答」のいずれか\n# 「順不同」は各欄採点。配点には各欄1つ分の点数を書く\n# 「完答」「順不同+完答」はグループ全体の配点を書く`;
+}
+async function copyTextTemplate(){
+  try{await navigator.clipboard.writeText(textFormatTemplate());$('examSourceMsg').className='success small';$('examSourceMsg').textContent='T-DX Lab用の入力フォーマットをコピーしました。'}catch(e){alert(textFormatTemplate())}
+}
+function aiPromptText(){
+  const choices=configuredChoices().join('、')||'（未設定）';
+  return `添付した模範解答PDFを読み取り、T-DX Lab☆問題演習システムに貼り付けられるテキストへ変換してください。\n\n【厳守】\n・説明や前置きは書かず、最後に示すフォーマットだけを出力する。\n・PDFに書かれている「大問」「解答記号」「正答」「配点」を忠実に転記する。\n・推測しない。読めない箇所は正答または配点に「要確認」と書く。\n・この試験のマーク選択肢は ${choices}。選択肢そのものの一覧は出力しない。\n・複数の解答記号が1行にまとまり、その行全体で配点されている場合は「完答」。\n・「解答の順序は問わない」「順不同」等の注記があり、グループ全体で配点される場合は「順不同+完答」。\n・「解答の順序は問わない」かつ「各2点」のように各欄に配点される場合は「順不同」とし、配点欄には各欄1つ分の点数を書く。\n・単独の解答欄は「通常」。\n・大問ごとの配点も必ず出力する。\n\n【出力形式】\n試験名|PDFに記載された試験名\n教科|PDFに記載された教科\n満点|100\n\n第1問|20\nア,イ|0,3|2|完答\nウ|3|2|通常\nエ,オ|e,4|2|完答\n\n第2問|30\nア,イ|2,4|3|順不同+完答\n...\n\n各設問行は必ず「解答記号|正答|配点|採点方式」の4項目にしてください。`;
+}
+async function copyAiPrompt(){
+  try{await navigator.clipboard.writeText(aiPromptText());$('examSourceMsg').className='success small';$('examSourceMsg').textContent='AI読取用プロンプトをコピーしました。模範解答PDFと一緒にChatGPTやClaude等へ渡してください。'}catch(e){alert(aiPromptText())}
+}
 function editorBlocks(){
   const blocks=[],used=new Set();
   editorRows.forEach((r,i)=>{
@@ -634,12 +761,8 @@ function moveEditorBlock(index,dir){
 }
 function typeOptions(value){return [['normal','通常（1欄ずつ採点）'],['unordered_item','順不同（各欄採点）'],['complete_item','完答（全欄一致で得点）'],['unordered_complete_item','順不同＋完答（全欄一致で得点）']].map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}
 function reviewDisplayOptions(r){
-  const explicit=String(r.options||'').split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean);
-  if(explicit.length)return {options:explicit,inferred:false};
-  const nums=String(r.answer||'').split(/[,、\s]+/).map(x=>Number(x)).filter(Number.isFinite);
-  const n=nums.length?Math.max(...nums):-1;
-  if(Number.isInteger(n)&&n>=0&&n<=12)return {options:Array.from({length:Math.max(4,n+1)},(_,i)=>String(i)),inferred:true};
-  return {options:[],inferred:true};
+  const explicit=String(r.options||configuredOptionsCsv()).split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean);
+  return {options:explicit,inferred:false};
 }
 function groupPeers(index){
   const r=editorRows[index];
@@ -745,32 +868,55 @@ function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'
 function updateParseSummary(){
   const n=editorRows.length,uncertain=editorRows.filter(r=>r.confidence==='要確認').length,special=editorRows.filter(r=>r.type!=='normal').length,sections=new Set(editorRows.map(r=>r.section).filter(Boolean)).size;
   $('parseSummary').innerHTML=`<div class="kpi"><div class="muted small">認識設問</div><div class="value">${n}</div></div><div class="kpi"><div class="muted small">大問</div><div class="value">${sections}</div></div><div class="kpi"><div class="muted small">特殊採点</div><div class="value">${special}</div></div><div class="kpi ${uncertain?'kpi-warn':''}"><div class="muted small">要確認</div><div class="value">${uncertain}</div></div>`;
+  renderSectionPointsSummary();
 }
-function applyDefaultOptions(){const v=$('defaultOptions').value.trim();editorRows.forEach(r=>{if(!r.options)r.options=v});renderEditor()}
+function applyDefaultOptions(){applyConfiguredOptionsToAllRows()}
 function rowPointTotal(rows=editorRows){
   let total=0,seen=new Set();
   for(const r of rows){if(['complete_item','unordered_complete_item'].includes(r.type)){const g=r.group||`__row_${rows.indexOf(r)}`;if(seen.has(g))continue;seen.add(g);total+=Number(r.groupPoints||0)}else total+=Number(r.points||0)}
   return total;
 }
-function checkPoints(){const total=rowPointTotal(),target=Number($('examTotalPoints').value)||100,ok=Math.abs(total-target)<0.0001;$('pointsCheckMsg').className=(ok?'success':'error')+' small';$('pointsCheckMsg').textContent=`現在の合計配点：${total}点 / 設定した満点：${target}点${ok?' ✓':'　※配点を確認してください。'}`;return ok}
+function sectionActualPoints(section){return rowPointTotal(editorRows.filter(r=>r.section===section))}
+function renderSectionPointsSummary(){
+  const root=$('sectionPointsSummary');if(!root)return;
+  const sections=[...new Set([...Object.keys(editorSectionTargets),...editorRows.map(r=>r.section).filter(Boolean)])];
+  const cards=sections.map(sec=>{const actual=sectionActualPoints(sec),expected=editorSectionTargets[sec],known=Number.isFinite(Number(expected)),ok=!known||Math.abs(actual-Number(expected))<.0001;return `<div class="section-score-card ${ok?'ok':'warn'}"><span>${esc(sec)}</span><strong>${actual}${known?` / ${Number(expected)}`:''}点</strong><small>${known?(ok?'✓ 配点一致':'⚠ 要確認'):'大問配点未取得'}</small></div>`}).join('');
+  const total=rowPointTotal(),target=Number($('examTotalPoints').value)||100,totalOk=Math.abs(total-target)<.0001;
+  root.innerHTML=`${cards}<div class="section-score-card total ${totalOk?'ok':'warn'}"><span>合計</span><strong>${total} / ${target}点</strong><small>${totalOk?'✓ 満点と一致':'⚠ 合計点を確認'}</small></div>`;
+}
+function checkPoints(){
+  renderSectionPointsSummary();
+  const total=rowPointTotal(),target=Number($('examTotalPoints').value)||100,totalOk=Math.abs(total-target)<0.0001;
+  const sectionErrors=Object.entries(editorSectionTargets).filter(([sec,expected])=>Math.abs(sectionActualPoints(sec)-Number(expected))>.0001);
+  const ok=totalOk&&!sectionErrors.length;
+  $('pointsCheckMsg').className=(ok?'success':'error')+' small';
+  $('pointsCheckMsg').textContent=ok?`配点チェックOK：大問別・合計とも一致しています（${total}/${target}点）。`:`配点を確認してください：合計 ${total}/${target}点${sectionErrors.length?` / 不一致：${sectionErrors.map(([s])=>s).join('、')}`:''}`;
+  return ok;
+}
 function makeExamId(){let id;do{id=`exam_${new Date().toISOString().slice(0,10).replace(/-/g,'')}_${TDX.randomCode(6).toLowerCase()}`}while(exams.some(e=>e.id===id));return id}
 function buildExamFromEditor(){
   const title=$('examName').value.trim(),subject=$('examSubjectInput').value.trim(),googleFormUrl=$('formUrl').value.trim(),target=Number($('examTotalPoints').value)||100;
   if(!title||!subject)throw new Error('試験名と教科を入力してください。');if(!editorRows.length)throw new Error('設問がありません。');
-  const rows=editorRows.map(r=>({...r,section:r.section.trim(),label:r.label.trim(),answer:String(r.answer).trim(),points:Number(r.points||0),group:r.group.trim(),groupPoints:Number(r.groupPoints||0),options:r.options.split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean)}));
+  const rows=editorRows.map(r=>({...r,section:r.section.trim(),label:r.label.trim(),answer:String(r.answer).trim(),points:Number(r.points||0),group:r.group.trim(),groupPoints:Number(r.groupPoints||0),options:String(r.options||configuredOptionsCsv()).split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean)}));
   if(rows.some(r=>!r.section||!r.label||r.answer===''))throw new Error('大問・設問名・正答の空欄を確認してください。');
   const sectionNames=[...new Set(rows.map(r=>r.section))],sectionMap=new Map(sectionNames.map((n,i)=>[n,`s${i+1}`]));
   const questions=rows.map((r,i)=>({id:i+1,section:sectionMap.get(r.section),label:r.label,answer:r.answer,points:r.type==='complete_item'||r.type==='unordered_complete_item'?0:r.points,options:r.options.length?r.options:['0','1','2','3'],type:r.type,...(r.group?{group:r.group}:{}),...(['complete_item','unordered_complete_item'].includes(r.type)?{groupPoints:r.groupPoints}:{})}));
   const groups={};questions.forEach(q=>{if(q.group)(groups[q.group]??=[]).push(q)});Object.values(groups).forEach(gs=>{if(gs[0]?.type==='unordered_complete_item'){const answers=gs.map(q=>String(q.answer));gs.forEach(q=>q.groupAnswers=answers)}});
   const sections=sectionNames.map(name=>{const id=sectionMap.get(name),qs=questions.filter(q=>q.section===id);let points=0,seen=new Set();qs.forEach(q=>{if(['complete_item','unordered_complete_item'].includes(q.type)){if(!seen.has(q.group)){seen.add(q.group);points+=Number(q.groupPoints||0)}}else points+=Number(q.points||0)});return {id,name,points}});
-  return {id:makeExamId(),title,subject,schoolYear:String(new Date().getFullYear()),published:false,totalPoints:target,googleFormUrl,formSubmission:null,access:{mode:'restricted',classes:[],students:[]},sections,questions,createdAt:new Date().toISOString()};
+  return {id:makeExamId(),title,subject,schoolYear:String(new Date().getFullYear()),published:false,totalPoints:target,googleFormUrl,formSubmission:null,choiceConfig:{options:configuredChoices(),label:choiceRangeLabel()},access:{mode:'restricted',classes:[],students:[]},sections,questions,createdAt:new Date().toISOString()};
 }
 function saveDraft(){
-  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
+  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,choiceConfig:{numbers:$('useNumberChoices').checked,numberStart:$('numberChoiceStart').value,numberEnd:$('numberChoiceEnd').value,letters:$('useLetterChoices').checked,letterStart:$('letterChoiceStart').value,letterEnd:$('letterChoiceEnd').value},sectionTargets:editorSectionTargets,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
 function registerExam(){
   try{
-    const exam=buildExamFromEditor(),total=rowPointTotal();if(Math.abs(total-exam.totalPoints)>0.0001&&!confirm(`合計配点は${total}点、満点設定は${exam.totalPoints}点です。このまま登録しますか？`))return;
+    const exam=buildExamFromEditor(),total=rowPointTotal();
+    const sectionErrors=Object.entries(editorSectionTargets).filter(([sec,expected])=>Math.abs(sectionActualPoints(sec)-Number(expected))>.0001);
+    const warnings=[];
+    if(Math.abs(total-exam.totalPoints)>0.0001)warnings.push(`合計配点：${total}点 / 満点設定：${exam.totalPoints}点`);
+    if(sectionErrors.length)warnings.push(`大問別配点の不一致：${sectionErrors.map(([sec,expected])=>`${sec} ${sectionActualPoints(sec)}/${expected}点`).join('、')}`);
+    if(editorRows.some(r=>r.confidence==='要確認'))warnings.push(`要確認の解答欄：${editorRows.filter(r=>r.confidence==='要確認').length}件`);
+    if(warnings.length&&!confirm(`公開前に確認したい項目があります。\n\n${warnings.join('\n')}\n\nこのまま非公開の試験データとして登録しますか？`))return;
     exams.push(exam);allExamData.exams=exams;refreshExamSelects();
     $('draftExamMsg').className='success small';$('draftExamMsg').innerHTML=`非公開で登録しました：<strong>${exam.title}</strong><br>試験ID：<code>${exam.id}</code><br>「公開管理」で受験者を選択してから公開してください。`;
     $('publishExamSelect').value=exam.id;loadPublishExam();
