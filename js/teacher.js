@@ -200,14 +200,38 @@ function annualMasterState(){
 }
 function updateAnnualMasterButtons(){
   const st=annualMasterState();
-  if($('exportAnnualSecretsBtn'))$('exportAnnualSecretsBtn').disabled=!st.complete;
+  // CSVボタンは無効化せず、押したときに不足内容を具体的に案内する。
+  if($('exportAnnualSecretsBtn'))$('exportAnnualSecretsBtn').disabled=st.total===0;
   if($('printAllAnnualCardsBtn'))$('printAllAnnualCardsBtn').disabled=!st.complete;
+  renderAnnualMasterStatus(st);
+}
+function renderAnnualMasterStatus(st=annualMasterState()){
+  const el=$('annualMasterStatus');if(!el)return;
+  if(!st.total){el.className='info-strip teacher-strip';el.innerHTML='<span>MASTER</span> 生徒名簿を登録すると、年間マスターCSVの準備状況がここに表示されます。';return}
+  if(st.complete){el.className='info-strip teacher-strip success-strip';el.innerHTML=`<span>READY</span> 年間マスターCSV：<strong>${st.known}/${st.total}人</strong> のアクセスキーを確認済み。全員分を書き出せます。`;return}
+  const parts=[];
+  if(st.known)parts.push(`確認済み ${st.known}人`);
+  if(st.missing)parts.push(`発行済・キー未読込 ${st.missing}人`);
+  if(st.unissued)parts.push(`未発行 ${st.unissued}人`);
+  el.className='info-strip teacher-strip warning-strip';
+  el.innerHTML=`<span>CHECK</span> 年間マスターCSVはまだ完成していません（${parts.join(' / ')}）。ボタンを押すと不足分の対応方法を案内します。`;
 }
 function exportAnnualSecrets(){
   const st=annualMasterState();
   if(!usersData.users.length){alert('生徒名簿が登録されていません。');return}
-  if(st.unissued){alert(`未発行の生徒が ${st.unissued}人います。先に「未発行者にアクセスキーを発行」を実行してください。`);return}
-  if(st.missing){alert(`発行済みですが平文アクセスキーを確認できない生徒が ${st.missing}人います。以前の年間マスターCSVを読み込むか、「要再発行を選択」→「選択した生徒だけ再発行」で補ってください。完全なCSVになるまで書き出しません。`);return}
+  if(st.unissued){
+    alert(`年間マスターCSVは「登録生徒全員分」がそろった時だけ書き出します。\n\n未発行：${st.unissued}人\n\n先に「未発行者にアクセスキーを発行」を押してください。`);
+    $('generateAnnualCodesBtn')?.focus();return
+  }
+  if(st.missing){
+    // 不足者を自動選択して、どの生徒が不足しているか直ちに確認できるようにする。
+    if($('accessVaultClassFilter'))$('accessVaultClassFilter').value='';
+    renderAccessVaultManager();
+    selectMissingVaultRows();
+    $('accessVaultManager')?.scrollIntoView({behavior:'smooth',block:'center'});
+    alert(`年間マスターCSVは「登録生徒全員分」がそろった時だけ書き出します。\n\n現在：${st.known}/${st.total}人のキーを確認済み\n発行済・キー未読込：${st.missing}人\n\n不足している生徒を一覧で選択しました。\n・以前保存した「年間マスターCSV」を読み込む\nまたは\n・「選択した生徒だけ再発行」を実行する\nのどちらかで補ってください。`);
+    return
+  }
   const m=accessSecretMap();
   const rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
   const csv='4桁番号,年間アクセスキー,クラス\n'+rows.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
