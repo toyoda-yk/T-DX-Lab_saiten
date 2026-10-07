@@ -20,6 +20,7 @@ async function init(){
   bind();
   renderRosterRanges();
   renderRosterSummary();
+  renderAccessVaultManager();
   loadPublishExam();
 }
 function refreshExamSelects(){
@@ -38,11 +39,13 @@ function bind(){
   $('regenerateAnnualCodesBtn').onclick=()=>generateAnnualCodes(true);
   $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
   $('printAnnualCardsBtn').onclick=printAnnualCards;
+  $('printAllAnnualCardsBtn').onclick=printAllAnnualCards;
   $('exportRosterUsersBtn').onclick=exportUserData;
   $('importAnnualSecretsBtn').onclick=()=>$('importAnnualSecretsInput').click();
   $('importAnnualSecretsInput').onchange=importAnnualSecretsCsv;
   $('accessVaultClassFilter').onchange=renderAccessVaultManager;
   $('selectVisibleVaultBtn').onclick=()=>setVisibleVaultSelection(true);
+  $('selectMissingVaultBtn').onclick=selectMissingVaultRows;
   $('clearVaultSelectionBtn').onclick=()=>setVisibleVaultSelection(false);
   $('reprintSelectedCardsBtn').onclick=reprintSelectedCards;
   $('reissueSelectedCodesBtn').onclick=reissueSelectedCodes;
@@ -131,7 +134,8 @@ function saveRoster(){
     usersData.users=codes.map(code=>{const u=old.get(code)||{studentCode:code,classKey:code.slice(0,2),credential:null,examCredentials:{}};u.classKey=code.slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null;return u});
     localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges));
     $('rosterMsg').className='success small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。次に「年間アクセスキーを発行」を実行し、QRカードと users.json を保存してください。`;
-    renderRosterSummary();loadPublishExam();
+    accessVault=accessVault.filter(x=>codes.includes(x.studentCode));
+    renderRosterSummary();renderAccessVaultManager();loadPublishExam();
   }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message}
 }
 function renderRosterSummary(){
@@ -172,11 +176,11 @@ async function generateAnnualCodes(regenerateAll=false){
   mergeIntoAccessVault(annualSecrets);
   renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
   if(annualSecrets.length){
-    $('exportAnnualSecretsBtn').disabled=false;$('printAnnualCardsBtn').disabled=false;
+    $('printAnnualCardsBtn').disabled=false;updateAnnualMasterButtons();
     $('rosterMsg').className='success small';
-    $('rosterMsg').textContent=`${annualSecrets.length}人分の年間アクセスキーを発行しました。必ずQRカードPDFまたは教員保管CSVを保存してから users.json を書き出してください。`;
+    $('rosterMsg').textContent=`${annualSecrets.length}人分の年間アクセスキーを発行しました。必ずQRカードPDFを保存し、全員分の年間マスターCSVが完成してから users.json を書き出してください。`;
   }else{
-    $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。必要な場合のみ「全員再発行」を使ってください。';
+    $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。黄色の「発行済・キー未読込」がある場合は、年間マスターCSVを読み込むか、その生徒だけ再発行してください。';
   }
 }
 function renderAnnualSecrets(){
@@ -184,24 +188,43 @@ function renderAnnualSecrets(){
   if(!annualSecrets.length){root.innerHTML='<div class="notice small">アクセスキーを新規発行すると、ここに今回発行分だけ表示されます。平文キーは users.json には保存されません。</div>';return}
   root.innerHTML=`<h3>今回発行したアクセスキー（${annualSecrets.length}人）</h3><div class="table-shell"><table><thead><tr><th>4桁番号</th><th>年間アクセスキー</th><th>クラス</th></tr></thead><tbody>${annualSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table></div>${annualSecrets.length>20?`<p class="small muted">ほか ${annualSecrets.length-20}人</p>`:''}`;
 }
+function accessSecretMap(){return new Map(accessVault.map(x=>[x.studentCode,x]))}
+function annualMasterState(){
+  const m=accessSecretMap();
+  const total=usersData.users.length;
+  const issued=usersData.users.filter(u=>!!u.credential).length;
+  const known=usersData.users.filter(u=>u.credential&&m.has(u.studentCode)).length;
+  const missing=usersData.users.filter(u=>u.credential&&!m.has(u.studentCode)).length;
+  const unissued=usersData.users.filter(u=>!u.credential).length;
+  return {total,issued,known,missing,unissued,complete:total>0&&known===total&&missing===0&&unissued===0};
+}
+function updateAnnualMasterButtons(){
+  const st=annualMasterState();
+  if($('exportAnnualSecretsBtn'))$('exportAnnualSecretsBtn').disabled=!st.complete;
+  if($('printAllAnnualCardsBtn'))$('printAllAnnualCardsBtn').disabled=!st.complete;
+}
 function exportAnnualSecrets(){
-  const rows=accessVault.length?accessVault:annualSecrets;
-  if(!rows.length){alert('保存できるアクセスキーがありません。先にアクセスキーを発行してください。');return}
-  const csv='4桁番号,年間アクセスキー,クラス\n'+rows.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
-  TDX.download('T-DX_Lab_年間アクセスキー_教員保管.csv','\ufeff'+csv,'text/csv;charset=utf-8');
+  const st=annualMasterState();
+  if(!usersData.users.length){alert('生徒名簿が登録されていません。');return}
+  if(st.unissued){alert(`未発行の生徒が ${st.unissued}人います。先に「未発行者にアクセスキーを発行」を実行してください。`);return}
+  if(st.missing){alert(`発行済みですが平文アクセスキーを確認できない生徒が ${st.missing}人います。以前の年間マスターCSVを読み込むか、「要再発行を選択」→「選択した生徒だけ再発行」で補ってください。完全なCSVになるまで書き出しません。`);return}
+  const m=accessSecretMap();
+  const rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
+  const csv='4桁番号,年間アクセスキー,クラス\n'+rows.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
+  TDX.download('T-DX_Lab_年間アクセスキー_年間マスター.csv','\ufeff'+csv,'text/csv;charset=utf-8');
 }
 
 function mergeIntoAccessVault(rows){
-  const m=new Map(accessVault.map(x=>[x.studentCode,x]));
-  (rows||[]).forEach(x=>{if(x&&/^\d{4}$/.test(String(x.studentCode))&&x.accessCode)m.set(String(x.studentCode),{studentCode:String(x.studentCode),accessCode:String(x.accessCode).toUpperCase(),classKey:String(x.classKey||x.studentCode.slice(0,2))})});
+  const validCodes=new Set(usersData.users.map(u=>u.studentCode));
+  const m=new Map(accessVault.filter(x=>validCodes.has(x.studentCode)).map(x=>[x.studentCode,x]));
+  (rows||[]).forEach(x=>{if(x&&/^\d{4}$/.test(String(x.studentCode))&&x.accessCode&&validCodes.has(String(x.studentCode)))m.set(String(x.studentCode),{studentCode:String(x.studentCode),accessCode:String(x.accessCode).toUpperCase(),classKey:String(x.classKey||x.studentCode.slice(0,2))})});
   accessVault=[...m.values()].sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
-  refreshAccessVaultClassFilter();
-  $('exportAnnualSecretsBtn').disabled=!accessVault.length;
+  refreshAccessVaultClassFilter();updateAnnualMasterButtons();
 }
 function refreshAccessVaultClassFilter(){
   const sel=$('accessVaultClassFilter');if(!sel)return;
   const current=sel.value;
-  const classes=[...new Set(accessVault.map(x=>x.classKey||x.studentCode.slice(0,2)))].sort();
+  const classes=[...new Set(usersData.users.map(x=>x.classKey||x.studentCode.slice(0,2)))].sort();
   sel.innerHTML='<option value="">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}組</option>`).join('');
   if(classes.includes(current))sel.value=current;
 }
@@ -217,60 +240,79 @@ async function importAnnualSecretsCsv(e){
       if(/^\d{4}$/.test(studentCode)&&accessCode)rows.push({studentCode,accessCode,classKey});
     }
     if(!rows.length)throw new Error('有効なアクセスキーが見つかりませんでした。');
-    const verified=[];const stale=[];
+    const verified=[],stale=[],unknown=[];
     for(const row of rows){
       const u=usersData.users.find(x=>x.studentCode===row.studentCode);
-      if(!u?.credential){stale.push(row.studentCode);continue}
+      if(!u){unknown.push(row.studentCode);continue}
+      if(!u.credential){stale.push(row.studentCode);continue}
       if(await TDX.verify(row.accessCode,u.credential))verified.push(row);else stale.push(row.studentCode);
     }
     mergeIntoAccessVault(verified);
     renderAccessVaultManager();
-    $('rosterMsg').className=stale.length?'notice small':'success small';
-    $('rosterMsg').textContent=`教員保管CSVから ${verified.length}人分の現在有効なアクセスキーを読み込みました。`+(stale.length?` ${stale.length}人分は現在のusers.jsonと一致しないため除外しました。`:``);
-  }catch(err){$('rosterMsg').className='error small';$('rosterMsg').textContent='教員保管CSVを読み込めませんでした：'+err.message}
+    $('rosterMsg').className=(stale.length||unknown.length)?'notice small':'success small';
+    $('rosterMsg').textContent=`年間マスターCSVから ${verified.length}人分の現在有効なアクセスキーを読み込みました。`+(stale.length?` ${stale.length}人分は現在のusers.jsonと一致しないため除外しました。`:``)+(unknown.length?` ${unknown.length}人分は現在の名簿に存在しないため除外しました。`:``);
+  }catch(err){$('rosterMsg').className='error small';$('rosterMsg').textContent='年間マスターCSVを読み込めませんでした：'+err.message}
   finally{e.target.value=''}
 }
-function currentVaultRows(){
+function currentManagedUsers(){
   const c=$('accessVaultClassFilter')?.value||'';
-  return accessVault.filter(x=>!c||x.classKey===c);
+  return usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).filter(x=>!c||(x.classKey||x.studentCode.slice(0,2))===c);
+}
+function renderAccessVaultSummary(){
+  const root=$('accessVaultSummary');if(!root)return;
+  const st=annualMasterState();
+  root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">発行済・キー未読込</div><div class="value">${st.missing}</div></div><div class="kpi ${st.unissued?'kpi-warn':''}"><div class="muted small">未発行</div><div class="value">${st.unissued}</div></div>`;
 }
 function renderAccessVaultManager(){
   const root=$('accessVaultManager');if(!root)return;
-  refreshAccessVaultClassFilter();
-  const rows=currentVaultRows();
-  if(!accessVault.length){root.innerHTML='<div class="notice small">教員保管CSVを読み込むと、クラス・生徒を選んで同じQRカードを再印刷できます。</div>';updateVaultButtons();return}
-  root.innerHTML=`<div class="table-shell"><table><thead><tr><th></th><th>4桁番号</th><th>クラス</th><th>年間アクセスキー</th></tr></thead><tbody>${rows.map(x=>`<tr><td><input type="checkbox" class="vault-check" data-code="${esc(x.studentCode)}"></td><td><strong>${esc(x.studentCode)}</strong></td><td>${esc(x.classKey)}組</td><td><code>${esc(x.accessCode)}</code></td></tr>`).join('')}</tbody></table></div>${rows.length?`<p class="small muted">${rows.length}人表示中。再印刷する生徒だけ選択してください。</p>`:''}`;
-  root.querySelectorAll('.vault-check').forEach(x=>x.onchange=updateVaultButtons);
-  updateVaultButtons();
+  refreshAccessVaultClassFilter();renderAccessVaultSummary();updateAnnualMasterButtons();
+  const rows=currentManagedUsers(),m=accessSecretMap();
+  if(!usersData.users.length){root.innerHTML='<div class="notice small">先に生徒名簿を登録してください。</div>';updateVaultButtons();return}
+  root.innerHTML=`<div class="table-shell"><table><thead><tr><th></th><th>4桁番号</th><th>クラス</th><th>状態</th><th>年間アクセスキー</th></tr></thead><tbody>${rows.map(u=>{
+    const secret=m.get(u.studentCode),issued=!!u.credential;
+    const state=!issued?'<span class="master-status unissued">○ 未発行</span>':secret?'<span class="master-status ready">✓ QR再印刷可能</span>':'<span class="master-status missing">⚠ 発行済・キー未読込</span>';
+    return `<tr><td><input type="checkbox" class="vault-check" data-code="${esc(u.studentCode)}"></td><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td>${secret?`<code>${esc(secret.accessCode)}</code>`:'<span class="muted">—</span>'}</td></tr>`
+  }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。黄色の「発行済・キー未読込」は、以前の年間マスターCSVを読み込むか、その生徒だけ再発行してください。</p>`;
+  root.querySelectorAll('.vault-check').forEach(x=>x.onchange=updateVaultButtons);updateVaultButtons();
 }
-function selectedVaultSecrets(){
-  const codes=[...document.querySelectorAll('.vault-check:checked')].map(x=>x.dataset.code);
-  const set=new Set(codes);return accessVault.filter(x=>set.has(x.studentCode));
-}
+function selectedManagedCodes(){return [...document.querySelectorAll('.vault-check:checked')].map(x=>x.dataset.code)}
+function selectedPrintableSecrets(){const set=new Set(selectedManagedCodes());return accessVault.filter(x=>set.has(x.studentCode))}
 function setVisibleVaultSelection(v){document.querySelectorAll('.vault-check').forEach(x=>x.checked=v);updateVaultButtons()}
+function selectMissingVaultRows(){
+  const m=accessSecretMap();
+  document.querySelectorAll('.vault-check').forEach(cb=>{const u=usersData.users.find(x=>x.studentCode===cb.dataset.code);cb.checked=!!(u?.credential&&!m.has(cb.dataset.code))});updateVaultButtons();
+}
 function updateVaultButtons(){
-  const n=selectedVaultSecrets().length;
-  if($('reprintSelectedCardsBtn'))$('reprintSelectedCardsBtn').disabled=!n;
-  if($('reissueSelectedCodesBtn'))$('reissueSelectedCodesBtn').disabled=!n;
+  const codes=selectedManagedCodes(),printable=selectedPrintableSecrets();
+  if($('reprintSelectedCardsBtn'))$('reprintSelectedCardsBtn').disabled=!printable.length;
+  if($('reissueSelectedCodesBtn'))$('reissueSelectedCodesBtn').disabled=!codes.length;
 }
 async function reprintSelectedCards(){
-  const rows=selectedVaultSecrets();if(!rows.length){alert('再印刷する生徒を選択してください。');return}
+  const codes=selectedManagedCodes(),rows=selectedPrintableSecrets();
+  if(!codes.length){alert('再印刷する生徒を選択してください。');return}
+  if(!rows.length){alert('選択した生徒の平文アクセスキーがありません。年間マスターCSVを読み込むか、該当生徒を再発行してください。');return}
+  if(rows.length<codes.length&&!confirm(`${codes.length}人中 ${rows.length}人だけ再印刷可能です。キー未読込の生徒は除外してPDFを作成しますか？`))return;
   await generateAccessCardsPdf(rows,'T-DX_Lab_年間アクセスカード_再印刷.pdf');
 }
 async function reissueSelectedCodes(){
-  const selected=selectedVaultSecrets();if(!selected.length){alert('再発行する生徒を選択してください。');return}
-  if(!confirm(`${selected.length}人の年間アクセスキーを再発行します。新しい users.json をGitHubへ反映した時点で、以前のQRカードは使えなくなります。よろしいですか？`))return;
+  const codes=selectedManagedCodes();if(!codes.length){alert('再発行する生徒を選択してください。');return}
+  if(!confirm(`${codes.length}人の年間アクセスキーを再発行します。新しい users.json をGitHubへ反映した時点で、以前のQRカードは使えなくなります。よろしいですか？`))return;
   const newly=[];
-  for(const old of selected){
-    const u=usersData.users.find(x=>x.studentCode===old.studentCode);if(!u)continue;
+  for(const code of codes){
+    const u=usersData.users.find(x=>x.studentCode===code);if(!u)continue;
     const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty);
     u.credential={salt:v.salt,hash:v.hash,codeId,issuedAt:new Date().toISOString()};
     newly.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
   }
   mergeIntoAccessVault(newly);annualSecrets=newly;
   renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
-  $('printAnnualCardsBtn').disabled=!newly.length;$('exportAnnualSecretsBtn').disabled=!accessVault.length;
-  $('rosterMsg').className='success small';$('rosterMsg').textContent=`${newly.length}人のアクセスキーを再発行しました。新しいQRカードを配布し、教員保管CSVと users.json を必ず更新してください。GitHubへ新しい users.json を反映すると旧キーは無効になります。`;
+  $('printAnnualCardsBtn').disabled=!newly.length;
+  $('rosterMsg').className='success small';$('rosterMsg').textContent=`${newly.length}人のアクセスキーを再発行しました。新しいQRカードを配布してください。年間マスターCSVが全員分そろったら保存し、users.json も更新してください。`;
+}
+async function printAllAnnualCards(){
+  const st=annualMasterState();if(!st.complete){alert('全員分の平文アクセスキーが揃っていません。年間マスターCSVを読み込むか、不足している生徒を再発行してください。');return}
+  const m=accessSecretMap(),rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
+  await generateAccessCardsPdf(rows,'T-DX_Lab_年間アクセスカード_全員分.pdf');
 }
 function renderAnnualCards(secrets){
   const pages=[];
@@ -769,6 +811,9 @@ function exportExamData(){
   TDX.download('exams.json',JSON.stringify(allExamData,null,2));
 }
 function exportUserData(){
+  const st=annualMasterState();
+  if(st.unissued&&!confirm(`未発行の生徒が ${st.unissued}人います。この状態で users.json を書き出しますか？`))return;
+  if(st.missing&&!confirm(`発行済みですが年間マスターCSV側で平文キーを確認できない生徒が ${st.missing}人います。users.json 自体は書き出せますが、後日のQR再印刷には年間マスターCSVか個別再発行が必要です。このまま書き出しますか？`))return;
   const payload={version:5,note:'年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users.map(u=>({studentCode:u.studentCode,classKey:u.classKey,credential:u.credential||null}))};
   TDX.download('users.json',JSON.stringify(payload,null,2));
 }

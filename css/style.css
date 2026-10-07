@@ -802,3 +802,9 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 @media(max-width:640px){.annual-card-grid{grid-template-columns:1fr}.annual-qr-wrap{justify-self:start}.qr-reader{min-height:260px}}
 
 .review-card-actions{display:flex;gap:5px;align-items:center;justify-content:flex-end}.row-move{width:32px;height:32px;padding:0;border-radius:8px;background:#eef5ff;color:#2458a6;border:1px solid #c9dcf5;font-weight:900}.row-move:hover{background:#dcecff}.row-move:active{transform:translateY(1px)}
+
+/* v1.10 annual master status */
+.master-status{display:inline-flex;align-items:center;white-space:nowrap;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900}
+.master-status.ready{background:#eaf8f0;color:#167647;border:1px solid #bde6cc}
+.master-status.missing{background:#fff4dc;color:#a55d00;border:1px solid #f1d59a}
+.master-status.unissued{background:#eef2f7;color:#596273;border:1px solid #dbe2ea}

@@ -70,7 +70,8 @@
               <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
               <button id="regenerateAnnualCodesBtn" class="secondary glass-btn">全員再発行（緊急用）</button>
               <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分のQRカードPDF</button>
-              <button id="exportAnnualSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button>
+              <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカードPDF</button>
+              <button id="exportAnnualSecretsBtn" class="secondary glass-btn" disabled>年間マスターCSVを書き出す</button>
               <button id="exportRosterUsersBtn" class="teacher-action">users.jsonを書き出す</button>
             </div>
             <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、「未発行者にアクセスキーを発行」を押してください。</div></div>
@@ -78,15 +79,17 @@
               <div class="section-title compact-title"><div><span class="section-eyebrow">REPRINT / REISSUE</span><h3>既存アクセスカードの再印刷・個別再発行</h3><p class="muted small">紛失・汚損なら同じQRを再印刷します。漏えいの可能性がある場合だけ、その生徒のアクセスキーを再発行してください。</p></div></div>
               <input id="importAnnualSecretsInput" type="file" accept=".csv,text/csv" class="hidden">
               <div class="actions">
-                <button id="importAnnualSecretsBtn" class="secondary glass-btn">教員保管CSVを読み込む</button>
+                <button id="importAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSVを読み込む</button>
                 <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
                 <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
+                <button id="selectMissingVaultBtn" class="secondary glass-btn">要再発行を選択</button>
                 <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
                 <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒のQRを再印刷</button>
                 <button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒だけ再発行</button>
               </div>
-              <div class="info-strip teacher-strip"><span>SAFE</span> 平文のアクセスキーは users.json には保存しません。後日再印刷するときは、年度初めに保存した「教員保管CSV」を読み込んでください。</div>
-              <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">教員保管CSVを読み込むと、クラス・生徒を選んで同じQRカードを再印刷できます。</div></div>
+              <div class="info-strip teacher-strip"><span>MASTER</span> 「年間マスターCSV」は年度内のアクセスキー原本です。平文キーは users.json には保存しないため、必ず安全な場所に保管してください。</div>
+              <div id="accessVaultSummary" class="grid four roster-summary"></div>
+              <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のアクセスキー状態を表示します。</div></div>
             </div>
           </div>
           <div id="rosterMsg" class="small muted"></div>
