@@ -764,11 +764,11 @@
       }
     },
     {
-      "id": "exam_20261007_uvxw8u",
+      "id": "exam_20261007_s4xkfr",
       "title": "１２３",
       "subject": "１２３",
       "schoolYear": "2026",
-      "published": false,
+      "published": true,
       "totalPoints": 100,
       "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSe-gcDFa2IS2CZLSFzorAhalEaNTi0lFnWwyrTCCXLqDphp3g/viewform?usp=dialog",
       "formSubmission": null,
@@ -795,10 +795,10 @@
       },
       "access": {
         "mode": "restricted",
-        "classes": [
-          "31"
-        ],
-        "students": []
+        "classes": [],
+        "students": [
+          "3302"
+        ]
       },
       "sections": [
         {
@@ -847,13 +847,9 @@
             "e",
             "f"
           ],
-          "type": "unordered_complete_item",
+          "type": "complete_item",
           "group": "g_1_1",
-          "groupPoints": 2,
-          "groupAnswers": [
-            "0",
-            "3"
-          ]
+          "groupPoints": 2
         },
         {
           "id": 2,
@@ -879,13 +875,9 @@
             "e",
             "f"
           ],
-          "type": "unordered_complete_item",
+          "type": "complete_item",
           "group": "g_1_1",
-          "groupPoints": 2,
-          "groupAnswers": [
-            "0",
-            "3"
-          ]
+          "groupPoints": 2
         },
         {
           "id": 3,
@@ -2444,8 +2436,8 @@
           "type": "normal"
         }
       ],
-      "createdAt": "2026-10-07T12:02:10.673Z"
+      "createdAt": "2026-10-07T12:15:41.698Z"
     }
   ],
-  "updatedAt": "2026-10-07T12:02:27.411Z"
+  "updatedAt": "2026-10-07T12:16:12.954Z"
 }
