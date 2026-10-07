@@ -200,58 +200,126 @@ function renderAnnualCards(secrets){
   $('slips').innerHTML=pages.join('');
   document.querySelectorAll('.annual-qr').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qrCode,width:130,height:130,correctLevel:QRCode.CorrectLevel.M})});
 }
+async function imageFromUrl(src){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=reject;
+    img.src=src;
+  });
+}
+async function qrCanvasFor(text,size=250){
+  const host=document.createElement('div');
+  host.style.cssText='position:fixed;left:0;top:0;width:'+size+'px;height:'+size+'px;opacity:.001;pointer-events:none;z-index:-1;background:#fff';
+  document.body.appendChild(host);
+  try{
+    new QRCode(host,{text,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+    await new Promise(r=>setTimeout(r,80));
+    const c=host.querySelector('canvas');
+    if(c) return c;
+    const img=host.querySelector('img');
+    if(img){
+      if(!img.complete) await new Promise((res,rej)=>{img.onload=res;img.onerror=rej});
+      const out=document.createElement('canvas');out.width=size;out.height=size;
+      out.getContext('2d').drawImage(img,0,0,size,size);return out;
+    }
+    throw new Error('QRコードの描画に失敗しました。');
+  } finally { host.remove(); }
+}
+function roundRect(ctx,x,y,w,h,r,fill,stroke){
+  ctx.beginPath();
+  ctx.roundRect(x,y,w,h,r);
+  if(fill){ctx.fillStyle=fill;ctx.fill()}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}
+}
+function drawCardText(ctx,text,x,y,size=28,weight=600,color='#172033',align='left'){
+  ctx.save();ctx.font=`${weight} ${size}px -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif`;ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillText(text,x,y);ctx.restore();
+}
+async function drawAnnualAccessCard(ctx,x,y,w,h,secret,logo){
+  const pad=44;
+  roundRect(ctx,x+8,y+8,w-16,h-16,28,'#ffffff','#d8e4f3');
+  // header
+  if(logo){
+    const maxH=62,maxW=150,scale=Math.min(maxW/logo.width,maxH/logo.height);
+    ctx.drawImage(logo,x+pad,y+32,logo.width*scale,logo.height*scale);
+  }
+  drawCardText(ctx,'T-DX Lab☆問題演習システム',x+pad+(logo?170:0),y+70,28,800,'#0d3f8f');
+  drawCardText(ctx,'年間 学習アクセスカード',x+pad,y+126,34,800,'#172033');
+  drawCardText(ctx,'年度内のすべての教科・模擬試験で使用します。ほかの人には見せないでください。',x+pad,y+170,18,500,'#64748b');
+
+  // credentials panel
+  const panelX=x+pad,panelY=y+215,panelW=w-pad*2-310,panelH=300;
+  roundRect(ctx,panelX,panelY,panelW,panelH,20,'#f4f8ff','#d5e4fa');
+  drawCardText(ctx,'4桁番号',panelX+30,panelY+58,19,700,'#64748b');
+  drawCardText(ctx,secret.studentCode,panelX+30,panelY+116,48,900,'#10264b');
+  drawCardText(ctx,'年間アクセスキー',panelX+30,panelY+174,19,700,'#64748b');
+  drawCardText(ctx,secret.accessCode,panelX+30,panelY+238,31,800,'#10264b');
+
+  // qr
+  const qr=await qrCanvasFor(`TDX|${secret.studentCode}|${secret.accessCode}`,250);
+  const qrX=x+w-pad-250,qrY=panelY+8;
+  ctx.fillStyle='#fff';ctx.fillRect(qrX-10,qrY-10,270,270);ctx.drawImage(qr,qrX,qrY,250,250);
+  drawCardText(ctx,'ログイン時に読み取る',qrX+125,qrY+286,17,700,'#334155','center');
+
+  drawCardText(ctx,'QRコードが使えない場合は、上記の4桁番号と年間アクセスキーを手入力してください。',x+pad,y+h-54,17,500,'#475569');
+}
+async function canvasToPngBytes(canvas){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(async blob=>{
+      if(!blob){reject(new Error('PNG画像の生成に失敗しました。'));return}
+      try{resolve(new Uint8Array(await blob.arrayBuffer()))}catch(e){reject(e)}
+    },'image/png');
+  });
+}
+async function makeAccessCardCanvas(secret,logo){
+  // A4半ページとほぼ同じ比率。日本語はCanvas側で描画し、PDFにはPNGとして埋め込む。
+  const W=1190,H=842;
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  await drawAnnualAccessCard(ctx,18,18,W-36,H-36,secret,logo);
+  return canvas;
+}
 async function printAnnualCards(){
   if(!annualSecrets.length){
     alert('先に年間アクセスキーを発行してください。年間アクセスキーの平文は users.json には保存されないため、発行直後にPDFまたは教員保管CSVを保存してください。');
     return;
   }
-  if(typeof html2canvas==='undefined'||!window.jspdf?.jsPDF){
-    alert('PDF生成ライブラリを読み込めませんでした。インターネット接続を確認してページを再読み込みしてください。');
+  if(!window.PDFLib || typeof QRCode==='undefined'){
+    alert('PDFまたはQRコード生成ライブラリを読み込めませんでした。インターネット接続を確認してページを再読み込みしてください。');
     return;
   }
 
-  renderAnnualCards(annualSecrets);
-  const stage=$('slips');
-  const pages=[...stage.querySelectorAll('.slip-page')];
-  if(!pages.length){alert('PDFに出力するカードがありません。');return}
-
-  // オフスクリーン要素のまま html2canvas に渡すと Safari で白紙になるため、
-  // PDF作成中だけ実寸A4を画面内に配置し、上からマスクを重ねてキャプチャする。
-  const mask=document.createElement('div');
-  mask.className='pdf-capture-mask';
-  mask.innerHTML='<div><strong>年間アクセスカードPDFを作成しています…</strong><span>QRコードとアクセスキーを描画中です。</span></div>';
-  document.body.appendChild(mask);
-  document.body.classList.add('pdf-capturing');
-  stage.classList.add('pdf-rendering');
-
+  const oldText=$('printAnnualCardsBtn').textContent;
+  $('printAnnualCardsBtn').disabled=true;$('printAnnualCardsBtn').textContent='PDF作成中…';
   try{
-    await new Promise(r=>setTimeout(r,500)); // QRCode canvas/img の描画待ち
-    const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
-
-    for(let i=0;i<pages.length;i++){
-      if(i>0)pdf.addPage('a4','portrait');
-      const canvas=await html2canvas(pages[i],{
-        scale:2,
-        useCORS:true,
-        backgroundColor:'#ffffff',
-        logging:false,
-        width:pages[i].scrollWidth,
-        height:pages[i].scrollHeight,
-        windowWidth:pages[i].scrollWidth,
-        windowHeight:pages[i].scrollHeight
-      });
-      const img=canvas.toDataURL('image/jpeg',0.96);
-      pdf.addImage(img,'JPEG',0,0,210,297,undefined,'FAST');
+    const {PDFDocument,rgb}=window.PDFLib;
+    const pdfDoc=await PDFDocument.create();
+    let logo=null;try{logo=await imageFromUrl('assets/images/tdx-lab-logo.png')}catch(e){console.warn('logo load skipped',e)}
+    const pageW=595.28,pageH=841.89,marginX=20,marginY=18,gap=12;
+    const halfH=(pageH-marginY*2-gap)/2;
+    for(let i=0;i<annualSecrets.length;i+=2){
+      const page=pdfDoc.addPage([pageW,pageH]);
+      const topCanvas=await makeAccessCardCanvas(annualSecrets[i],logo);
+      const topPng=await pdfDoc.embedPng(await canvasToPngBytes(topCanvas));
+      page.drawImage(topPng,{x:marginX,y:pageH-marginY-halfH,width:pageW-marginX*2,height:halfH});
+      if(annualSecrets[i+1]){
+        const bottomCanvas=await makeAccessCardCanvas(annualSecrets[i+1],logo);
+        const bottomPng=await pdfDoc.embedPng(await canvasToPngBytes(bottomCanvas));
+        page.drawImage(bottomPng,{x:marginX,y:marginY,width:pageW-marginX*2,height:halfH});
+      }
+      const cutY=marginY+halfH+gap/2;
+      page.drawLine({start:{x:marginX,y:cutY},end:{x:pageW-marginX,y:cutY},thickness:0.7,color:rgb(0.55,0.6,0.68),dashArray:[5,4]});
     }
-    pdf.save('T-DX_Lab_年間アクセスカード.pdf');
+    const bytes=await pdfDoc.save({useObjectStreams:false});
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='T-DX_Lab_年間アクセスカード.pdf';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
   }catch(e){
     console.error(e);
-    alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを保存したうえで、ページを再読み込みして再度お試しください。');
+    alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを先に保存し、ページを再読み込みしてもう一度お試しください。');
   }finally{
-    stage.classList.remove('pdf-rendering');
-    document.body.classList.remove('pdf-capturing');
-    mask.remove();
+    $('printAnnualCardsBtn').disabled=false;$('printAnnualCardsBtn').textContent=oldText;
   }
 }
 
@@ -387,6 +455,30 @@ function analyzeAnswerSource(source='pdf'){
 function analyzePdfText(text){$('pdfText').value=text;analyzeAnswerSource('pdf')}
 function blankEditorRow(){return {section:'第1問',label:'',answer:'',points:'',type:'normal',group:'',groupPoints:'',options:'',confidence:'要確認',sourceLine:''}}
 function addEditorRow(row=blankEditorRow()){editorRows.push({...row});renderEditor();setTimeout(()=>$('examEditorCards')?.lastElementChild?.scrollIntoView({behavior:'smooth',block:'center'}),0)}
+function editorBlocks(){
+  const blocks=[],used=new Set();
+  editorRows.forEach((r,i)=>{
+    if(used.has(i))return;
+    if(r.group&&['complete_item','unordered_complete_item'].includes(r.type)){
+      const idx=editorRows.map((x,j)=>x.group===r.group&&x.section===r.section?j:-1).filter(j=>j>=0);
+      if(idx.length>1){idx.forEach(j=>used.add(j));blocks.push(idx);return}
+    }
+    used.add(i);blocks.push([i]);
+  });
+  return blocks;
+}
+function moveEditorBlock(index,dir){
+  const blocks=editorBlocks(),bi=blocks.findIndex(b=>b.includes(index)),target=bi+dir;
+  if(bi<0||target<0||target>=blocks.length)return;
+  const reordered=[...blocks];[reordered[bi],reordered[target]]=[reordered[target],reordered[bi]];
+  const old=[...editorRows];editorRows=reordered.flatMap(b=>b.map(i=>old[i]));
+  renderEditor();
+  setTimeout(()=>{
+    const blocksNow=editorBlocks(),newBi=Math.max(0,Math.min(blocksNow.length-1,target));
+    const firstIndex=blocksNow[newBi]?.[0];
+    document.querySelector(`[data-row="${firstIndex}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});
+  },0);
+}
 function typeOptions(value){return [['normal','通常（1欄ずつ採点）'],['unordered_item','順不同（各欄採点）'],['complete_item','完答（全欄一致で得点）'],['unordered_complete_item','順不同＋完答（全欄一致で得点）']].map(([v,t])=>`<option value="${v}" ${v===value?'selected':''}>${t}</option>`).join('')}
 function reviewDisplayOptions(r){
   const explicit=String(r.options||'').split(/[,、\s]+/).map(x=>x.trim()).filter(Boolean);
@@ -422,7 +514,7 @@ function renderGroupCard(rows,indices){
         <div class="review-group-title">${esc(first.section)} ${esc(title)}</div>
         <div class="review-meta-line"><span class="review-status ${rows.some(r=>r.confidence==='要確認')?'warn-status':'ok-status'}">${rows.some(r=>r.confidence==='要確認')?'要確認':'確認済'}</span><span>${unordered?'順不同＋完答':'完答'}</span><span class="group-award-badge">${gp?esc(gp)+'点':'配点未設定'}</span></div>
       </div>
-      <button class="row-delete" data-del-group="${esc(first.group)}" type="button">×</button>
+      <div class="review-card-actions"><button class="row-move" data-move="${indices[0]}" data-dir="-1" type="button" title="上へ移動">↑</button><button class="row-move" data-move="${indices[0]}" data-dir="1" type="button" title="下へ移動">↓</button><button class="row-delete" data-del-group="${esc(first.group)}" type="button">×</button></div>
     </div>
     <div class="group-explain"><strong>${rows.length}つの解答欄をすべて正解したときだけ得点</strong>${unordered?'。解答の順番は問いません。':'。'}<br><span>各欄の青いボタンが現在の正答です。違う場合は正しい番号をクリックしてください。</span></div>
     <div class="group-answer-list">${subRows}</div>
@@ -447,7 +539,7 @@ function renderSingleCard(r,i){
         <input class="review-label-input" data-k="label" value="${esc(r.label)}" placeholder="設問名">
         <div class="review-meta-line"><span class="review-status ${r.confidence==='高'?'ok-status':'warn-status'}">${r.confidence}</span><span>${esc(r.type==='normal'?'通常':r.type.includes('unordered')?'順不同':'完答')}</span>${od.inferred?'<span class="inferred-tag">選択肢は仮表示</span>':''}</div>
       </div>
-      <button class="row-delete" data-del="${i}" type="button">×</button>
+      <div class="review-card-actions"><button class="row-move" data-move="${i}" data-dir="-1" type="button" title="上へ移動">↑</button><button class="row-move" data-move="${i}" data-dir="1" type="button" title="下へ移動">↓</button><button class="row-delete" data-del="${i}" type="button">×</button></div>
     </div>
     <div class="review-answer-zone">
       <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
@@ -491,6 +583,7 @@ function renderEditor(){
   root.querySelectorAll('[data-answer-row]').forEach(b=>b.onclick=()=>{
     const i=Number(b.dataset.answerRow);editorRows[i].answer=b.dataset.answer;editorRows[i].confidence='確認済';renderEditor();
   });
+  root.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moveEditorBlock(Number(b.dataset.move),Number(b.dataset.dir)));
   root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{editorRows.splice(Number(b.dataset.del),1);renderEditor()});
   root.querySelectorAll('[data-del-group]').forEach(b=>b.onclick=()=>{const g=b.dataset.delGroup;editorRows=editorRows.filter(r=>r.group!==g);renderEditor()});
   updateParseSummary();
