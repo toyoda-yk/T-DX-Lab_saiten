@@ -84,13 +84,13 @@
       <div class="score-hero future-score-hero">
         <span class="badge future-badge">RESULT</span>
         <h2 id="resultTitle"></h2>
-        <div class="score-orbit"><div><span class="score" id="scoreValue"></span><span class="den"> / 100</span><small>YOUR SCORE</small></div></div>
+        <div class="score-orbit"><div><span class="score" id="scoreValue"></span><span class="den" id="scoreDen"> / 100</span><small>YOUR SCORE</small></div></div>
         <p id="resultCode" class="muted"></p>
       </div>
 
       <div class="result-block">
         <div class="section-eyebrow">SECTION PERFORMANCE</div>
-        <h3>大問別</h3>
+        <h3>大問別の得点・正答率</h3>
         <div id="sectionBars" class="modern-bars"></div>
       </div>
 
@@ -116,7 +116,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="js/common.js"></script>
 <script src="js/student.js"></script>
 </body>

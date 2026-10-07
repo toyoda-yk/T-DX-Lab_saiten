@@ -1,10 +1,17 @@
-let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[];
+let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null;
 const $=id=>document.getElementById(id);
 let qrScanner=null;
 async function loadData(){
-  const [e,u]=await Promise.all([fetch('data/exams.json').then(r=>r.json()),fetch('data/users.json').then(r=>r.json())]);
-  exams=e.exams||[];users=u.users||[];
+  const bust=Date.now();
+  const [e,u]=await Promise.all([
+    fetch(`data/exams.json?v=${bust}`,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`exams.json: ${r.status}`);return r.json()}),
+    fetch(`data/users.json?v=${bust}`,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`users.json: ${r.status}`);return r.json()})
+  ]);
+  exams=e.exams||[];
+  // v1.5以前の配布用デモ3101だけを除外。本番で再発行済みの3101は残ります。
+  users=(u.users||[]).filter(x=>x?.credential?.codeId!=='demo-annual-3101');
 }
+
 function show(id){['loginPanel','examListPanel','examPanel','resultPanel'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function eligible(exam,user){
   if(!exam.published)return false;
@@ -15,6 +22,9 @@ function eligible(exam,user){
 }
 async function login(){
   const code=$('studentCode').value.trim(),pass=$('accessCode').value.trim();
+  $('loginMsg').className='small muted';$('loginMsg').textContent='最新の公開情報を確認しています…';
+  try{await loadData()}catch(e){console.error(e);$('loginMsg').className='error small';$('loginMsg').textContent='最新データの読み込みに失敗しました。通信状態を確認して、もう一度お試しください。';return}
+
   if(!/^\d{4}$/.test(code)){ $('loginMsg').className='error small';$('loginMsg').textContent='4桁の数字を入力してください。';return;}
   const rec=users.find(u=>u.studentCode===code);
   if(!rec){$('loginMsg').className='error small';$('loginMsg').textContent='この番号は登録されていません。';return;}
@@ -50,13 +60,56 @@ function openExam(id){
 }
 function collectAnswers(){const a={};currentExam.questions.forEach(q=>{const x=document.querySelector(`input[name=q${q.id}]:checked`);if(x)a[q.id]=x.value});return a}
 function updateProgress(){const n=Object.keys(collectAnswers()).length;$('answeredCount').textContent=n;$('answerProgress').style.width=`${100*n/currentExam.questions.length}%`}
-function submitExam(){const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length;if(missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;const result=TDX.scoreExam(currentExam,answers);renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}
+function submitExam(){const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length;if(missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}
+function sectionStat(section,r){
+  const rows=r.detail.filter(d=>d.q.section===section.id),correct=rows.filter(d=>d.correct).length,total=rows.length;
+  return {score:r.sectionScores[section.id]||0,points:section.points||0,correct,total,rate:total?Math.round(correct/total*100):0};
+}
 function renderResult(r,answers){
-  $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('resultCode').textContent=`4桁番号：${currentUser.studentCode}`;
-  const bars=$('sectionBars');bars.innerHTML='';currentExam.sections.forEach(s=>{const sc=r.sectionScores[s.id]||0,pct=Math.round(sc/s.points*100);bars.insertAdjacentHTML('beforeend',`<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${pct}%"></div></div><div>${sc}/${s.points}<br><span class="small muted">${pct}%</span></div></div>`) });
+  const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
+  $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('scoreDen').textContent=` / ${totalPoints}`;$('resultCode').textContent=`4桁番号：${currentUser.studentCode}`;
+  const bars=$('sectionBars');bars.innerHTML='';currentExam.sections.forEach(s=>{const st=sectionStat(s,r);bars.insertAdjacentHTML('beforeend',`<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${st.rate}%"></div></div><div>${st.score}/${st.points}点<br><span class="small muted">正答率 ${st.rate}%</span></div></div>`) });
   const body=$('detailBody');body.innerHTML='';r.detail.forEach(d=>{const answer=d.answer||'未回答';let correctText=d.q.answer;if(d.q.type.includes('unordered')&&d.q.groupAnswers)correctText=d.q.groupAnswers.join('・');const earned=d.groupAward??d.earned;body.insertAdjacentHTML('beforeend',`<tr><td>${d.q.label}</td><td>${answer}</td><td>${correctText}</td><td class="${d.correct?'ok':'ng'}">${d.correct?'○':'×'}</td><td>${earned}</td></tr>`) });
 }
-async function pdf(){const el=$('resultSheet'),name=`${currentExam.subject}_${currentExam.title}_${currentUser.studentCode}.pdf`.replace(/[\\/:*?"<>|]/g,'_');if(window.html2pdf){await html2pdf().set({margin:8,filename:name,image:{type:'jpeg',quality:.96},html2canvas:{scale:1.5},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(el).save();}else window.print()}
+function buildQuickPdfSheet(r){
+  const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
+  const overallRate=totalPoints?Math.round(r.total/totalPoints*100):0;
+  const sheet=document.createElement('div');sheet.className='pdf-quick-sheet';
+  const header=document.createElement('div');header.className='pdf-quick-header';
+  header.innerHTML='<div><div class="pdf-brand">T-DX Lab☆問題演習システム</div><div class="pdf-kicker">QUICK RESULT / 速報版</div></div><div class="pdf-a4-badge">A4 / 1 PAGE</div>';
+  sheet.appendChild(header);
+  const title=document.createElement('h1');title.className='pdf-quick-title';title.textContent=currentExam.title;sheet.appendChild(title);
+  const meta=document.createElement('div');meta.className='pdf-quick-meta';
+  const metaItems=[['教科',currentExam.subject||'-'],['4桁番号',currentUser.studentCode],['実施日',new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())]];
+  metaItems.forEach(([k,v])=>{const box=document.createElement('div');const key=document.createElement('span');key.textContent=k;const val=document.createElement('strong');val.textContent=v;box.append(key,val);meta.appendChild(box)});sheet.appendChild(meta);
+  const score=document.createElement('div');score.className='pdf-quick-score';
+  const scoreMain=document.createElement('div');scoreMain.className='pdf-score-main';scoreMain.innerHTML=`<span>${r.total}</span><small> / ${totalPoints} 点</small>`;
+  const scoreRate=document.createElement('div');scoreRate.className='pdf-score-rate';scoreRate.innerHTML=`<strong>${overallRate}%</strong><span>得点率</span>`;
+  score.append(scoreMain,scoreRate);sheet.appendChild(score);
+  const sectionTitle=document.createElement('div');sectionTitle.className='pdf-section-title';sectionTitle.innerHTML='<span>SECTION PERFORMANCE</span><h2>大問別の得点・正答率</h2>';sheet.appendChild(sectionTitle);
+  const grid=document.createElement('div');grid.className='pdf-section-grid';
+  currentExam.sections.forEach(s=>{const st=sectionStat(s,r);const card=document.createElement('div');card.className='pdf-section-card';card.innerHTML=`<div class="pdf-section-card-top"><strong></strong><span>${st.score} / ${st.points}点</span></div><div class="pdf-rate-line"><div><i style="width:${st.rate}%"></i></div><b>${st.rate}%</b></div><div class="pdf-correct-count">正答 ${st.correct} / ${st.total}</div>`;card.querySelector('strong').textContent=s.name;grid.appendChild(card)});sheet.appendChild(grid);
+  const note=document.createElement('div');note.className='pdf-quick-note';note.innerHTML='<strong>速報版</strong><span>このPDFは提出直後の採点結果です。クラス平均・全体分布などの集計結果は含みません。</span>';sheet.appendChild(note);
+  const footer=document.createElement('div');footer.className='pdf-quick-footer';footer.textContent='T-DX Lab - 学びを、データで次の一問へ。';sheet.appendChild(footer);
+  return sheet;
+}
+async function pdf(){
+  if(!lastResult||!currentExam||!currentUser)return;
+  const btn=$('pdfBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='PDF作成中…';
+  const name=`${currentExam.subject}_${currentExam.title}_${currentUser.studentCode}_速報版.pdf`.replace(/[\\/:*?"<>|]/g,'_');let sheet=null;
+  try{
+    if(!window.html2canvas||!window.jspdf?.jsPDF)throw new Error('PDFライブラリを読み込めませんでした。');
+    sheet=buildQuickPdfSheet(lastResult);document.body.appendChild(sheet);
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const canvas=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,scrollX:0,scrollY:0});
+    const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    const pageW=210,pageH=297,margin=8,maxW=pageW-margin*2,maxH=pageH-margin*2,ratio=canvas.width/canvas.height;
+    let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio}
+    const x=(pageW-w)/2,y=(pageH-h)/2;
+    doc.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',x,y,w,h,undefined,'FAST');
+    doc.save(name);
+  }catch(e){console.error(e);alert(`PDFを作成できませんでした。${e.message||''}`)}finally{if(sheet)sheet.remove();btn.disabled=false;btn.textContent=old}
+}
 function parseQrPayload(text){
   const m=String(text||'').trim().match(/^TDX\|(\d{4})\|([A-Z0-9-]{10,})$/i);if(!m)return null;return {studentCode:m[1],accessCode:m[2].toUpperCase()};
 }

@@ -8,11 +8,11 @@ let rosterRanges=[];
 
 async function init(){
   [allExamData,usersData]=await Promise.all([
-    fetch('data/exams.json').then(r=>r.json()),
-    fetch('data/users.json').then(r=>r.json()).catch(()=>({version:5,users:[],issuedCodeIds:[]}))
+    fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()),
+    fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>({version:5,users:[],issuedCodeIds:[]}))
   ]);
   exams=allExamData.exams||[];
-  usersData.users=usersData.users||[];
+  usersData.users=(usersData.users||[]).filter(u=>u?.credential?.codeId!=='demo-annual-3101');
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
   usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null});
   rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
@@ -24,7 +24,9 @@ async function init(){
   renderRosterSummary();
   renderAccessVaultManager();
   loadPublishExam();
+  renderExamExportSummary();
 }
+
 function refreshExamSelects(){
   const opts=exams.map(e=>`<option value="${e.id}">${e.title}</option>`).join('');
   ['analysisExam','publishExamSelect'].forEach(id=>{if($(id)) $(id).innerHTML=opts});
@@ -918,8 +920,9 @@ function registerExam(){
     if(editorRows.some(r=>r.confidence==='要確認'))warnings.push(`要確認の解答欄：${editorRows.filter(r=>r.confidence==='要確認').length}件`);
     if(warnings.length&&!confirm(`公開前に確認したい項目があります。\n\n${warnings.join('\n')}\n\nこのまま非公開の試験データとして登録しますか？`))return;
     exams.push(exam);allExamData.exams=exams;refreshExamSelects();
-    $('draftExamMsg').className='success small';$('draftExamMsg').innerHTML=`非公開で登録しました：<strong>${exam.title}</strong><br>試験ID：<code>${exam.id}</code><br>「公開管理」で受験者を選択してから公開してください。`;
-    $('publishExamSelect').value=exam.id;loadPublishExam();
+    $('draftExamMsg').className='success small';$('draftExamMsg').innerHTML=`<strong>✓ 模範解答・採点設定の登録が完了しました。</strong><br>試験：${esc(exam.title)} / 試験ID：<code>${esc(exam.id)}</code><br><span class="publish-next-warning">⚠ まだ生徒には公開されていません。</span><div class="actions compact-actions"><button type="button" id="goPublishFromRegister" class="orange">受験者・公開設定へ進む</button></div>`;
+    $('publishExamSelect').value=exam.id;loadPublishExam();renderExamExportSummary();
+    requestAnimationFrame(()=>{const b=$('goPublishFromRegister');if(b)b.onclick=()=>{showSection('publishManager');$('publishExamSelect').value=exam.id;loadPublishExam()}});
   }catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
 
@@ -973,13 +976,31 @@ function applyPublish(){
   const selected=selectedAudienceCodes();if($('publishToggle').checked&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
   const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};
   $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。次に「exams.jsonを書き出す」を押し、システム管理者へ送付してください。`;
+  renderExamExportSummary();
 }
+
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
+function renderExamExportSummary(){
+  const root=$('examExportSummary');if(!root)return;
+  const list=(allExamData?.exams||exams||[]);
+  const rows=list.map((e,i)=>{
+    const a=e.access||{};
+    const classText=(a.classes||[]).length?`${(a.classes||[]).join('・')}組`:'';
+    const studentText=(a.students||[]).length?`${(a.students||[]).length}人個別`:'';
+    const target=[classText,studentText].filter(Boolean).join('＋')||((!a||a.mode==='all')?'全員':'対象未設定');
+    return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${e.published?'公開中':'非公開'} / ${esc(target)}</small></div><span class="exam-export-state ${e.published?'live':'off'}">${e.published?'公開':'非公開'}</span></div>`;
+  }).join('');
+  root.innerHTML=`<div class="exam-export-head"><div><span class="section-eyebrow">EXPORT CONTENTS</span><h3>書き出す試験：${list.length}件</h3></div><small>exams.json は差分ではなく、登録済み試験をすべて含む累積ファイルです。</small></div>${rows||'<div class="notice small">登録済み試験はありません。</div>'}<div class="github-upload-note"><strong>GitHub反映先：<code>data/exams.json</code></strong><span>ダウンロード名が <code>exams(1).json</code> などになった場合は、GitHubへ上げる前に <code>exams.json</code> に戻して上書きしてください。</span></div>`;
+}
 function exportExamData(){
   allExamData.version=Math.max(Number(allExamData.version||0),5);
+  allExamData.exams=exams;
   allExamData.updatedAt=new Date().toISOString();
+  renderExamExportSummary();
   TDX.download('exams.json',JSON.stringify(allExamData,null,2));
+  $('publishMsg').className='success small';$('publishMsg').textContent=`最新版 exams.json を書き出しました（収録試験 ${exams.length}件）。GitHub の data/exams.json をこのファイルで置き換えてください。`;
 }
+
 function exportUserData(){
   const st=annualMasterState();
   if(st.unissued&&!confirm(`未発行の生徒が ${st.unissued}人います。この状態で users.json を書き出しますか？`))return;

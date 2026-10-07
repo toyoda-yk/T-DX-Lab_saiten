@@ -1,0 +1,6 @@
+{
+  "version": 5,
+  "note": "初回導入用テンプレートです。既存運用ではGitHub上の data/users.json を上書きしないでください。",
+  "issuedCodeIds": [],
+  "users": []
+}

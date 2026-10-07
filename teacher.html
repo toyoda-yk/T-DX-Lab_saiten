@@ -252,8 +252,9 @@
         <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
+      <div id="examExportSummary" class="exam-export-summary"></div>
 
-      <div class="notice small"><strong>運用：</strong>各教科の先生はこの画面で試験と対象者を設定し、最新版の <code>exams.json</code> を書き出してシステム管理者へ送付します。システム管理者がGitHubの <code>data/exams.json</code> を置き換えると生徒画面へ反映されます。</div>
+      <div class="notice small"><strong>運用：</strong>各教科の先生はこの画面で試験と対象者を設定し、最新版の <code>exams.json</code> を書き出してシステム管理者へ送付します。システム管理者がGitHubの <code>data/exams.json</code> を置き換えると生徒画面へ反映されます。<strong>このJSONは登録済み試験を全部含む累積ファイルです。</strong></div>
       <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
     </section>
   </div>
