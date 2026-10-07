@@ -1,15 +1,18 @@
 {
   "version": 5,
   "note": "年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。",
-  "issuedCodeIds": [],
+  "issuedCodeIds": [
+    "08fdcea9cfa097cff95b6b0bb1b89f225e00fc6063b94c876e77e9ca881f6341"
+  ],
   "users": [
     {
       "studentCode": "3101",
       "classKey": "31",
       "credential": {
-        "salt": "tdx-demo-annual-3101",
-        "hash": "76c8f9ec4936711c7e0001dec7bd162686263f8384f9875a09ec3d15de5e3e5e",
-        "codeId": "demo-annual-3101"
+        "salt": "8750ff8c35be1c942dfafb739ae588d2",
+        "hash": "cce18c68043b8c7e76a6c84155b667a9c5845d22f6cee9e75c4564a4ac7de8e2",
+        "codeId": "08fdcea9cfa097cff95b6b0bb1b89f225e00fc6063b94c876e77e9ca881f6341",
+        "issuedAt": "2026-10-07T12:03:18.181Z"
       }
     }
   ]
