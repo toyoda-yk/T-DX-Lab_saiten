@@ -54,7 +54,7 @@
     </section>
 
     <section id="studentManager" class="future-panel adminSection">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。試験ごとの受験者選択では、この名簿から選ぶだけです。</p></div><div class="admin-symbol">00</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。年度初めに1回だけ年間アクセスキーを発行し、そのQRカードを生徒へ配布します。</p></div><div class="admin-symbol">00</div></div>
       <input id="classDigits" type="hidden" value="2">
 
       <div class="grid two admin-form-grid roster-layout">
@@ -63,12 +63,22 @@
           <div id="rosterRangeRows" class="roster-range-list"></div>
           <div class="actions">
             <button id="saveRosterBtn" class="teacher-action">この名簿を登録</button>
-            <button id="exportRosterUsersBtn" class="secondary glass-btn">users.jsonを書き出す</button>
+          </div>
+          <div class="annual-access-panel">
+            <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">同じ生徒は、年度内のどの教科・どの模擬試験でも同じアクセスキーを使います。</p></div>
+            <div class="actions">
+              <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
+              <button id="regenerateAnnualCodesBtn" class="secondary glass-btn">全員再発行</button>
+              <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>QRカードPDF（A4・2人）</button>
+              <button id="exportAnnualSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button>
+              <button id="exportRosterUsersBtn" class="teacher-action">users.jsonを書き出す</button>
+            </div>
+            <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、「未発行者にアクセスキーを発行」を押してください。</div></div>
           </div>
           <div id="rosterMsg" class="small muted"></div>
         </div>
         <div>
-          <div class="info-strip teacher-strip"><span>ONCE</span> 名簿登録は基本的に年度当初の1回だけ。試験公開時に4桁番号を毎回入力する必要はありません。</div>
+          <div class="info-strip teacher-strip"><span>ONCE</span> 名簿登録と年間アクセスキー発行は基本的に年度当初の1回だけ。生徒は同じQRカードを年度内ずっと使用します。</div>
           <div id="rosterSummary" class="grid two roster-summary"></div>
           <div id="rosterPreview" class="roster-preview"></div>
         </div>
@@ -164,7 +174,7 @@
     </section>
 
     <section id="publishManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 3 / PUBLISH CONTROL</span><h2>試験公開・受験者設定</h2><p>STEP 0で登録済みの名簿から、クラス全員または特定の生徒だけを選んで公開します。</p></div><div class="admin-symbol">03</div></div>
+      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 3 / PUBLISH CONTROL</span><h2>試験公開・受験者設定</h2><p>STEP 0で登録済みの名簿から、クラス全員または特定の生徒だけを選んで公開します。ログインには年度共通のアクセスキーを使います。</p></div><div class="admin-symbol">03</div></div>
 
       <div class="grid two admin-form-grid">
         <div>
@@ -183,29 +193,22 @@
 
       <div class="publish-actions-panel">
         <div>
-          <span class="section-eyebrow">PUBLISH & ACCESS</span>
-          <h3>公開設定と試験専用ログインコード</h3>
-          <p class="muted small">対象者を確定後、この試験だけで使うランダムコードを発行します。</p>
+          <span class="section-eyebrow">PUBLISH</span>
+          <h3>公開設定を確定</h3>
+          <p class="muted small">対象者を確定して公開状態を保存します。生徒はSTEP 0で配布した年間アクセスキーでログインします。</p>
         </div>
-        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="generateAudienceCodesBtn" class="orange">対象者コードを生成</button></div>
+        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
-      <div id="publishGeneratedPreview" class="table-shell generated-shell"></div>
 
-      <div class="actions">
-        <button id="exportExamDataBtn" class="secondary glass-btn">exams.jsonを書き出す</button>
-        <button id="exportUserDataBtn" class="secondary glass-btn">users.jsonを書き出す</button>
-        <button id="exportPublishSecretsBtn" class="secondary glass-btn" disabled>教員保管CSV</button>
-        <button id="printPublishSlipsBtn" class="orange" disabled>ログイン票PDF（A4・2人）</button>
-      </div>
-
-      <div class="notice small">本番運用では、教員がGitHubを操作する方式にはしません。次の工程で <strong>Googleフォーム＋公開用Googleスプレッドシートを「公開ハブ」</strong> として接続し、この画面の「公開」で生徒画面へ反映できるようにします。下のJSON書き出しは開発・バックアップ用です。</div>
+      <div class="notice small"><strong>運用：</strong>各教科の先生はこの画面で試験と対象者を設定し、最新版の <code>exams.json</code> を書き出してシステム管理者へ送付します。システム管理者がGitHubの <code>data/exams.json</code> を置き換えると生徒画面へ反映されます。</div>
       <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
     </section>
   </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
 <script src="js/common.js"></script>

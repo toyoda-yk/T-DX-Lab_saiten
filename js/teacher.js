@@ -1,19 +1,19 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
-let exams=[],usersData={version:4,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
-let publishRoster=[],publishSecrets=[];
+let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
+let publishRoster=[],annualSecrets=[];
 let editorRows=[];
 let rosterRanges=[];
 
 async function init(){
   [allExamData,usersData]=await Promise.all([
     fetch('data/exams.json').then(r=>r.json()),
-    fetch('data/users.json').then(r=>r.json()).catch(()=>({version:3,users:[],issuedCodeIds:[]}))
+    fetch('data/users.json').then(r=>r.json()).catch(()=>({version:5,users:[],issuedCodeIds:[]}))
   ]);
   exams=allExamData.exams||[];
   usersData.users=usersData.users||[];
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
-  usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{}});
+  usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null});
   rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
   if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   refreshExamSelects();
@@ -34,6 +34,10 @@ function bind(){
 
   $('addRosterRangeBtn').onclick=()=>{rosterRanges.push({start:'',end:''});renderRosterRanges()};
   $('saveRosterBtn').onclick=saveRoster;
+  $('generateAnnualCodesBtn').onclick=()=>generateAnnualCodes(false);
+  $('regenerateAnnualCodesBtn').onclick=()=>generateAnnualCodes(true);
+  $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
+  $('printAnnualCardsBtn').onclick=printAnnualCards;
   $('exportRosterUsersBtn').onclick=exportUserData;
 
   $('readPdfBtn').onclick=readPdf;
@@ -52,11 +56,7 @@ function bind(){
   $('selectAllAudienceBtn').onclick=()=>setAllAudience(true);
   $('clearAudienceBtn').onclick=()=>setAllAudience(false);
   $('applyPublishBtn').onclick=applyPublish;
-  $('generateAudienceCodesBtn').onclick=generateAudienceCodes;
   $('exportExamDataBtn').onclick=exportExamData;
-  $('exportUserDataBtn').onclick=exportUserData;
-  $('exportPublishSecretsBtn').onclick=exportPublishSecrets;
-  $('printPublishSlipsBtn').onclick=printSlips;
 }
 async function adminLogin(){
   const h=await TDX.sha256Hex($('adminPass').value);
@@ -76,8 +76,8 @@ function showSection(id){
 }
 function getOrCreateUser(studentCode,digits=2){
   let u=usersData.users.find(x=>x.studentCode===studentCode);
-  if(!u){u={studentCode,classKey:studentCode.slice(0,digits),examCredentials:{}};usersData.users.push(u)}
-  u.classKey=studentCode.slice(0,digits);u.examCredentials=u.examCredentials||{};return u
+  if(!u){u={studentCode,classKey:studentCode.slice(0,digits),credential:null,examCredentials:{}};usersData.users.push(u)}
+  u.classKey=studentCode.slice(0,digits);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null;return u
 }
 function compressRosterRanges(codes){
   const nums=[...new Set((codes||[]).filter(x=>/^\d{4}$/.test(String(x))).map(Number))].sort((a,b)=>a-b);
@@ -121,9 +121,9 @@ function codesFromRosterRanges(){
 function saveRoster(){
   try{
     const codes=codesFromRosterRanges(),old=new Map(usersData.users.map(u=>[u.studentCode,u]));
-    usersData.users=codes.map(code=>{const u=old.get(code)||{studentCode:code,classKey:code.slice(0,2),examCredentials:{}};u.classKey=code.slice(0,2);u.examCredentials=u.examCredentials||{};return u});
+    usersData.users=codes.map(code=>{const u=old.get(code)||{studentCode:code,classKey:code.slice(0,2),credential:null,examCredentials:{}};u.classKey=code.slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null;return u});
     localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges));
-    $('rosterMsg').className='success small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。年度をまたいで残す場合は users.json を書き出してGitHubの data/ に反映してください。`;
+    $('rosterMsg').className='success small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。次に「年間アクセスキーを発行」を実行し、QRカードと users.json を保存してください。`;
     renderRosterSummary();loadPublishExam();
   }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message}
 }
@@ -131,63 +131,83 @@ function renderRosterSummary(){
   if(!$('rosterSummary'))return;
   const groups={};usersData.users.forEach(u=>{const c=u.classKey||u.studentCode.slice(0,2);(groups[c]??=[]).push(u.studentCode)});
   const entries=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b));
-  $('rosterSummary').innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${usersData.users.length}</div></div><div class="kpi"><div class="muted small">クラス</div><div class="value">${entries.length}</div></div>`;
+  const issued=usersData.users.filter(u=>u.credential).length;
+  $('rosterSummary').innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${usersData.users.length}</div></div><div class="kpi"><div class="muted small">クラス</div><div class="value">${entries.length}</div></div><div class="kpi"><div class="muted small">アクセスキー発行済</div><div class="value">${issued}</div></div>`;
   $('rosterPreview').innerHTML=entries.length?entries.map(([c,list])=>`<div class="roster-class-preview"><strong>${c}組</strong><span>${list.length}人</span><small>${list[0]} ～ ${list[list.length-1]}</small></div>`).join(''):'<div class="notice small">まだ生徒名簿が登録されていません。</div>';
 }
 async function candidateCollides(pretty){
   const fp=await TDX.sha256Hex(pretty);
   if(usersData.issuedCodeIds.includes(fp)) return true;
-  for(const u of usersData.users){for(const rec of Object.values(u.examCredentials||{})){if(rec.codeId===fp)return true;if(!rec.codeId&&rec.salt&&rec.hash&&await TDX.verify(pretty,rec))return true}}
+  for(const u of usersData.users){
+    const rec=u.credential;
+    if(rec){if(rec.codeId===fp)return true;if(!rec.codeId&&rec.salt&&rec.hash&&await TDX.verify(pretty,rec))return true}
+    for(const legacy of Object.values(u.examCredentials||{})){if(legacy.codeId===fp)return true;if(!legacy.codeId&&legacy.salt&&legacy.hash&&await TDX.verify(pretty,legacy))return true}
+  }
   return false;
 }
 async function createUniqueAccessCode(){
   for(let tries=0;tries<100;tries++){
-    const raw=TDX.randomCode(12),pretty=`${raw.slice(0,4)}-${raw.slice(4,8)}-${raw.slice(8)}`;
+    const raw=TDX.randomCode(16),pretty=`${raw.slice(0,4)}-${raw.slice(4,8)}-${raw.slice(8,12)}-${raw.slice(12)}`;
     if(!(await candidateCollides(pretty))){const codeId=await TDX.sha256Hex(pretty);usersData.issuedCodeIds.push(codeId);return {pretty,codeId}}
   }
-  throw new Error('一意なログインコードを生成できませんでした。');
+  throw new Error('一意なアクセスキーを生成できませんでした。');
 }
-async function generateForExam(examId,codes){
-  const secrets=[];
-  for(const studentCode of codes){
-    const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty),u=getOrCreateUser(studentCode,2);
-    u.examCredentials[examId]={salt:v.salt,hash:v.hash,codeId};
-    secrets.push({examId,studentCode,accessCode:pretty,classKey:u.classKey});
+async function generateAnnualCodes(regenerateAll=false){
+  if(!usersData.users.length){alert('先に生徒名簿を登録してください。');return}
+  if(regenerateAll&&!confirm('全生徒の年間アクセスキーを再発行します。以前のQRカードはすべて無効になります。よろしいですか？'))return;
+  annualSecrets=[];
+  for(const u of usersData.users){
+    if(u.credential&&!regenerateAll)continue;
+    const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty);
+    u.credential={salt:v.salt,hash:v.hash,codeId,issuedAt:new Date().toISOString()};
+    annualSecrets.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
   }
-  return secrets;
+  renderAnnualSecrets();renderRosterSummary();
+  if(annualSecrets.length){
+    $('exportAnnualSecretsBtn').disabled=false;$('printAnnualCardsBtn').disabled=false;
+    $('rosterMsg').className='success small';
+    $('rosterMsg').textContent=`${annualSecrets.length}人分の年間アクセスキーを発行しました。必ずQRカードPDFまたは教員保管CSVを保存してから users.json を書き出してください。`;
+  }else{
+    $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。必要な場合のみ「全員再発行」を使ってください。';
+  }
 }
-function renderSlips(secrets,exam){
+function renderAnnualSecrets(){
+  const root=$('annualCodePreview');if(!root)return;
+  if(!annualSecrets.length){root.innerHTML='<div class="notice small">アクセスキーを新規発行すると、ここに今回発行分だけ表示されます。平文キーは users.json には保存されません。</div>';return}
+  root.innerHTML=`<h3>今回発行したアクセスキー（${annualSecrets.length}人）</h3><div class="table-shell"><table><thead><tr><th>4桁番号</th><th>年間アクセスキー</th><th>クラス</th></tr></thead><tbody>${annualSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table></div>${annualSecrets.length>20?`<p class="small muted">ほか ${annualSecrets.length-20}人</p>`:''}`;
+}
+function exportAnnualSecrets(){
+  if(!annualSecrets.length){alert('この画面で新しく発行したアクセスキーがありません。');return}
+  const csv='4桁番号,年間アクセスキー,クラス\n'+annualSecrets.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
+  TDX.download('T-DX_Lab_年間アクセスキー_教員保管.csv','\ufeff'+csv,'text/csv;charset=utf-8');
+}
+function renderAnnualCards(secrets){
   const pages=[];
   for(let i=0;i<secrets.length;i+=2){
     const pair=secrets.slice(i,i+2);
-    pages.push(`<section class="slip-page">${pair.map((x,j)=>`<div class="slip-half">
-      <div class="slip-brand"><strong>T-DX Lab☆問題演習システム</strong><span>${esc(exam?.subject||'')}</span></div>
-      <h2>${esc(exam?.title||'')}</h2>
-      <p class="slip-note">この試験専用のログイン票です。ほかの人に見せないでください。</p>
-      <div class="slip-credentials"><div><span>4桁番号</span><strong>${x.studentCode}</strong></div><div><span>専用ログインコード</span><strong class="code">${x.accessCode}</strong></div></div>
-      <p class="small">このコードは上記試験でのみ使用できます。</p>
+    pages.push(`<section class="slip-page annual-card-page">${pair.map((x,j)=>`<div class="slip-half annual-access-card">
+      <div class="slip-brand"><strong>T-DX Lab☆問題演習システム</strong><span>年間アクセスカード</span></div>
+      <h2>学習アクセスカード</h2>
+      <p class="slip-note">このカードは年度内のT-DX Lab☆問題演習システム共通ログインに使用します。ほかの人に見せないでください。</p>
+      <div class="annual-card-grid">
+        <div class="slip-credentials"><div><span>4桁番号</span><strong>${x.studentCode}</strong></div><div><span>年間アクセスキー</span><strong class="code">${x.accessCode}</strong></div></div>
+        <div class="annual-qr-wrap"><div class="annual-qr" data-qr-code="TDX|${x.studentCode}|${x.accessCode}"></div><small>ログイン時に読み取る</small></div>
+      </div>
+      <p class="small">QRコードが使えない場合は、4桁番号と年間アクセスキーを手入力してください。</p>
       ${j===0?'<div class="cutline">✂ 切り取り線</div>':''}
     </div>`).join('')}</section>`);
   }
   $('slips').innerHTML=pages.join('');
+  document.querySelectorAll('.annual-qr').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qrCode,width:130,height:130,correctLevel:QRCode.CorrectLevel.M})});
 }
-async function printSlips(){
-  if(!publishSecrets.length){alert('先に対象者コードを生成してください。');return}
-  const exam=exams.find(e=>e.id===$('publishExamSelect').value);
-  renderSlips(publishSecrets,exam);
-  const stage=$('slips');
-  stage.classList.add('pdf-rendering');
-  const filename=`T-DX_Lab_${exam?.title||'試験'}_ログイン票.pdf`.replace(/[\\/:*?"<>|]/g,'_');
+async function printAnnualCards(){
+  if(!annualSecrets.length){alert('先に年間アクセスキーを発行してください。平文キーは安全のため再表示できないので、発行直後にPDFを保存してください。');return}
+  renderAnnualCards(annualSecrets);
+  const stage=$('slips');stage.classList.add('pdf-rendering');
+  await new Promise(r=>setTimeout(r,250));
   try{
-    await html2pdf().set({
-      margin:0,
-      filename,
-      image:{type:'jpeg',quality:.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css','legacy'],after:'.slip-page'}
-    }).from(stage).save();
-  }catch(e){console.error(e);alert('ログイン票PDFの生成に失敗しました。ブラウザを再読み込みして再度お試しください。')}
+    await html2pdf().set({margin:0,filename:'T-DX_Lab_年間アクセスカード.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],after:'.slip-page'}}).from(stage).save();
+  }catch(e){console.error(e);alert('年間アクセスカードPDFの生成に失敗しました。')}
   finally{stage.classList.remove('pdf-rendering')}
 }
 
@@ -516,19 +536,16 @@ function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
   const selected=selectedAudienceCodes();if($('publishToggle').checked&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
   const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};
-  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。現在はブラウザ内に反映済みです。本番公開は次工程でGoogle公開ハブへ自動送信する方式に切り替えます。`;
+  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。次に「exams.jsonを書き出す」を押し、システム管理者へ送付してください。`;
 }
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
-async function generateAudienceCodes(){
-  const exam=exams.find(e=>e.id===$('publishExamSelect').value),codes=selectedAudienceCodes();if(!exam)return;
-  if(!codes.length){alert('受験対象生徒を選択してください。');return}
-  publishSecrets=await generateForExam(exam.id,codes);
-  $('exportPublishSecretsBtn').disabled=false;$('printPublishSlipsBtn').disabled=false;
-  $('publishGeneratedPreview').innerHTML=`<h3>${esc(exam.title)}：対象者 ${codes.length}人の試験専用コード</h3><table><thead><tr><th>4桁番号</th><th>ログインコード</th><th>クラス</th></tr></thead><tbody>${publishSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table>${codes.length>20?`<p class="small muted">ほか ${codes.length-20}人</p>`:''}`;
-  renderSlips(publishSecrets,exam);
-  $('publishMsg').className='success small';$('publishMsg').textContent='対象者の試験専用ログインコードを生成しました。教員保管CSVとA4ログイン票PDFを保存してください。公開用データは次工程でGoogle公開ハブへ自動送信する方式に切り替えます。';
+function exportExamData(){
+  allExamData.version=Math.max(Number(allExamData.version||0),5);
+  allExamData.updatedAt=new Date().toISOString();
+  TDX.download('exams.json',JSON.stringify(allExamData,null,2));
 }
-function exportExamData(){TDX.download('exams.json',JSON.stringify(allExamData,null,2))}
-function exportUserData(){TDX.download('users.json',JSON.stringify({version:4,note:'STEP 0で登録した生徒名簿と試験ごとの認証情報。平文ログインコードは含みません。issuedCodeIds は再発行時の重複防止用です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users},null,2))}
-function exportPublishSecrets(){const exam=exams.find(e=>e.id===$('publishExamSelect').value),csv='試験,4桁番号,ログインコード,クラス\n'+publishSecrets.map(x=>`"${exam?.title||''}",${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');TDX.download(`T-DX_Lab_${exam?.title||'試験'}_ログインコード.csv`.replace(/[\\/:*?"<>|]/g,'_'),'\ufeff'+csv,'text/csv;charset=utf-8')}
+function exportUserData(){
+  const payload={version:5,note:'年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。',issuedCodeIds:usersData.issuedCodeIds,users:usersData.users.map(u=>({studentCode:u.studentCode,classKey:u.classKey,credential:u.credential||null}))};
+  TDX.download('users.json',JSON.stringify(payload,null,2));
+}
 init().catch(console.error);

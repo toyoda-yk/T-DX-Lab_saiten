@@ -1,15 +1,15 @@
 {
-  "version": 2,
-  "note": "試験ごとの認証情報。公開ファイルにはsaltとhashのみを保存します。",
+  "version": 5,
+  "note": "年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。",
+  "issuedCodeIds": [],
   "users": [
     {
       "studentCode": "3101",
       "classKey": "31",
-      "examCredentials": {
-        "info1_mock_01": {
-          "salt": "tdx-demo-salt-3101",
-          "hash": "bf6692f7d45191e43d8effab2681ec9b972f9a50630086ffda72c4bbe7f2eb52"
-        }
+      "credential": {
+        "salt": "tdx-demo-annual-3101",
+        "hash": "76c8f9ec4936711c7e0001dec7bd162686263f8384f9875a09ec3d15de5e3e5e",
+        "codeId": "demo-annual-3101"
       }
     }
   ]

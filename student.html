@@ -23,7 +23,7 @@
       <p class="portal-overline">T-DX Lab☆ DIGITAL LEARNING SYSTEM</p>
       <h1><span>生徒用</span>問題演習ポータル</h1>
       <p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
-      <p class="portal-sub">配布された4桁番号と、今回の試験専用ログインコードでアクセスします。</p>
+      <p class="portal-sub">配布された4桁番号と、年度共通のT-DX Labアクセスキーでアクセスします。QRカードを使えば入力せずにログインできます。</p>
     </div>
 
     <div class="portal-login-card">
@@ -36,12 +36,13 @@
         <input id="studentCode" inputmode="numeric" maxlength="4" placeholder="例：3101">
       </div>
       <div class="field-group">
-        <label for="accessCode">専用ログインコード</label>
-        <input id="accessCode" type="password" autocomplete="current-password" placeholder="配布されたコード">
+        <label for="accessCode">年間アクセスキー</label>
+        <input id="accessCode" type="password" autocomplete="current-password" placeholder="例：ABCD-EFGH-JKLM-NPQR">
       </div>
+      <div class="qr-login-row"><button id="qrLoginBtn" type="button" class="qr-login-btn">QRコードを読み取る</button><span>または手入力</span></div>
       <div id="loginMsg" class="small portal-login-message">試作確認用：3101 / DEMO-7KQ3-M9TZ</div>
       <button id="loginBtn" class="portal-login-btn student-login-btn">ログインして試験を選ぶ <span>›</span></button>
-      <div class="portal-security"><span>✓</span><p><strong>この試験専用のログインコード</strong><br>他の人には見せないでください。</p></div>
+      <div class="portal-security"><span>✓</span><p><strong>年度共通のT-DX Labアクセスキー</strong><br>問題集に貼ったQRカードを年度内ずっと使用できます。</p></div>
     </div>
   </section>
 
@@ -54,7 +55,7 @@
       </div>
       <button id="logoutBtn" class="secondary glass-btn">ログアウト</button>
     </div>
-    <div class="info-strip"><span>●</span> 公開中の試験だけが表示されます。試験ごとに専用ログインコードを使用します。</div>
+    <div class="info-strip"><span>●</span> 公開中かつ、あなたが受験対象に指定されている試験だけが表示されます。</div>
     <div id="examList" class="grid two future-exam-grid"></div>
   </section>
 
@@ -105,6 +106,16 @@
   </section>
 </main>
 
+<div id="qrModal" class="qr-modal hidden" role="dialog" aria-modal="true" aria-label="QRコード読み取り">
+  <div class="qr-modal-card">
+    <div class="section-title"><div><span class="section-eyebrow">QR ACCESS</span><h2>アクセスカードを読み取る</h2></div><button id="qrCloseBtn" class="secondary glass-btn">閉じる</button></div>
+    <p class="muted small">問題集に貼ったT-DX LabアクセスカードのQRコードをカメラに映してください。</p>
+    <div id="qrReader" class="qr-reader"></div>
+    <div id="qrScanMsg" class="small muted"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="js/common.js"></script>
 <script src="js/student.js"></script>
