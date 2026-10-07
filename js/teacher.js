@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
 let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
-let publishRoster=[],annualSecrets=[];
+let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
 let rosterRanges=[];
 
@@ -39,6 +39,13 @@ function bind(){
   $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
   $('printAnnualCardsBtn').onclick=printAnnualCards;
   $('exportRosterUsersBtn').onclick=exportUserData;
+  $('importAnnualSecretsBtn').onclick=()=>$('importAnnualSecretsInput').click();
+  $('importAnnualSecretsInput').onchange=importAnnualSecretsCsv;
+  $('accessVaultClassFilter').onchange=renderAccessVaultManager;
+  $('selectVisibleVaultBtn').onclick=()=>setVisibleVaultSelection(true);
+  $('clearVaultSelectionBtn').onclick=()=>setVisibleVaultSelection(false);
+  $('reprintSelectedCardsBtn').onclick=reprintSelectedCards;
+  $('reissueSelectedCodesBtn').onclick=reissueSelectedCodes;
 
   $('readPdfBtn').onclick=readPdf;
   $('parsePastedTextBtn').onclick=()=>analyzeAnswerSource('pasted');
@@ -162,7 +169,8 @@ async function generateAnnualCodes(regenerateAll=false){
     u.credential={salt:v.salt,hash:v.hash,codeId,issuedAt:new Date().toISOString()};
     annualSecrets.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
   }
-  renderAnnualSecrets();renderRosterSummary();
+  mergeIntoAccessVault(annualSecrets);
+  renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
   if(annualSecrets.length){
     $('exportAnnualSecretsBtn').disabled=false;$('printAnnualCardsBtn').disabled=false;
     $('rosterMsg').className='success small';
@@ -177,9 +185,92 @@ function renderAnnualSecrets(){
   root.innerHTML=`<h3>今回発行したアクセスキー（${annualSecrets.length}人）</h3><div class="table-shell"><table><thead><tr><th>4桁番号</th><th>年間アクセスキー</th><th>クラス</th></tr></thead><tbody>${annualSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table></div>${annualSecrets.length>20?`<p class="small muted">ほか ${annualSecrets.length-20}人</p>`:''}`;
 }
 function exportAnnualSecrets(){
-  if(!annualSecrets.length){alert('この画面で新しく発行したアクセスキーがありません。');return}
-  const csv='4桁番号,年間アクセスキー,クラス\n'+annualSecrets.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
+  const rows=accessVault.length?accessVault:annualSecrets;
+  if(!rows.length){alert('保存できるアクセスキーがありません。先にアクセスキーを発行してください。');return}
+  const csv='4桁番号,年間アクセスキー,クラス\n'+rows.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
   TDX.download('T-DX_Lab_年間アクセスキー_教員保管.csv','\ufeff'+csv,'text/csv;charset=utf-8');
+}
+
+function mergeIntoAccessVault(rows){
+  const m=new Map(accessVault.map(x=>[x.studentCode,x]));
+  (rows||[]).forEach(x=>{if(x&&/^\d{4}$/.test(String(x.studentCode))&&x.accessCode)m.set(String(x.studentCode),{studentCode:String(x.studentCode),accessCode:String(x.accessCode).toUpperCase(),classKey:String(x.classKey||x.studentCode.slice(0,2))})});
+  accessVault=[...m.values()].sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  refreshAccessVaultClassFilter();
+  $('exportAnnualSecretsBtn').disabled=!accessVault.length;
+}
+function refreshAccessVaultClassFilter(){
+  const sel=$('accessVaultClassFilter');if(!sel)return;
+  const current=sel.value;
+  const classes=[...new Set(accessVault.map(x=>x.classKey||x.studentCode.slice(0,2)))].sort();
+  sel.innerHTML='<option value="">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}組</option>`).join('');
+  if(classes.includes(current))sel.value=current;
+}
+async function importAnnualSecretsCsv(e){
+  const f=e.target.files?.[0];if(!f)return;
+  try{
+    const text=(await f.text()).replace(/^\uFEFF/,'');
+    const lines=text.split(/\r?\n/).filter(x=>x.trim());
+    const rows=[];
+    for(let i=1;i<lines.length;i++){
+      const parts=lines[i].split(',').map(x=>x.trim().replace(/^"|"$/g,''));
+      const studentCode=parts[0],accessCode=(parts[1]||'').toUpperCase(),classKey=parts[2]||studentCode?.slice(0,2);
+      if(/^\d{4}$/.test(studentCode)&&accessCode)rows.push({studentCode,accessCode,classKey});
+    }
+    if(!rows.length)throw new Error('有効なアクセスキーが見つかりませんでした。');
+    const verified=[];const stale=[];
+    for(const row of rows){
+      const u=usersData.users.find(x=>x.studentCode===row.studentCode);
+      if(!u?.credential){stale.push(row.studentCode);continue}
+      if(await TDX.verify(row.accessCode,u.credential))verified.push(row);else stale.push(row.studentCode);
+    }
+    mergeIntoAccessVault(verified);
+    renderAccessVaultManager();
+    $('rosterMsg').className=stale.length?'notice small':'success small';
+    $('rosterMsg').textContent=`教員保管CSVから ${verified.length}人分の現在有効なアクセスキーを読み込みました。`+(stale.length?` ${stale.length}人分は現在のusers.jsonと一致しないため除外しました。`:``);
+  }catch(err){$('rosterMsg').className='error small';$('rosterMsg').textContent='教員保管CSVを読み込めませんでした：'+err.message}
+  finally{e.target.value=''}
+}
+function currentVaultRows(){
+  const c=$('accessVaultClassFilter')?.value||'';
+  return accessVault.filter(x=>!c||x.classKey===c);
+}
+function renderAccessVaultManager(){
+  const root=$('accessVaultManager');if(!root)return;
+  refreshAccessVaultClassFilter();
+  const rows=currentVaultRows();
+  if(!accessVault.length){root.innerHTML='<div class="notice small">教員保管CSVを読み込むと、クラス・生徒を選んで同じQRカードを再印刷できます。</div>';updateVaultButtons();return}
+  root.innerHTML=`<div class="table-shell"><table><thead><tr><th></th><th>4桁番号</th><th>クラス</th><th>年間アクセスキー</th></tr></thead><tbody>${rows.map(x=>`<tr><td><input type="checkbox" class="vault-check" data-code="${esc(x.studentCode)}"></td><td><strong>${esc(x.studentCode)}</strong></td><td>${esc(x.classKey)}組</td><td><code>${esc(x.accessCode)}</code></td></tr>`).join('')}</tbody></table></div>${rows.length?`<p class="small muted">${rows.length}人表示中。再印刷する生徒だけ選択してください。</p>`:''}`;
+  root.querySelectorAll('.vault-check').forEach(x=>x.onchange=updateVaultButtons);
+  updateVaultButtons();
+}
+function selectedVaultSecrets(){
+  const codes=[...document.querySelectorAll('.vault-check:checked')].map(x=>x.dataset.code);
+  const set=new Set(codes);return accessVault.filter(x=>set.has(x.studentCode));
+}
+function setVisibleVaultSelection(v){document.querySelectorAll('.vault-check').forEach(x=>x.checked=v);updateVaultButtons()}
+function updateVaultButtons(){
+  const n=selectedVaultSecrets().length;
+  if($('reprintSelectedCardsBtn'))$('reprintSelectedCardsBtn').disabled=!n;
+  if($('reissueSelectedCodesBtn'))$('reissueSelectedCodesBtn').disabled=!n;
+}
+async function reprintSelectedCards(){
+  const rows=selectedVaultSecrets();if(!rows.length){alert('再印刷する生徒を選択してください。');return}
+  await generateAccessCardsPdf(rows,'T-DX_Lab_年間アクセスカード_再印刷.pdf');
+}
+async function reissueSelectedCodes(){
+  const selected=selectedVaultSecrets();if(!selected.length){alert('再発行する生徒を選択してください。');return}
+  if(!confirm(`${selected.length}人の年間アクセスキーを再発行します。新しい users.json をGitHubへ反映した時点で、以前のQRカードは使えなくなります。よろしいですか？`))return;
+  const newly=[];
+  for(const old of selected){
+    const u=usersData.users.find(x=>x.studentCode===old.studentCode);if(!u)continue;
+    const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty);
+    u.credential={salt:v.salt,hash:v.hash,codeId,issuedAt:new Date().toISOString()};
+    newly.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
+  }
+  mergeIntoAccessVault(newly);annualSecrets=newly;
+  renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
+  $('printAnnualCardsBtn').disabled=!newly.length;$('exportAnnualSecretsBtn').disabled=!accessVault.length;
+  $('rosterMsg').className='success small';$('rosterMsg').textContent=`${newly.length}人のアクセスキーを再発行しました。新しいQRカードを配布し、教員保管CSVと users.json を必ず更新してください。GitHubへ新しい users.json を反映すると旧キーは無効になります。`;
 }
 function renderAnnualCards(secrets){
   const pages=[];
@@ -279,31 +370,27 @@ async function makeAccessCardCanvas(secret,logo){
   await drawAnnualAccessCard(ctx,18,18,W-36,H-36,secret,logo);
   return canvas;
 }
-async function printAnnualCards(){
-  if(!annualSecrets.length){
-    alert('先に年間アクセスキーを発行してください。年間アクセスキーの平文は users.json には保存されないため、発行直後にPDFまたは教員保管CSVを保存してください。');
-    return;
-  }
+async function generateAccessCardsPdf(secrets,filename='T-DX_Lab_年間アクセスカード.pdf'){
+  if(!secrets?.length){alert('PDFに出力するアクセスキーがありません。');return}
   if(!window.PDFLib || typeof QRCode==='undefined'){
     alert('PDFまたはQRコード生成ライブラリを読み込めませんでした。インターネット接続を確認してページを再読み込みしてください。');
     return;
   }
-
-  const oldText=$('printAnnualCardsBtn').textContent;
-  $('printAnnualCardsBtn').disabled=true;$('printAnnualCardsBtn').textContent='PDF作成中…';
+  const btn=$('printAnnualCardsBtn'),oldText=btn?.textContent||'';
+  if(btn){btn.disabled=true;btn.textContent='PDF作成中…'}
   try{
     const {PDFDocument,rgb}=window.PDFLib;
     const pdfDoc=await PDFDocument.create();
     let logo=null;try{logo=await imageFromUrl('assets/images/tdx-lab-logo.png')}catch(e){console.warn('logo load skipped',e)}
     const pageW=595.28,pageH=841.89,marginX=20,marginY=18,gap=12;
     const halfH=(pageH-marginY*2-gap)/2;
-    for(let i=0;i<annualSecrets.length;i+=2){
+    for(let i=0;i<secrets.length;i+=2){
       const page=pdfDoc.addPage([pageW,pageH]);
-      const topCanvas=await makeAccessCardCanvas(annualSecrets[i],logo);
+      const topCanvas=await makeAccessCardCanvas(secrets[i],logo);
       const topPng=await pdfDoc.embedPng(await canvasToPngBytes(topCanvas));
       page.drawImage(topPng,{x:marginX,y:pageH-marginY-halfH,width:pageW-marginX*2,height:halfH});
-      if(annualSecrets[i+1]){
-        const bottomCanvas=await makeAccessCardCanvas(annualSecrets[i+1],logo);
+      if(secrets[i+1]){
+        const bottomCanvas=await makeAccessCardCanvas(secrets[i+1],logo);
         const bottomPng=await pdfDoc.embedPng(await canvasToPngBytes(bottomCanvas));
         page.drawImage(bottomPng,{x:marginX,y:marginY,width:pageW-marginX*2,height:halfH});
       }
@@ -313,14 +400,14 @@ async function printAnnualCards(){
     const bytes=await pdfDoc.save({useObjectStreams:false});
     const blob=new Blob([bytes],{type:'application/pdf'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='T-DX_Lab_年間アクセスカード.pdf';document.body.appendChild(a);a.click();a.remove();
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-  }catch(e){
-    console.error(e);
-    alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを先に保存し、ページを再読み込みしてもう一度お試しください。');
-  }finally{
-    $('printAnnualCardsBtn').disabled=false;$('printAnnualCardsBtn').textContent=oldText;
-  }
+  }catch(e){console.error(e);alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを確認し、ページを再読み込みしてもう一度お試しください。')}
+  finally{if(btn){btn.disabled=false;btn.textContent=oldText}}
+}
+async function printAnnualCards(){
+  if(!annualSecrets.length){alert('今回新しく発行したアクセスキーがありません。既存カードの再印刷は「教員保管CSVを読み込む」から行ってください。');return}
+  await generateAccessCardsPdf(annualSecrets,'T-DX_Lab_年間アクセスカード.pdf');
 }
 
 // ===== PDF / pasted text → editable exam draft =====
