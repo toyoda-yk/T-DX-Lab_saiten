@@ -201,14 +201,58 @@ function renderAnnualCards(secrets){
   document.querySelectorAll('.annual-qr').forEach(el=>{el.innerHTML='';new QRCode(el,{text:el.dataset.qrCode,width:130,height:130,correctLevel:QRCode.CorrectLevel.M})});
 }
 async function printAnnualCards(){
-  if(!annualSecrets.length){alert('先に年間アクセスキーを発行してください。平文キーは安全のため再表示できないので、発行直後にPDFを保存してください。');return}
+  if(!annualSecrets.length){
+    alert('先に年間アクセスキーを発行してください。年間アクセスキーの平文は users.json には保存されないため、発行直後にPDFまたは教員保管CSVを保存してください。');
+    return;
+  }
+  if(typeof html2canvas==='undefined'||!window.jspdf?.jsPDF){
+    alert('PDF生成ライブラリを読み込めませんでした。インターネット接続を確認してページを再読み込みしてください。');
+    return;
+  }
+
   renderAnnualCards(annualSecrets);
-  const stage=$('slips');stage.classList.add('pdf-rendering');
-  await new Promise(r=>setTimeout(r,250));
+  const stage=$('slips');
+  const pages=[...stage.querySelectorAll('.slip-page')];
+  if(!pages.length){alert('PDFに出力するカードがありません。');return}
+
+  // オフスクリーン要素のまま html2canvas に渡すと Safari で白紙になるため、
+  // PDF作成中だけ実寸A4を画面内に配置し、上からマスクを重ねてキャプチャする。
+  const mask=document.createElement('div');
+  mask.className='pdf-capture-mask';
+  mask.innerHTML='<div><strong>年間アクセスカードPDFを作成しています…</strong><span>QRコードとアクセスキーを描画中です。</span></div>';
+  document.body.appendChild(mask);
+  document.body.classList.add('pdf-capturing');
+  stage.classList.add('pdf-rendering');
+
   try{
-    await html2pdf().set({margin:0,filename:'T-DX_Lab_年間アクセスカード.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],after:'.slip-page'}}).from(stage).save();
-  }catch(e){console.error(e);alert('年間アクセスカードPDFの生成に失敗しました。')}
-  finally{stage.classList.remove('pdf-rendering')}
+    await new Promise(r=>setTimeout(r,500)); // QRCode canvas/img の描画待ち
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+
+    for(let i=0;i<pages.length;i++){
+      if(i>0)pdf.addPage('a4','portrait');
+      const canvas=await html2canvas(pages[i],{
+        scale:2,
+        useCORS:true,
+        backgroundColor:'#ffffff',
+        logging:false,
+        width:pages[i].scrollWidth,
+        height:pages[i].scrollHeight,
+        windowWidth:pages[i].scrollWidth,
+        windowHeight:pages[i].scrollHeight
+      });
+      const img=canvas.toDataURL('image/jpeg',0.96);
+      pdf.addImage(img,'JPEG',0,0,210,297,undefined,'FAST');
+    }
+    pdf.save('T-DX_Lab_年間アクセスカード.pdf');
+  }catch(e){
+    console.error(e);
+    alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを保存したうえで、ページを再読み込みして再度お試しください。');
+  }finally{
+    stage.classList.remove('pdf-rendering');
+    document.body.classList.remove('pdf-capturing');
+    mask.remove();
+  }
 }
 
 // ===== PDF / pasted text → editable exam draft =====
