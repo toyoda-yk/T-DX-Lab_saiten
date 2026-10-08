@@ -12,6 +12,7 @@ let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='';
 let startupDataWarning='';
+window.addEventListener('tdx-teacher-login-inline',e=>{teacherSessionPassword=String(e?.detail?.password||'').trim();});
 
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
@@ -141,8 +142,10 @@ function refreshPublishSelectors(preferredExamId=''){
   if(examId)$('publishExamSelect').value=examId;
 }
 function bind(){
-  $('adminLoginBtn').onclick=adminLogin;
-  $('adminPass').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin()});
+  if(!window.__TDX_INLINE_LOGIN_BOUND__){
+    $('adminLoginBtn').onclick=adminLogin;
+    $('adminPass').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin()});
+  }
   $('adminLogoutBtn').onclick=()=>{systemAdminUnlocked=false;teacherSessionPassword='';updateSystemAdminUi();$('systemAdminGate')?.classList.add('hidden');$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');$('adminPass').value='';window.scrollTo({top:0,behavior:'smooth'})};
   document.querySelectorAll('.menuBtn').forEach(b=>b.onclick=()=>showSection(b.dataset.target));
   $('systemAdminBtn').onclick=()=>{if(systemAdminUnlocked){showSection('studentManager');return}$('systemAdminGate').classList.toggle('hidden');if(!$('systemAdminGate').classList.contains('hidden'))$('systemAdminPass').focus()};
@@ -209,7 +212,7 @@ function bind(){
 async function adminLogin(){
   // 教員ログインはWeb Cryptoの可否に依存させない。
   // GitHub Pages上の簡易ロックなので、入力文字列を直接比較する。
-  const entered=String($('adminPass')?.value||'');
+  const entered=String($('adminPass')?.value||'').trim();
   if(entered!==TEACHER_PASSWORD){$('adminMsg').className='error small';$('adminMsg').textContent='教員共通パスワードが違います。';return}
   teacherSessionPassword=entered;
   $('adminGate').classList.add('hidden');
@@ -1578,4 +1581,5 @@ async function exportUserData(){
   renderAccessVaultManager();renderAdminStudentList();renderAnnualMasterStatus();
 }
 
-init().catch(console.error);
+window.__TDX_TEACHER_APP_READY__=true;
+init().catch(e=>{console.error(e);const n=$('startupScriptNotice');if(n){n.classList.remove('hidden');n.textContent='教員画面の初期化中にエラーが発生しました。ページを再読み込みしてください。';}});

@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.24.2">
+  <link rel="stylesheet" href="css/style.css?v=1.24.3">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -16,7 +16,7 @@
       <img src="assets/images/tdx-lab-logo.png" alt="T-DX Lab">
       <span><strong>T-DX Lab</strong><small>問題演習システム</small></span>
     </a>
-    <div class="header-version-tools"><span class="app-version">v1.24.2</span><button id="forceReloadBtn" class="header-refresh-btn" type="button">最新版を再読込</button><a class="app-home-link portal-home-link" href="index.html?v=1.24.2">トップへ</a></div>
+    <div class="header-version-tools"><span class="app-version">v1.24.3</span><button id="forceReloadBtn" class="header-refresh-btn" type="button">最新版を再読込</button><a class="app-home-link portal-home-link" href="index.html?v=1.24.3">トップへ</a></div>
   </div>
 </header>
 
@@ -43,6 +43,7 @@
   </section>
 
   <div id="adminApp" class="hidden">
+    <div id="startupScriptNotice" class="notice small hidden" style="margin:12px 24px 0"></div>
     <section class="future-panel admin-dashboard-card">
       <div class="section-title app-section-head teacher-dashboard-head">
         <div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">通常は「試験作成・模範解答の登録」から開始します。年度設定はシステム管理者だけが操作します。</p></div>
@@ -114,7 +115,7 @@
           <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
           <details class="compact-help-details legacy-migration-details">
             <summary>v1.23以前の年間マスターCSVから移行する</summary>
-            <p>旧users.jsonにはQR再印刷用の暗号化キーがありません。旧CSVを読み込むと、現在の教員パスワードで暗号化してv1.24.2形式へ移行できます。移行後にusers.jsonを書き出してください。</p>
+            <p>旧users.jsonにはQR再印刷用の暗号化キーがありません。旧CSVを読み込むと、現在の教員パスワードで暗号化してv1.24.3形式へ移行できます。移行後にusers.jsonを書き出してください。</p>
             <div class="actions compact-actions"><button id="importAnnualSecretsBtn" class="secondary glass-btn" type="button">旧CSV / 再印刷データを読み込む</button></div>
           </details>
           <details class="danger-admin-details">
@@ -399,6 +400,56 @@
   </div>
 </main>
 
+<script>
+// v1.24.3: 教員ログインだけは外部JSの読込状態に依存させない。
+// GitHub Pagesで teacher.html と js/teacher.js の更新タイミングがずれても、
+// ログインボタン自体が無反応にならないための最小フォールバック。
+(() => {
+  const TEACHER_PASSWORD_FALLBACK = 'T-DXLab9999';
+  const gate = document.getElementById('adminGate');
+  const app = document.getElementById('adminApp');
+  const pass = document.getElementById('adminPass');
+  const btn = document.getElementById('adminLoginBtn');
+  const msg = document.getElementById('adminMsg');
+  if (!gate || !app || !pass || !btn) return;
+
+  function showExamManagerFallback(){
+    document.querySelectorAll('.adminSection').forEach(el => el.classList.toggle('hidden', el.id !== 'examManager'));
+    document.querySelectorAll('.menuBtn').forEach(el => el.classList.toggle('active-look', el.dataset.target === 'examManager'));
+  }
+  function unlockTeacher(){
+    const entered = String(pass.value || '').trim();
+    if (entered !== TEACHER_PASSWORD_FALLBACK) {
+      if (msg) { msg.className='error small portal-admin-message'; msg.textContent='教員共通パスワードが違います。'; }
+      return;
+    }
+    window.__TDX_TEACHER_INLINE_PASSWORD__ = entered;
+    gate.classList.add('hidden');
+    app.classList.remove('hidden');
+    if (msg) msg.textContent='';
+    showExamManagerFallback();
+    window.dispatchEvent(new CustomEvent('tdx-teacher-login-inline', {detail:{password:entered}}));
+    requestAnimationFrame(() => app.scrollIntoView({behavior:'smooth', block:'start'}));
+  }
+
+  // captureで先に受ける。teacher.js側にも同じ処理があっても問題ない。
+  btn.addEventListener('click', (e) => { e.preventDefault(); unlockTeacher(); }, true);
+  pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); unlockTeacher(); } }, true);
+  window.__TDX_INLINE_LOGIN_BOUND__ = true;
+
+  // 本体JSが読み込めない場合は、ログイン後に原因が分かる表示を出す。
+  setTimeout(() => {
+    if (!window.__TDX_TEACHER_APP_READY__) {
+      const el = document.getElementById('startupScriptNotice');
+      if (el) {
+        el.classList.remove('hidden');
+        el.textContent = '本体JavaScriptの読み込みを確認中です。操作できない場合は、GitHubの js/common.js と js/teacher.js もv1.24.3へ更新してください。';
+      }
+    }
+  }, 2500);
+})();
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -406,7 +457,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
-<script src="js/common.js?v=1.24.2"></script>
-<script src="js/teacher.js?v=1.24.2"></script>
+<script src="js/common.js?v=1.24.3"></script>
+<script src="js/teacher.js?v=1.24.3"></script>
 </body>
 </html>
