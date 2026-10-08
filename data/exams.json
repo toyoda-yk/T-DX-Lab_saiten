@@ -4940,10 +4940,10 @@
       },
       "access": {
         "mode": "restricted",
-        "classes": [],
-        "students": [
-          "3301"
-        ]
+        "classes": [
+          "33"
+        ],
+        "students": []
       },
       "sections": [
         {
@@ -5674,9 +5674,9 @@
         "mode": "auto"
       },
       "endedAt": null,
-      "updatedAt": "2026-10-08T12:14:28.701Z",
+      "updatedAt": "2026-10-08T12:18:29.852Z",
       "clonedFrom": "exam_20261008_dthqs5"
     }
   ],
-  "updatedAt": "2026-10-08T12:15:55.326Z"
+  "updatedAt": "2026-10-08T12:18:47.484Z"
 }
