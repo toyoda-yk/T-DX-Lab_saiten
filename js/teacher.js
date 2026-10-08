@@ -1,5 +1,7 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
+const SYSTEM_ADMIN_HASH='888df25ae35772424a560c7152a1de794440e0ea5cfee62828333a456a506e05'; // 9999
+const QR_VAULT_STORAGE='tdxQrReprintVaultV1';
 let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
 let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
@@ -7,6 +9,7 @@ let editorSectionTargets={};
 let rosterRanges=[];
 let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
+let systemAdminUnlocked=false;
 
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
@@ -47,6 +50,32 @@ function scheduleSummary(exam){
   return '期間指定なし（旧データ）';
 }
 
+async function loadCachedAccessVault(){
+  let rows=[];
+  try{rows=JSON.parse(localStorage.getItem(QR_VAULT_STORAGE)||'[]')}catch(_){rows=[]}
+  if(!Array.isArray(rows)||!rows.length){accessVault=[];return}
+  const valid=[];
+  for(const row of rows){
+    const code=String(row?.studentCode||'');
+    const u=usersData.users.find(x=>x.studentCode===code);
+    if(!u?.credential||!row?.accessCode)continue;
+    try{if(await TDX.verify(String(row.accessCode).toUpperCase(),u.credential))valid.push({studentCode:code,accessCode:String(row.accessCode).toUpperCase(),classKey:String(row.classKey||code.slice(0,2))})}catch(_){/* ignore stale cache */}
+  }
+  accessVault=valid.sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  try{localStorage.setItem(QR_VAULT_STORAGE,JSON.stringify(accessVault))}catch(_){}
+}
+function persistAccessVault(){
+  try{localStorage.setItem(QR_VAULT_STORAGE,JSON.stringify(accessVault))}catch(_){}
+}
+function setAccessMessage(text,type='muted'){
+  const el=$('qrMsg')||$('rosterMsg');if(!el)return;
+  el.className=(type==='success'?'success':type==='error'?'error':type==='notice'?'notice':'muted')+' small';
+  el.textContent=text;
+}
+function updateSystemAdminUi(){
+  const tools=$('qrAdminTools');if(tools)tools.classList.toggle('hidden',!systemAdminUnlocked);
+  const btn=$('systemAdminBtn');if(btn)btn.textContent=systemAdminUnlocked?'管理者メニューを開く':'システム管理者';
+}
 async function init(){
   [allExamData,usersData]=await Promise.all([
     fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()),
@@ -57,6 +86,7 @@ async function init(){
   usersData.users=(usersData.users||[]).filter(u=>u?.credential?.codeId!=='demo-annual-3101');
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
   usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null});
+  await loadCachedAccessVault();
   rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
   if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   refreshExamSelects();
@@ -65,6 +95,7 @@ async function init(){
   renderRosterRanges();
   renderRosterSummary();
   renderAccessVaultManager();
+  updateSystemAdminUi();
   loadPublishExam();
   renderExamExportSummary();
 }
@@ -91,14 +122,19 @@ function refreshPublishSelectors(preferredExamId=''){
 function bind(){
   $('adminLoginBtn').onclick=adminLogin;
   $('adminPass').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin()});
-  $('adminLogoutBtn').onclick=()=>{$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');$('adminPass').value='';window.scrollTo({top:0,behavior:'smooth'})};
+  $('adminLogoutBtn').onclick=()=>{systemAdminUnlocked=false;updateSystemAdminUi();$('systemAdminGate')?.classList.add('hidden');$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');$('adminPass').value='';window.scrollTo({top:0,behavior:'smooth'})};
   document.querySelectorAll('.menuBtn').forEach(b=>b.onclick=()=>showSection(b.dataset.target));
+  $('systemAdminBtn').onclick=()=>{if(systemAdminUnlocked){showSection('studentManager');return}$('systemAdminGate').classList.toggle('hidden');if(!$('systemAdminGate').classList.contains('hidden'))$('systemAdminPass').focus()};
+  $('systemAdminCancelBtn').onclick=()=>{$('systemAdminGate').classList.add('hidden');$('systemAdminPass').value='';$('systemAdminMsg').textContent=''};
+  $('systemAdminLoginBtn').onclick=systemAdminLogin;
+  $('systemAdminPass').addEventListener('keydown',e=>{if(e.key==='Enter')systemAdminLogin()});
 
   $('addRosterRangeBtn').onclick=()=>{rosterRanges.push({start:'',end:''});renderRosterRanges()};
   $('saveRosterBtn').onclick=saveRoster;
   $('generateAnnualCodesBtn').onclick=()=>generateAnnualCodes(false);
   $('regenerateAnnualCodesBtn').onclick=()=>generateAnnualCodes(true);
   $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
+  $('exportQrReprintDataBtn').onclick=exportQrReprintData;
   $('printAnnualCardsBtn').onclick=printAnnualCards;
   $('printAllAnnualCardsBtn').onclick=printAllAnnualCards;
   $('exportRosterUsersBtn').onclick=exportUserData;
@@ -109,6 +145,7 @@ function bind(){
   $('selectMissingVaultBtn').onclick=selectMissingVaultRows;
   $('clearVaultSelectionBtn').onclick=()=>setVisibleVaultSelection(false);
   $('reprintSelectedCardsBtn').onclick=reprintSelectedCards;
+  $('clearQrCacheBtn').onclick=()=>{if(!confirm('この端末に保存したQR再印刷用データを消去します。アクセスキー自体は変更されません。よろしいですか？'))return;accessVault=[];persistAccessVault();renderAccessVaultManager();setAccessMessage('この端末のQR再印刷用データを消去しました。','success')};
   $('reissueSelectedCodesBtn').onclick=reissueSelectedCodes;
 
   $('readPdfBtn').onclick=readPdf;
@@ -152,13 +189,23 @@ async function adminLogin(){
   $('adminGate').classList.add('hidden');
   $('adminApp').classList.remove('hidden');
   $('adminMsg').textContent='';
-  showSection('studentManager');
+  showSection('examManager');
   requestAnimationFrame(()=>$('adminApp').scrollIntoView({behavior:'smooth',block:'start'}));
 }
+async function systemAdminLogin(){
+  const h=await TDX.sha256Hex($('systemAdminPass').value);
+  if(h!==SYSTEM_ADMIN_HASH){$('systemAdminMsg').className='error small';$('systemAdminMsg').textContent='システム管理者パスワードが違います。';return}
+  systemAdminUnlocked=true;
+  $('systemAdminMsg').className='success small';$('systemAdminMsg').textContent='管理者機能を開きました。';
+  $('systemAdminPass').value='';$('systemAdminGate').classList.add('hidden');
+  updateSystemAdminUi();showSection('studentManager');
+}
 function showSection(id){
+  if(id==='studentManager'&&!systemAdminUnlocked){$('systemAdminGate')?.classList.remove('hidden');$('systemAdminPass')?.focus();return}
   document.querySelectorAll('.adminSection').forEach(x=>x.classList.toggle('hidden',x.id!==id));
   document.querySelectorAll('.menuBtn').forEach(x=>x.classList.toggle('active-look',x.dataset.target===id));
   if(id==='studentManager')renderRosterSummary();
+  if(id==='qrManager')renderAccessVaultManager();
   if(id==='publishManager')loadPublishExam();
   requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
@@ -303,11 +350,10 @@ function exportAnnualSecrets(){
   }
   if(st.missing){
     // 不足者を自動選択して、どの生徒が不足しているか直ちに確認できるようにする。
+    showSection('qrManager');
     if($('accessVaultClassFilter'))$('accessVaultClassFilter').value='';
-    renderAccessVaultManager();
-    selectMissingVaultRows();
-    $('accessVaultManager')?.scrollIntoView({behavior:'smooth',block:'center'});
-    alert(`年間マスターCSVは「登録生徒全員分」がそろった時だけ書き出します。\n\n現在：${st.known}/${st.total}人のキーを確認済み\n発行済・キー未読込：${st.missing}人\n\n不足している生徒を一覧で選択しました。\n・以前保存した「年間マスターCSV」を読み込む\nまたは\n・「選択した生徒だけ再発行」を実行する\nのどちらかで補ってください。`);
+    renderAccessVaultManager();selectMissingVaultRows();
+    alert(`年間マスターCSVは全員分がそろった時だけ書き出します。\n\n再印刷データが不足：${st.missing}人\n\n以前保存したQR再印刷用データ／年間マスターを読み込むか、漏えい等で必要な場合だけ管理者として再発行してください。`);
     return
   }
   const m=accessSecretMap();
@@ -316,11 +362,21 @@ function exportAnnualSecrets(){
   TDX.download('T-DX_Lab_年間アクセスキー_年間マスター.csv','\ufeff'+csv,'text/csv;charset=utf-8');
 }
 
+function exportQrReprintData(){
+  const st=annualMasterState();
+  if(!st.total){alert('生徒名簿が登録されていません。');return}
+  if(!st.complete){alert(`QR再印刷用データは全員分の有効なアクセスキーがそろってから書き出します。\n\n再印刷可能：${st.known}/${st.total}人`);return}
+  const m=accessSecretMap();
+  const users=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>{const x=m.get(u.studentCode);return {studentCode:u.studentCode,classKey:u.classKey||u.studentCode.slice(0,2),accessCode:x.accessCode}});
+  const out={version:1,type:'tdx-qr-reprint-data',createdAt:new Date().toISOString(),users};
+  TDX.download('T-DX_Lab_QR再印刷用データ.json',JSON.stringify(out,null,2),'application/json');
+}
 function mergeIntoAccessVault(rows){
   const validCodes=new Set(usersData.users.map(u=>u.studentCode));
   const m=new Map(accessVault.filter(x=>validCodes.has(x.studentCode)).map(x=>[x.studentCode,x]));
   (rows||[]).forEach(x=>{if(x&&/^\d{4}$/.test(String(x.studentCode))&&x.accessCode&&validCodes.has(String(x.studentCode)))m.set(String(x.studentCode),{studentCode:String(x.studentCode),accessCode:String(x.accessCode).toUpperCase(),classKey:String(x.classKey||x.studentCode.slice(0,2))})});
   accessVault=[...m.values()].sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  persistAccessVault();
   refreshAccessVaultClassFilter();updateAnnualMasterButtons();
 }
 function refreshAccessVaultClassFilter(){
@@ -334,26 +390,30 @@ async function importAnnualSecretsCsv(e){
   const f=e.target.files?.[0];if(!f)return;
   try{
     const text=(await f.text()).replace(/^\uFEFF/,'');
-    const lines=text.split(/\r?\n/).filter(x=>x.trim());
-    const rows=[];
-    for(let i=1;i<lines.length;i++){
-      const parts=lines[i].split(',').map(x=>x.trim().replace(/^"|"$/g,''));
-      const studentCode=parts[0],accessCode=(parts[1]||'').toUpperCase(),classKey=parts[2]||studentCode?.slice(0,2);
-      if(/^\d{4}$/.test(studentCode)&&accessCode)rows.push({studentCode,accessCode,classKey});
+    let rows=[];
+    if(f.name.toLowerCase().endsWith('.json')||text.trim().startsWith('{')||text.trim().startsWith('[')){
+      const obj=JSON.parse(text);const src=Array.isArray(obj)?obj:(obj.users||obj.rows||[]);
+      rows=src.map(x=>({studentCode:String(x.studentCode||x['4桁番号']||''),accessCode:String(x.accessCode||x['年間アクセスキー']||'').toUpperCase(),classKey:String(x.classKey||x['クラス']||'')})).filter(x=>/^\d{4}$/.test(x.studentCode)&&x.accessCode);
+    }else{
+      const table=TDX.csvParse(text);
+      const header=(table.shift()||[]).map(x=>String(x).trim());
+      const idxCode=Math.max(0,header.findIndex(x=>/4桁番号|student/i.test(x)));
+      const idxKey=header.findIndex(x=>/アクセスキー|access/i.test(x));
+      const idxClass=header.findIndex(x=>/クラス|class/i.test(x));
+      rows=table.map(parts=>({studentCode:String(parts[idxCode]||'').trim(),accessCode:String(parts[idxKey>=0?idxKey:1]||'').trim().toUpperCase(),classKey:String(parts[idxClass>=0?idxClass:2]||'').trim()})).filter(x=>/^\d{4}$/.test(x.studentCode)&&x.accessCode);
     }
-    if(!rows.length)throw new Error('有効なアクセスキーが見つかりませんでした。');
+    if(!rows.length)throw new Error('有効なQR再印刷データが見つかりませんでした。');
     const verified=[],stale=[],unknown=[];
     for(const row of rows){
       const u=usersData.users.find(x=>x.studentCode===row.studentCode);
       if(!u){unknown.push(row.studentCode);continue}
       if(!u.credential){stale.push(row.studentCode);continue}
-      if(await TDX.verify(row.accessCode,u.credential))verified.push(row);else stale.push(row.studentCode);
+      if(await TDX.verify(row.accessCode,u.credential))verified.push({...row,classKey:row.classKey||u.classKey||row.studentCode.slice(0,2)});else stale.push(row.studentCode);
     }
     mergeIntoAccessVault(verified);
     renderAccessVaultManager();
-    $('rosterMsg').className=(stale.length||unknown.length)?'notice small':'success small';
-    $('rosterMsg').textContent=`年間マスターCSVから ${verified.length}人分の現在有効なアクセスキーを読み込みました。`+(stale.length?` ${stale.length}人分は現在のusers.jsonと一致しないため除外しました。`:``)+(unknown.length?` ${unknown.length}人分は現在の名簿に存在しないため除外しました。`:``);
-  }catch(err){$('rosterMsg').className='error small';$('rosterMsg').textContent='年間マスターCSVを読み込めませんでした：'+err.message}
+    setAccessMessage(`QR再印刷用データから ${verified.length}人分を読み込み、ブラウザに保存しました。`+(stale.length?` 現在のusers.jsonと一致しない ${stale.length}人分は除外しました。`:``)+(unknown.length?` 名簿外 ${unknown.length}人分は除外しました。`:``),stale.length||unknown.length?'notice':'success');
+  }catch(err){setAccessMessage('QR再印刷用データを読み込めませんでした：'+err.message,'error')}
   finally{e.target.value=''}
 }
 function currentManagedUsers(){
@@ -363,23 +423,24 @@ function currentManagedUsers(){
 function renderAccessVaultSummary(){
   const root=$('accessVaultSummary');if(!root)return;
   const st=annualMasterState();
-  root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">発行済・キー未読込</div><div class="value">${st.missing}</div></div><div class="kpi ${st.unissued?'kpi-warn':''}"><div class="muted small">未発行</div><div class="value">${st.unissued}</div></div>`;
+  root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">QR再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">再印刷データ未読込</div><div class="value">${st.missing}</div></div><div class="kpi ${st.unissued?'kpi-warn':''}"><div class="muted small">アクセス未発行</div><div class="value">${st.unissued}</div></div>`;
+  const cache=$('qrCacheStatus');if(cache){cache.className='qr-cache-status '+(st.known?'ready':'');cache.innerHTML=st.known?`<span>READY</span> このブラウザに ${st.known}人分を保存済み`:'<span>DATA</span> QR再印刷用データを読み込んでください';}
 }
 function renderAccessVaultManager(){
   const root=$('accessVaultManager');if(!root)return;
-  refreshAccessVaultClassFilter();renderAccessVaultSummary();updateAnnualMasterButtons();
+  refreshAccessVaultClassFilter();renderAccessVaultSummary();updateAnnualMasterButtons();updateSystemAdminUi();
   const rows=currentManagedUsers(),m=accessSecretMap();
-  if(!usersData.users.length){root.innerHTML='<div class="notice small">先に生徒名簿を登録してください。</div>';updateVaultButtons();return}
-  root.innerHTML=`<div class="table-shell"><table><thead><tr><th></th><th>4桁番号</th><th>クラス</th><th>状態</th><th>年間アクセスキー</th></tr></thead><tbody>${rows.map(u=>{
+  if(!usersData.users.length){root.innerHTML='<div class="notice small">生徒名簿がまだ登録されていません。システム管理者へ確認してください。</div>';updateVaultButtons();return}
+  root.innerHTML=`<div class="table-shell"><table><thead><tr><th></th><th>4桁番号</th><th>クラス</th><th>QR再印刷</th></tr></thead><tbody>${rows.map(u=>{
     const secret=m.get(u.studentCode),issued=!!u.credential;
-    const state=!issued?'<span class="master-status unissued">○ 未発行</span>':secret?'<span class="master-status ready">✓ QR再印刷可能</span>':'<span class="master-status missing">⚠ 発行済・キー未読込</span>';
-    return `<tr><td><input type="checkbox" class="vault-check" data-code="${esc(u.studentCode)}"></td><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td>${secret?`<code>${esc(secret.accessCode)}</code>`:'<span class="muted">—</span>'}</td></tr>`
-  }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。黄色の「発行済・キー未読込」は、以前の年間マスターCSVを読み込むか、その生徒だけ再発行してください。</p>`;
+    const state=!issued?'<span class="master-status unissued">○ 未発行</span>':secret?'<span class="master-status ready">✓ 再印刷可能</span>':'<span class="master-status missing">△ データ未読込</span>';
+    return `<tr><td><input type="checkbox" class="vault-check" data-code="${esc(u.studentCode)}" ${secret||systemAdminUnlocked?'':'disabled'}></td><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td></tr>`
+  }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。「データ未読込」はアクセスキーが無効という意味ではありません。QR再印刷用データを読み込むと印刷できます。</p>`;
   root.querySelectorAll('.vault-check').forEach(x=>x.onchange=updateVaultButtons);updateVaultButtons();
 }
 function selectedManagedCodes(){return [...document.querySelectorAll('.vault-check:checked')].map(x=>x.dataset.code)}
 function selectedPrintableSecrets(){const set=new Set(selectedManagedCodes());return accessVault.filter(x=>set.has(x.studentCode))}
-function setVisibleVaultSelection(v){document.querySelectorAll('.vault-check').forEach(x=>x.checked=v);updateVaultButtons()}
+function setVisibleVaultSelection(v){document.querySelectorAll('.vault-check').forEach(x=>x.checked=!!v&&!x.disabled);updateVaultButtons()}
 function selectMissingVaultRows(){
   const m=accessSecretMap();
   document.querySelectorAll('.vault-check').forEach(cb=>{const u=usersData.users.find(x=>x.studentCode===cb.dataset.code);cb.checked=!!(u?.credential&&!m.has(cb.dataset.code))});updateVaultButtons();
@@ -409,7 +470,7 @@ async function reissueSelectedCodes(){
   mergeIntoAccessVault(newly);annualSecrets=newly;
   renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
   $('printAnnualCardsBtn').disabled=!newly.length;
-  $('rosterMsg').className='success small';$('rosterMsg').textContent=`${newly.length}人のアクセスキーを再発行しました。新しいQRカードを配布してください。年間マスターCSVが全員分そろったら保存し、users.json も更新してください。`;
+  setAccessMessage(`${newly.length}人のアクセスキーを再発行しました。新しいQRカードを配布し、users.json とQR再印刷用データを更新してください。`,'success');
 }
 async function printAllAnnualCards(){
   const st=annualMasterState();if(!st.complete){alert('全員分の平文アクセスキーが揃っていません。年間マスターCSVを読み込むか、不足している生徒を再発行してください。');return}

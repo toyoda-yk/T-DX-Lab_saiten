@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.22">
+  <link rel="stylesheet" href="css/style.css?v=1.23">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -44,31 +44,43 @@
 
   <div id="adminApp" class="hidden">
     <section class="future-panel admin-dashboard-card">
-      <div class="section-title app-section-head">
-        <div><span class="section-eyebrow">CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">STEP 0 の名簿登録を済ませると、試験ごとの受験者選択が簡単になります。</p></div>
+      <div class="section-title app-section-head teacher-dashboard-head">
+        <div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">通常は「試験作成・模範解答の登録」から開始します。年度設定はシステム管理者だけが操作します。</p></div>
         <button id="adminLogoutBtn" class="secondary glass-btn">画面をロック</button>
       </div>
-      <div class="admin-menu-grid">
-        <button class="admin-menu-card menuBtn active-look" data-target="studentManager"><span class="menu-index">STEP 0</span><strong>生徒名簿</strong><small>クラス範囲を一度だけ登録</small></button>
-        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">STEP 1</span><strong>試験作成</strong><small>採点・選択肢・Googleフォーム連携</small></button>
-        <button class="admin-menu-card menuBtn" data-target="analysisManager"><span class="menu-index">STEP 2</span><strong>回答分析</strong><small>得点分布・正答率</small></button>
-        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">STEP 3</span><strong>公開・運用</strong><small>対象・公開期間・複製・確認</small></button>
+
+      <div class="teacher-workflow-nav">
+        <button class="admin-menu-card menuBtn tone-build active-look" data-target="examManager"><span class="menu-index">CREATE</span><strong>試験作成・模範解答</strong><small>正答・配点・選択肢・Googleフォーム</small></button>
+        <button class="admin-menu-card menuBtn tone-manage" data-target="publishManager"><span class="menu-index">MANAGE</span><strong>試験管理・公開</strong><small>対象者・公開期間・複製・削除</small></button>
+        <button class="admin-menu-card menuBtn tone-analysis" data-target="analysisManager"><span class="menu-index">ANALYZE</span><strong>回答分析</strong><small>得点分布・大問別・設問別正答率</small></button>
+        <button class="admin-menu-card menuBtn tone-qr" data-target="qrManager"><span class="menu-index">QR</span><strong>QRカード再印刷</strong><small>紛失・汚損時に同じQRを再印刷</small></button>
+      </div>
+
+      <div class="system-admin-entry">
+        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度名簿・年間アクセスキー・users.json はGitHub担当者向けです。</small></div></div>
+        <button id="systemAdminBtn" class="secondary glass-btn" type="button">システム管理者</button>
+      </div>
+      <div id="systemAdminGate" class="system-admin-gate hidden">
+        <div><strong>システム管理者認証</strong><small>年間設定を変更する場合のみ入力してください。</small></div>
+        <div class="system-admin-login-row"><input id="systemAdminPass" type="password" inputmode="numeric" maxlength="8" placeholder="管理者パスワード"><button id="systemAdminLoginBtn" class="teacher-action" type="button">開く</button><button id="systemAdminCancelBtn" class="secondary glass-btn" type="button">閉じる</button></div>
+        <div id="systemAdminMsg" class="small muted"></div>
       </div>
     </section>
 
-    <section id="studentManager" class="future-panel adminSection">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。年度初めに1回だけ年間アクセスキーを発行し、そのQRカードを生徒へ配布します。</p></div><div class="admin-symbol">00</div></div>
+    <section id="studentManager" class="future-panel adminSection teacher-tone-admin hidden">
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度設定・年間アクセス管理</h2><p>年度初めの名簿登録とアクセスキー発行を行います。通常の試験作成では操作しません。</p></div><div class="admin-symbol">SYS</div></div>
+      <div class="admin-lock-note"><strong>管理者専用</strong><span>アクセスキーの「再発行」はログイン情報そのものを変更します。紛失・汚損は「QRカード再印刷」を使用してください。</span></div>
       <input id="classDigits" type="hidden" value="2">
 
       <div class="roster-setup-grid">
         <section class="roster-compact-card">
-          <div class="section-title compact-title"><div><h3>クラス範囲</h3><p class="muted small">例：3101 ～ 3138 なら、31クラスの3101～3138を自動登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
+          <div class="section-title compact-title"><div><h3>年度名簿</h3><p class="muted small">クラスごとに最初と最後の4桁番号を登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
           <div id="rosterRangeRows" class="roster-range-list"></div>
-          <div class="actions compact-actions"><button id="saveRosterBtn" class="teacher-action">この名簿を登録</button></div>
+          <div class="actions compact-actions"><button id="saveRosterBtn" class="teacher-action">名簿を登録</button></div>
           <div id="rosterMsg" class="small muted"></div>
         </section>
         <section class="roster-compact-card roster-current-card">
-          <div class="compact-card-head"><div><span class="section-eyebrow">CURRENT ROSTER</span><h3>登録状況</h3></div><span class="one-time-badge">年度初めに1回</span></div>
+          <div class="compact-card-head"><div><span class="section-eyebrow">CURRENT ROSTER</span><h3>登録状況</h3></div><span class="one-time-badge">年度初め</span></div>
           <div id="rosterSummary" class="grid two roster-summary"></div>
           <div id="rosterPreview" class="roster-preview"></div>
         </section>
@@ -76,42 +88,29 @@
 
       <div class="annual-access-panel roster-annual-wide">
         <div class="annual-access-head-v122">
-          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">年度内は全教科・全試験で同じQRを使用します。通常は年度当初に一度だけ発行します。</p></div>
+          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー発行</h3><p class="muted small">未発行者だけに新しい年間アクセスキーを発行します。</p></div>
           <div class="actions compact-actions annual-primary-actions">
             <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
-            <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分のQRカードPDF</button>
-            <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカードPDF</button>
+            <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分QRカード</button>
+            <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカード</button>
             <button id="exportAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSV</button>
+            <button id="exportQrReprintDataBtn" class="secondary glass-btn">QR再印刷用データ</button>
             <button id="exportRosterUsersBtn" class="teacher-action">users.json</button>
           </div>
         </div>
         <div class="annual-secondary-row">
-          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターCSVの準備状況を確認しています。</div>
-          <button id="regenerateAnnualCodesBtn" class="secondary glass-btn danger-soft">全員再発行（緊急用）</button>
+          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターの準備状況を確認しています。</div>
         </div>
-        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、「未発行者にアクセスキーを発行」を押してください。</div></div>
-
-        <div class="access-key-manager compact-access-manager">
-          <div class="section-title compact-title"><div><span class="section-eyebrow">REPRINT / REISSUE</span><h3>再印刷・個別再発行</h3><p class="muted small">紛失・汚損は再印刷、漏えいの可能性がある場合だけ個別再発行します。</p></div></div>
-          <input id="importAnnualSecretsInput" type="file" accept=".csv,text/csv" class="hidden">
-          <div class="actions compact-actions access-vault-actions">
-            <button id="importAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSVを読み込む</button>
-            <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
-            <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
-            <button id="selectMissingVaultBtn" class="secondary glass-btn">要再発行を選択</button>
-            <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
-            <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒を再印刷</button>
-            <button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒だけ再発行</button>
-          </div>
-          <p class="master-note">年間マスターCSVは平文アクセスキーの原本です。<code>users.json</code> からキーは復元できないため、安全な場所に保管してください。</p>
-          <div id="accessVaultSummary" class="grid four roster-summary"></div>
-          <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のアクセスキー状態を表示します。</div></div>
-        </div>
+        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
+        <details class="danger-admin-details">
+          <summary>緊急時の再発行</summary>
+          <div class="danger-admin-inner"><p>漏えいなどで現在のQRを無効化する必要がある場合だけ使用します。通常の紛失・汚損では使いません。</p><button id="regenerateAnnualCodesBtn" class="danger-soft">全員のアクセスキーを再発行</button></div>
+        </details>
       </div>
     </section>
 
-    <section id="examManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>試験を作成</h2><p>基本情報 → 模範解答・採点 → Googleフォーム連携 → 登録の順で設定します。</p></div><div class="admin-symbol">01</div></div>
+    <section id="examManager" class="future-panel adminSection teacher-tone-build hidden">
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM BUILDER</span><h2>試験作成・模範解答の登録</h2><p>基本情報から模範解答・採点、Googleフォーム連携までを順に設定します。</p></div><div class="admin-symbol">01</div></div>
 
       <div class="builder-steps compact-builder-steps">
         <div class="builder-step active"><b>1</b><span>基本情報・選択肢</span></div>
@@ -270,8 +269,31 @@
       </section>
     </section>
 
-    <section id="analysisManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 2 / DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">02</div></div>
+    <section id="qrManager" class="future-panel adminSection teacher-tone-qr hidden">
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒へ、現在有効なアクセスキーのQRをそのまま再印刷します。</p></div><div class="admin-symbol">QR</div></div>
+      <div class="qr-safety-strip"><strong>再印刷ではアクセスキーは変わりません</strong><span>「再発行」は管理者専用です。通常の先生はここから同じQRカードを印刷できます。</span></div>
+      <input id="importAnnualSecretsInput" type="file" accept=".json,.csv,application/json,text/csv" class="hidden">
+      <div class="qr-reprint-toolbar">
+        <button id="importAnnualSecretsBtn" class="secondary glass-btn">QR再印刷用データを読み込む</button>
+        <div id="qrCacheStatus" class="qr-cache-status"><span>DATA</span> 再印刷データを確認しています。</div>
+        <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
+        <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
+        <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
+        <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒を再印刷</button>
+        <button id="clearQrCacheBtn" class="secondary glass-btn qr-cache-clear" type="button">この端末の再印刷データを消去</button>
+      </div>
+      <p class="master-note">QR再印刷用データは管理者が年度初めに出力します。一度読み込んだデータはこのブラウザに保存されるため、通常は毎回読み込む必要はありません。</p>
+      <div id="accessVaultSummary" class="grid four roster-summary"></div>
+      <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
+      <div id="qrMsg" class="small muted"></div>
+      <div id="qrAdminTools" class="qr-admin-tools hidden">
+        <div><span class="section-eyebrow">SYSTEM ADMIN ONLY</span><strong>アクセスキー再発行</strong><small>漏えいなど、現在のQRを無効化する必要がある場合だけ使用します。</small></div>
+        <div class="actions compact-actions"><button id="selectMissingVaultBtn" class="secondary glass-btn">再印刷データ不足を選択</button><button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒のアクセスキーを再発行</button></div>
+      </div>
+    </section>
+
+    <section id="analysisManager" class="future-panel adminSection teacher-tone-analysis hidden">
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームの回答CSV / XLSXを読み込み、得点と正答率を集計します。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答CSV / XLSX</label><input id="responseFile" type="file" accept=".csv,.xlsx,.xls"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
         <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>LIVE</span> 登録済み4桁番号の先頭2桁をクラスとして集計します。回答者数に応じて正答率・平均点は再計算されます。</div></div>
@@ -286,8 +308,8 @@
       </div>
     </section>
 
-    <section id="publishManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 3 / EXAM OPERATIONS</span><h2>公開・運用</h2><p>試験を選び、受験対象と公開期間を設定します。公開期間終了後は自動で生徒画面から消えます。</p></div><div class="admin-symbol">03</div></div>
+    <section id="publishManager" class="future-panel adminSection teacher-tone-manage hidden">
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM MANAGEMENT</span><h2>試験管理・公開</h2><p>受験対象と公開期間を設定し、公開・終了・複製・削除を管理します。</p></div><div class="admin-symbol">03</div></div>
 
       <div class="exam-ops-toolbar">
         <div class="exam-ops-selects">
@@ -366,7 +388,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
-<script src="js/common.js?v=1.22"></script>
-<script src="js/teacher.js?v=1.22"></script>
+<script src="js/common.js?v=1.23"></script>
+<script src="js/teacher.js?v=1.23"></script>
 </body>
 </html>
