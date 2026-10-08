@@ -21,26 +21,18 @@
     "9b3360b1a36e591893ce0a6de61a5b0dee5a2920ed2292d1bd3a7a413fc7a9c2",
     "b9c8a5104447d9e4204d6a60d5d52897a94d8cd49e52676255a15511f376b5cd",
     "cd3e213c5122d147735f18b18b662258d60f37c1192f3a932652de424d449ed1",
-    "c32b64083a66b039d3e91d3082dc087cf4a8539c67eb0f2e7b08287fcd974372"
+    "c32b64083a66b039d3e91d3082dc087cf4a8539c67eb0f2e7b08287fcd974372",
+    "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc"
   ],
   "users": [
-    {
-      "studentCode": "3101",
-      "classKey": "31",
-      "credential": {
-        "salt": "tdx-demo-annual-3101",
-        "hash": "76c8f9ec4936711c7e0001dec7bd162686263f8384f9875a09ec3d15de5e3e5e",
-        "codeId": "demo-annual-3101"
-      }
-    },
     {
       "studentCode": "3301",
       "classKey": "33",
       "credential": {
-        "salt": "a457974ea892fadd4de1621b80dd0f03",
-        "hash": "4b97265e96fd53e5e5ed7455a45f591b087817a3ce426380f5cd026c93b2cba7",
-        "codeId": "c3b30d823997711c0f631505d1f3b6566278f801469b1fddca8ad7943520e4b4",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "53a26490c82bf9ac3a0212d828fd67e4",
+        "hash": "ba9db066690de2c0a56defda9ee15aea2e6d00980725e2e61d0b4cff7a11f6df",
+        "codeId": "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc",
+        "issuedAt": "2026-10-08T10:32:31.786Z"
       }
     },
     {
