@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.19">
+  <link rel="stylesheet" href="css/style.css?v=1.20">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -126,13 +126,15 @@
 
         <div class="choice-range-box choice-range-wide">
           <div class="section-title compact-title">
-            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字の範囲を先に指定してください。</p></div>
+            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字・カタカナの範囲を先に指定してください。</p></div>
           </div>
           <div class="choice-range-grid">
             <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
             <div class="range-pair"><label>最小<input id="numberChoiceStart" type="number" min="0" max="99" value="0"></label><span>〜</span><label>最大<input id="numberChoiceEnd" type="number" min="0" max="99" value="9"></label></div>
             <label class="range-enable"><input id="useLetterChoices" type="checkbox" checked> 英字を使う</label>
             <div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
+            <label class="range-enable"><input id="useKanaChoices" type="checkbox"> カタカナを使う</label>
+            <div class="range-pair"><label>最初<select id="kanaChoiceStart"></select></label><span>〜</span><label>最後<select id="kanaChoiceEnd"></select></label></div>
           </div>
           <div class="choice-preview"><span>この試験の選択肢</span><div id="globalChoicePreview" class="choice-chip-list"></div></div>
         </div>
@@ -251,6 +253,7 @@
               </div>
             </div>
             <div id="formTestMsg" class="small muted"></div>
+            <div id="formNextStepMsg" class="google-next-step hidden">✓ Googleフォーム連携の確認完了。次は下の「この内容で試験データに登録（非公開）」へ進んでください。</div>
           </div>
         </section>
 
@@ -287,7 +290,14 @@
           <select id="publishSubjectSelect"></select>
           <label>対象試験</label>
           <select id="publishExamSelect"></select>
-          <label class="publish-switch-row"><input id="publishToggle" type="checkbox"> <span>この試験を生徒画面に公開する</span></label>
+          <label>公開状態
+            <select id="publishStatusSelect">
+              <option value="unpublished">非公開（準備中）</option>
+              <option value="published">公開中（生徒に表示）</option>
+              <option value="ended">終了（生徒には非表示・データは保持）</option>
+            </select>
+          </label>
+          <div class="publish-status-help"><span><b>非公開</b> 作成・確認中</span><span><b>公開中</b> 対象生徒の一覧に表示</span><span><b>終了</b> 一覧から外すが試験データは残す</span></div>
           <div class="actions"><button id="selectAllAudienceBtn" class="secondary glass-btn">登録生徒を全員選択</button><button id="clearAudienceBtn" class="secondary glass-btn">選択解除</button></div>
         </div>
         <div>
@@ -302,7 +312,7 @@
         <div>
           <span class="section-eyebrow">PUBLISH</span>
           <h3>公開設定を確定</h3>
-          <p class="muted small">対象者を確定して公開状態を保存します。生徒はSTEP 0で配布した年間アクセスキーでログインします。</p>
+          <p class="muted small">対象者と「非公開／公開中／終了」を確定して保存します。公開中の試験だけが対象生徒の画面に表示されます。</p>
         </div>
         <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
       </div>
@@ -322,7 +332,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
-<script src="js/common.js?v=1.19"></script>
-<script src="js/teacher.js?v=1.19"></script>
+<script src="js/common.js?v=1.20"></script>
+<script src="js/teacher.js?v=1.20"></script>
 </body>
 </html>

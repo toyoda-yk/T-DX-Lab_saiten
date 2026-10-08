@@ -7,12 +7,21 @@ let editorSectionTargets={};
 let rosterRanges=[];
 let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 
+function examStatus(exam){
+  const s=String(exam?.status||'').toLowerCase();
+  if(['published','unpublished','ended'].includes(s))return s;
+  return exam?.published?'published':'unpublished';
+}
+function examStatusLabel(exam){return ({published:'公開中',unpublished:'非公開',ended:'終了'})[examStatus(exam)]||'非公開'}
+function examStatusClass(exam){return ({published:'live',unpublished:'off',ended:'ended'})[examStatus(exam)]||'off'}
+
 async function init(){
   [allExamData,usersData]=await Promise.all([
     fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()),
     fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>({version:5,users:[],issuedCodeIds:[]}))
   ]);
   exams=allExamData.exams||[];
+  exams.forEach(e=>{e.status=examStatus(e);e.published=e.status==='published'});
   usersData.users=(usersData.users||[]).filter(u=>u?.credential?.codeId!=='demo-annual-3101');
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
   usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null});
@@ -42,7 +51,7 @@ function refreshPublishSelectors(preferredExamId=''){
   $('publishSubjectSelect').innerHTML=subjects.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   if(subject)$('publishSubjectSelect').value=subject;
   const filtered=exams.filter(e=>String(e.subject||'')===subject);
-  $('publishExamSelect').innerHTML=filtered.map(e=>`<option value="${e.id}">${esc(e.title)}${e.published?'【公開中】':'【非公開】'}</option>`).join('');
+  $('publishExamSelect').innerHTML=filtered.map(e=>`<option value="${e.id}">${esc(e.title)}【${examStatusLabel(e)}】</option>`).join('');
   let examId=preferredExam&&preferredExam.subject===subject?preferredExam.id:$('publishExamSelect').value;
   if(!filtered.some(e=>e.id===examId))examId=filtered[0]?.id||'';
   if(examId)$('publishExamSelect').value=examId;
@@ -520,7 +529,13 @@ function initChoiceRangeControls(){
     start.innerHTML=letters.map(x=>`<option value="${x}" ${x==='a'?'selected':''}>${x}</option>`).join('');
     end.innerHTML=letters.map(x=>`<option value="${x}" ${x==='f'?'selected':''}>${x}</option>`).join('');
   }
-  ['useNumberChoices','numberChoiceStart','numberChoiceEnd','useLetterChoices','letterChoiceStart','letterChoiceEnd'].forEach(id=>{
+  const kana=['ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ','シ','ス','セ','ソ','タ','チ','ツ','テ','ト'];
+  const ks=$('kanaChoiceStart'),ke=$('kanaChoiceEnd');
+  if(ks&&ke){
+    ks.innerHTML=kana.map(x=>`<option value="${x}" ${x==='ア'?'selected':''}>${x}</option>`).join('');
+    ke.innerHTML=kana.map(x=>`<option value="${x}" ${x==='ト'?'selected':''}>${x}</option>`).join('');
+  }
+  ['useNumberChoices','numberChoiceStart','numberChoiceEnd','useLetterChoices','letterChoiceStart','letterChoiceEnd','useKanaChoices','kanaChoiceStart','kanaChoiceEnd'].forEach(id=>{
     $(id)?.addEventListener('change',()=>{renderGlobalChoicePreview();applyConfiguredOptionsToEmptyRows(false)});
     $(id)?.addEventListener('input',()=>{renderGlobalChoicePreview()});
   });
@@ -538,6 +553,12 @@ function configuredChoices(){
     let lo=Math.max(0,Math.min(a,b)),hi=Math.max(0,Math.max(a,b));
     for(let i=lo;i<=hi;i++)out.push(alphabet[i]);
   }
+  if($('useKanaChoices')?.checked){
+    const kana=['ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ','シ','ス','セ','ソ','タ','チ','ツ','テ','ト'];
+    const a=kana.indexOf($('kanaChoiceStart')?.value||'ア'),b=kana.indexOf($('kanaChoiceEnd')?.value||'ト');
+    let lo=Math.max(0,Math.min(a,b)),hi=Math.max(0,Math.max(a,b));
+    for(let i=lo;i<=hi;i++)out.push(kana[i]);
+  }
   return [...new Set(out)];
 }
 function configuredOptionsCsv(){return configuredChoices().join(',')}
@@ -545,6 +566,7 @@ function choiceRangeLabel(){
   const parts=[];
   if($('useNumberChoices')?.checked)parts.push(`${$('numberChoiceStart').value}〜${$('numberChoiceEnd').value}`);
   if($('useLetterChoices')?.checked)parts.push(`${$('letterChoiceStart').value}〜${$('letterChoiceEnd').value}`);
+  if($('useKanaChoices')?.checked)parts.push(`${$('kanaChoiceStart').value}〜${$('kanaChoiceEnd').value}`);
   return parts.join(' / ')||'未設定';
 }
 function renderGlobalChoicePreview(){
@@ -554,7 +576,7 @@ function renderGlobalChoicePreview(){
 }
 function ensureChoicesConfigured(){
   if(configuredChoices().length)return true;
-  alert('先に、この試験で使う選択肢の数字範囲または英字範囲を指定してください。');
+  alert('先に、この試験で使う選択肢の数字・英字・カタカナ範囲を指定してください。');
   $('useNumberChoices')?.focus();return false;
 }
 function applyConfiguredOptionsToEmptyRows(render=true){
@@ -807,7 +829,7 @@ function renderGroupCard(rows,indices){
     return `<div class="group-answer-row" data-row="${i}">
       <div class="group-answer-label"><span>${esc(lastKana(r.label)||r.label)}</span><small>正答 ${esc(r.answer||'未設定')}</small></div>
       <div class="choices review-choices">${c.html||'<span class="muted small">選択肢未設定</span>'}</div>
-      <button type="button" class="choice-edit-btn" data-edit-options="${i}">選択肢を変更</button>
+      <button type="button" class="choice-edit-btn" data-edit-options="${i}">この設問の選択肢を変更</button>
     </div>`;
   }).join('');
   return `<article class="review-question-card review-group-card ${rows.some(r=>r.confidence==='要確認')?'needs-review':''}" data-group-card="${esc(first.group)}">
@@ -847,7 +869,7 @@ function renderSingleCard(r,i){
     <div class="review-answer-zone">
       <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
       ${c.html?`<div class="choices review-choices">${c.html}</div>`:'<div class="notice small">選択肢を認識できていません。下の「詳細設定」で選択肢を入力してください。</div>'}
-      <button type="button" class="choice-edit-btn" data-edit-options="${i}">選択肢を変更</button>
+      <button type="button" class="choice-edit-btn" data-edit-options="${i}">この設問の選択肢を変更</button>
     </div>
     <details class="review-detail-settings">
       <summary>詳細設定を確認・修正</summary>
@@ -1025,12 +1047,15 @@ function renderGoogleFormStatus(){
   if(st.ok)msg.push(`連携設定OK：氏名・4桁番号・解答 ${st.mapped}件を送信できます。${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
   $('formLinkMsg').className=(st.ok?'success':'error')+' small';
   $('formLinkMsg').textContent=msg.join(' ')||(st.ok?'連携設定OKです。':'連携項目を確認してください。');
+  const next=$('formNextStepMsg');if(next)next.classList.toggle('hidden',!(st.ok&&tested));
 }
 function resetGoogleFormLink(){
   googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
   $('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+  if($('formNextStepMsg'))$('formNextStepMsg').classList.add('hidden');
   $('formLinkMsg').className='small muted';$('formLinkMsg').textContent='Googleフォーム連携設定をリセットしました。通常のGoogleフォームURL欄はそのまま残しています。';
 }
+
 function buildGoogleFormSubmissionConfig(questions){
   if(!googleFormSetup.actionUrl)return null;
   const st=googleFormMappingState();
@@ -1045,7 +1070,7 @@ function postGoogleForm(actionUrl,fields){
       const frame=document.createElement('iframe');frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
       Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
-      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      [['fvv','1'],['pageHistory','0']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
       frame.onload=()=>finish();
@@ -1083,10 +1108,10 @@ function buildExamFromEditor(){
     const currentKey=googleFormEndpoints(googleFormUrl).formKey;if(currentKey!==googleFormSetup.formKey)throw new Error('GoogleフォームURLと事前入力リンクが別のフォームです。連携情報を解析し直してください。');
     formSubmission=buildGoogleFormSubmissionConfig(questions);
   }
-  return {id:makeExamId(),title,subject,schoolYear:String(new Date().getFullYear()),published:false,totalPoints:target,googleFormUrl,formSubmission,choiceConfig:{options:configuredChoices(),label:choiceRangeLabel()},access:{mode:'restricted',classes:[],students:[]},sections,questions,createdAt:new Date().toISOString()};
+  return {id:makeExamId(),title,subject,schoolYear:String(new Date().getFullYear()),status:'unpublished',published:false,totalPoints:target,googleFormUrl,formSubmission,choiceConfig:{options:configuredChoices(),label:choiceRangeLabel()},access:{mode:'restricted',classes:[],students:[]},sections,questions,createdAt:new Date().toISOString()};
 }
 function saveDraft(){
-  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),googleFormPrefillUrl:$('formPrefillUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,choiceConfig:{numbers:$('useNumberChoices').checked,numberStart:$('numberChoiceStart').value,numberEnd:$('numberChoiceEnd').value,letters:$('useLetterChoices').checked,letterStart:$('letterChoiceStart').value,letterEnd:$('letterChoiceEnd').value},sectionTargets:editorSectionTargets,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
+  try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),googleFormPrefillUrl:$('formPrefillUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,choiceConfig:{numbers:$('useNumberChoices').checked,numberStart:$('numberChoiceStart').value,numberEnd:$('numberChoiceEnd').value,letters:$('useLetterChoices').checked,letterStart:$('letterChoiceStart').value,letterEnd:$('letterChoiceEnd').value,kana:$('useKanaChoices').checked,kanaStart:$('kanaChoiceStart').value,kanaEnd:$('kanaChoiceEnd').value},sectionTargets:editorSectionTargets,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
 function registerExam(){
   try{
@@ -1118,7 +1143,7 @@ function loadPublishExam(){
     if($('audienceBuilder'))$('audienceBuilder').innerHTML='<div class="notice">先にSTEP 1で試験を登録してください。</div>';
     return;
   }
-  $('publishExamSelect').value=exam.id;$('publishToggle').checked=!!exam.published;
+  $('publishExamSelect').value=exam.id;if($('publishStatusSelect'))$('publishStatusSelect').value=examStatus(exam);
   buildAudience();renderRegisteredRosterSummary();
   requestAnimationFrame(()=>applyExistingAudience(exam));
 }
@@ -1153,9 +1178,11 @@ function collectAudience(){
 }
 function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
-  const selected=selectedAudienceCodes();if($('publishToggle').checked&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
-  const a=collectAudience();exam.published=$('publishToggle').checked;exam.access={mode:'restricted',classes:a.classes,students:a.students};
-  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${exam.published?'公開':'非公開'} / 対象 ${selected.length}人。次に「exams.jsonを書き出す」を押し、システム管理者へ送付してください。`;
+  const status=$('publishStatusSelect')?.value||'unpublished';
+  const selected=selectedAudienceCodes();if(status==='published'&&!selected.length){alert('公開中にする場合は受験対象生徒を選択してください。');return}
+  const a=collectAudience();exam.status=status;exam.published=status==='published';exam.access={mode:'restricted',classes:a.classes,students:a.students};
+  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${examStatusLabel(exam)} / 対象 ${selected.length}人。次に「exams.jsonを書き出す」を押し、システム管理者へ送付してください。`;
+  refreshPublishSelectors(exam.id);$('publishExamSelect').value=exam.id;
   renderExamExportSummary();
 }
 
@@ -1169,12 +1196,12 @@ function renderExamExportSummary(){
     const studentText=(a.students||[]).length?`${(a.students||[]).length}人個別`:'';
     const target=[classText,studentText].filter(Boolean).join('＋')||((!a||a.mode==='all')?'全員':'対象未設定');
     const formText=e.formSubmission?'Googleフォーム連携✓':(e.googleFormUrl?'Googleフォーム未連携':'フォームなし');
-    return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${e.published?'公開中':'非公開'} / ${esc(target)} / ${formText}</small></div><span class="exam-export-state ${e.published?'live':'off'}">${e.published?'公開':'非公開'}</span></div>`;
+    return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${examStatusLabel(e)} / ${esc(target)} / ${formText}</small></div><span class="exam-export-state ${examStatusClass(e)}">${examStatusLabel(e)}</span></div>`;
   }).join('');
   root.innerHTML=`<div class="exam-export-head"><div><span class="section-eyebrow">EXPORT CONTENTS</span><h3>書き出す試験：${list.length}件</h3></div><small>exams.json は差分ではなく、登録済み試験をすべて含む累積ファイルです。</small></div>${rows||'<div class="notice small">登録済み試験はありません。</div>'}<div class="github-upload-note"><strong>GitHub反映先：<code>data/exams.json</code></strong><span>ダウンロード名が <code>exams(1).json</code> などになった場合は、GitHubへ上げる前に <code>exams.json</code> に戻して上書きしてください。</span></div>`;
 }
 function exportExamData(){
-  allExamData.version=Math.max(Number(allExamData.version||0),6);
+  allExamData.version=Math.max(Number(allExamData.version||0),7);
   allExamData.exams=exams;
   allExamData.updatedAt=new Date().toISOString();
   renderExamExportSummary();

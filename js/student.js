@@ -13,8 +13,13 @@ async function loadData(){
 }
 
 function show(id){['loginPanel','examListPanel','examPanel','resultPanel'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function examStatus(exam){
+  const s=String(exam?.status||'').toLowerCase();
+  if(['published','unpublished','ended'].includes(s))return s;
+  return exam?.published?'published':'unpublished';
+}
 function eligible(exam,user){
-  if(!exam.published)return false;
+  if(examStatus(exam)!=='published')return false;
   const a=exam.access;
   if(!a||a.mode==='all')return true;
   const classes=a.classes||[], students=a.students||[];
@@ -46,7 +51,7 @@ async function login(){
 }
 function renderExamList(){
   const root=$('examList');root.innerHTML='';
-  accessibleExams.forEach(e=>{const d=document.createElement('div');d.className='exam-card';d.innerHTML=`<span class="badge">${e.subject}</span><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄</div><div class="actions"><button data-id="${e.id}">この試験を開く</button></div>`;d.querySelector('button').onclick=()=>openExam(e.id);root.appendChild(d)});
+  accessibleExams.forEach(e=>{const d=document.createElement('div');d.className='exam-card';d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄</div><div class="actions"><button data-id="${e.id}">この試験を開く</button></div>`;d.querySelector('button').onclick=()=>openExam(e.id);root.appendChild(d)});
   if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、あなたに公開されている試験はありません。</div>';
 }
 function openExam(id){
@@ -77,10 +82,10 @@ function postGoogleForm(actionUrl,fields){
       const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
       Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
-      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      [['fvv','1'],['pageHistory','0']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
-      frame.onload=()=>finish();form.submit();form.remove();setTimeout(finish,2500);
+      frame.onload=()=>finish();HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
     }catch(e){reject(e)}
   });
 }
