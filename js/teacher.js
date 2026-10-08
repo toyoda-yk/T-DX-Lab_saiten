@@ -807,6 +807,7 @@ function renderGroupCard(rows,indices){
     return `<div class="group-answer-row" data-row="${i}">
       <div class="group-answer-label"><span>${esc(lastKana(r.label)||r.label)}</span><small>正答 ${esc(r.answer||'未設定')}</small></div>
       <div class="choices review-choices">${c.html||'<span class="muted small">選択肢未設定</span>'}</div>
+      <button type="button" class="choice-edit-btn" data-edit-options="${i}">選択肢を変更</button>
     </div>`;
   }).join('');
   return `<article class="review-question-card review-group-card ${rows.some(r=>r.confidence==='要確認')?'needs-review':''}" data-group-card="${esc(first.group)}">
@@ -846,6 +847,7 @@ function renderSingleCard(r,i){
     <div class="review-answer-zone">
       <div class="review-answer-caption">読み取った正答 <strong>${esc(r.answer||'未設定')}</strong></div>
       ${c.html?`<div class="choices review-choices">${c.html}</div>`:'<div class="notice small">選択肢を認識できていません。下の「詳細設定」で選択肢を入力してください。</div>'}
+      <button type="button" class="choice-edit-btn" data-edit-options="${i}">選択肢を変更</button>
     </div>
     <details class="review-detail-settings">
       <summary>詳細設定を確認・修正</summary>
@@ -884,6 +886,14 @@ function renderEditor(){
   }));
   root.querySelectorAll('[data-answer-row]').forEach(b=>b.onclick=()=>{
     const i=Number(b.dataset.answerRow);editorRows[i].answer=b.dataset.answer;editorRows[i].confidence='確認済';renderEditor();
+  });
+  root.querySelectorAll('[data-edit-options]').forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.editOptions);
+    const card=b.closest('.review-question-card');
+    const details=card?.querySelector('.review-detail-settings');
+    if(details)details.open=true;
+    const input=card?.querySelector(`.group-detail-row[data-row="${i}"] input[data-k="options"]`)||card?.querySelector('input[data-k="options"]');
+    if(input){input.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>{input.focus();if(input.select)input.select()},250)}
   });
   root.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moveEditorBlock(Number(b.dataset.move),Number(b.dataset.dir)));
   root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{editorRows.splice(Number(b.dataset.del),1);renderEditor()});
@@ -1007,6 +1017,10 @@ function renderGoogleFormStatus(){
   let msg=[];
   if(!st.signatureOk)msg.push('設問構成が変更されています。自動対応をやり直してください。');
   if(st.dups.length)msg.push('同じentryが複数項目に使われています。');
+  if(st.mapped<editorRows.length){
+    const shortage=editorRows.length-st.mapped;
+    msg.push(`Googleフォームの解答欄が ${shortage}件不足しています。事前入力リンクを作るときに、すべての解答欄へ値を入れたか確認してリンクを取り直してください。`);
+  }
   if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。必須項目の場合は送信できないため、テスト送信で必ず確認してください。`);
   if(st.ok)msg.push(`連携設定OK：氏名・4桁番号・解答 ${st.mapped}件を送信できます。${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
   $('formLinkMsg').className=(st.ok?'success':'error')+' small';
@@ -1035,7 +1049,7 @@ function postGoogleForm(actionUrl,fields){
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
       frame.onload=()=>finish();
-      form.submit();form.remove();setTimeout(finish,2500);
+      HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
     }catch(e){reject(e)}
   });
 }

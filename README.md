@@ -1,6 +1,10 @@
-# T-DX Lab☆問題演習システム v1.18
+# T-DX Lab☆問題演習システム v1.19
 
-## v1.18 の主な変更
+## v1.19 の主な変更
+
+- Googleフォームのテスト送信で `form.submit is not a function` が出る不具合を修正しました。
+- 模範解答確認画面の各設問に「選択肢を変更」ボタンを追加しました。押すと該当設問の選択肢入力欄を開いて編集できます。
+- Googleフォームの解答欄数がT-DX Labより少ない場合、不足件数と「事前入力リンクですべての解答欄へ値を入れたか」を明示するようにしました。
 
 ### 1. Googleフォーム自動送信を実装
 - 教員画面に **Googleフォーム連携設定** を追加しました。
@@ -30,7 +34,7 @@
 - `exams.json` は従来どおり登録済み試験をすべて含む累積ファイルです。
 
 ### 5. キャッシュ対策
-- `style.css` / `common.js` / `student.js` / `teacher.js` の読み込み番号を `?v=1.18` に更新しました。
+- `style.css` / `common.js` / `student.js` / `teacher.js` の読み込み番号を `?v=1.19` に更新しました。
 - HTMLに no-cache 系メタ情報を追加しました。
 - `data/users.json` / `data/exams.json` は `cache: no-store`＋キャッシュバスターで取得します。
 

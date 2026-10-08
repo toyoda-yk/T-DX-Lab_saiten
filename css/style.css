@@ -877,7 +877,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .pdf-question-mark{width:14mm;text-align:center;font-size:15px;font-weight:1000;line-height:1}.pdf-question-mark.ok{color:#138553;background:#effaf4}.pdf-question-mark.ng{color:#d43d3d;background:#fff1f1}
 .pdf-question-grid.three-cols .pdf-question-table{font-size:8px}.pdf-question-grid.three-cols .pdf-question-table th:last-child,.pdf-question-grid.three-cols .pdf-question-mark{width:11mm}.pdf-question-grid.three-cols .pdf-question-mark{font-size:13px}
 
-/* ===== v1.18 Google Forms link / subject filter / student name ===== */
+/* ===== v1.19 Google Forms link / subject filter / student name ===== */
 .google-form-link-panel{margin-top:20px;padding:20px;border:1px solid #d9e6f4;border-radius:22px;background:linear-gradient(180deg,#fbfdff,#f6f9fd);box-shadow:0 10px 28px rgba(29,67,110,.05)}
 .google-form-link-head{align-items:flex-start;margin-bottom:14px}.google-form-link-head h3{margin:4px 0 7px}.google-form-standard-badge{white-space:nowrap;padding:7px 11px;border-radius:999px;background:#e9fff4;color:#13754b;border:1px solid #bfead5;font-size:11px;font-weight:900}
 .google-form-standard{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.google-form-standard>div{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e0e9f3;border-radius:15px;background:#fff}.google-form-standard b{display:flex;align-items:center;justify-content:center;flex:0 0 30px;height:30px;border-radius:10px;background:#edf5ff;color:#275b96}.google-form-standard span{display:flex;flex-direction:column;gap:2px}.google-form-standard small{color:#718096}
@@ -888,3 +888,10 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .pdf-quick-meta{grid-template-columns:1.4fr .9fr .8fr .9fr}.pdf-question-summary{grid-template-columns:1.7fr .9fr .8fr .8fr .8fr}.pdf-question-summary .name strong{font-size:11px;overflow-wrap:anywhere;line-height:1.25}
 @media(max-width:900px){.google-form-standard{grid-template-columns:1fr}.google-identity-map{grid-template-columns:1fr}.google-form-test-zone{align-items:stretch;flex-direction:column}.student-identity-card{grid-template-columns:1fr}.student-identity-fields{grid-template-columns:1fr 130px}.google-map-table-shell select{min-width:220px}}
 @media(max-width:600px){.student-identity-fields{grid-template-columns:1fr}.google-form-link-panel{padding:15px}.google-form-actions button{width:100%}}
+
+/* v1.19: per-question option editing */
+.choice-edit-btn{margin-top:10px;padding:8px 12px;border-radius:10px;border:1px solid #c9d9ea;background:#fff;color:#24517f;font-weight:800;cursor:pointer;white-space:nowrap}
+.choice-edit-btn:hover{background:#eef7ff;border-color:#7bb8ff}
+.group-answer-row{grid-template-columns:90px 1fr auto}
+.group-answer-row .choice-edit-btn{margin-top:0}
+@media(max-width:760px){.group-answer-row{grid-template-columns:1fr}.group-answer-row .choice-edit-btn{justify-self:start}}
