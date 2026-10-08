@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>生徒用 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.17">
+  <link rel="stylesheet" href="css/style.css?v=1.18">
 </head>
 <body class="future-app student-app tdx-v09-student">
 <header class="future-app-header portal-header">
@@ -67,6 +70,18 @@
       </div>
       <button id="backBtn" class="secondary glass-btn">試験一覧へ</button>
     </div>
+    <div id="studentIdentityCard" class="student-identity-card hidden">
+      <div>
+        <span class="section-eyebrow">STUDENT INFO</span>
+        <h3>受験者情報</h3>
+        <p class="muted small">氏名はこの試験のGoogleフォーム送信と速報PDFにだけ使用します。users.jsonには保存しません。</p>
+      </div>
+      <div class="student-identity-fields">
+        <label>氏名<input id="studentName" autocomplete="name" placeholder="例：豊田 太郎"></label>
+        <label>4桁番号<input id="studentCodeReadonly" readonly></label>
+      </div>
+    </div>
+
     <div class="exam-status-card">
       <div class="exam-status-label">ANSWER PROGRESS</div>
       <div class="exam-status-value"><span id="answeredCount">0</span> / <span id="questionCount">0</span> 回答済み</div>
@@ -100,6 +115,7 @@
         <div class="table-shell"><table><thead><tr><th>設問</th><th>あなたの解答</th><th>正答</th><th>結果</th><th>得点</th></tr></thead><tbody id="detailBody"></tbody></table></div>
       </div>
 
+      <div id="formSendResult" class="form-send-result hidden"></div>
       <div class="notice small result-notice">この速報版はあなた自身の採点結果です。クラス集計・全体集計が公開された後は、平均・分布・自分の位置を含む最終版に拡張する予定です。</div>
     </div>
     <div class="actions no-print result-actions"><button id="pdfBtn" class="future-btn">成績表をPDF保存</button><button id="resultBackBtn" class="secondary glass-btn">試験一覧へ</button></div>
@@ -118,7 +134,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="js/common.js?v=1.17"></script>
-<script src="js/student.js?v=1.17"></script>
+<script src="js/common.js?v=1.18"></script>
+<script src="js/student.js?v=1.18"></script>
 </body>
 </html>

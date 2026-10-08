@@ -1,4 +1,4 @@
-let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null;
+let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null;
 const $=id=>document.getElementById(id);
 let qrScanner=null;
 async function loadData(){
@@ -51,7 +51,13 @@ function renderExamList(){
 }
 function openExam(id){
   currentExam=accessibleExams.find(e=>e.id===id);if(!currentExam)return;
-  $('examTitle').textContent=currentExam.title;$('examSubject').textContent=currentExam.subject;$('questionCount').textContent=currentExam.questions.length;$('submitNote').textContent=currentExam.formSubmission?'提出時にGoogleフォームへも自動送信します。':'現在は即時採点のみ動作します。Googleフォーム自動送信は次工程で接続します。';
+  const linked=!!currentExam.formSubmission;
+  $('examTitle').textContent=currentExam.title;$('examSubject').textContent=currentExam.subject;$('questionCount').textContent=currentExam.questions.length;
+  $('submitNote').textContent=linked?'提出時に氏名・4桁番号・解答をGoogleフォームへ自動送信します。Googleフォーム連携試験は全解答欄を回答してから提出してください。':'この試験はT-DX Lab内で即時採点します。';
+  $('studentIdentityCard').classList.toggle('hidden',!linked);
+  $('studentCodeReadonly').value=currentUser?.studentCode||'';
+  $('studentName').value=currentStudentName||'';
+  lastFormSendState=null;
   const f=$('answerForm');f.innerHTML='';let last='';
   currentExam.questions.forEach(q=>{if(q.section!==last){const s=currentExam.sections.find(x=>x.id===q.section);const h=document.createElement('h3');h.textContent=`${s.name}（${s.points}点）`;h.style.marginTop='28px';f.appendChild(h);last=q.section}
     const div=document.createElement('div');div.className='question';div.innerHTML=`<strong>${q.label}</strong><div class="choices">${q.options.map(o=>`<label class="choice"><input type="radio" name="q${q.id}" value="${o}"><span>${o}</span></label>`).join('')}</div>`;f.appendChild(div);
@@ -60,14 +66,53 @@ function openExam(id){
 }
 function collectAnswers(){const a={};currentExam.questions.forEach(q=>{const x=document.querySelector(`input[name=q${q.id}]:checked`);if(x)a[q.id]=x.value});return a}
 function updateProgress(){const n=Object.keys(collectAnswers()).length;$('answeredCount').textContent=n;$('answerProgress').style.width=`${100*n/currentExam.questions.length}%`}
-function submitExam(){const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length;if(missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}
+function validFormSubmissionConfig(){
+  const f=currentExam?.formSubmission;if(!f)return false;
+  return f.provider==='google_forms'&&!!f.actionUrl&&!!f.nameEntry&&!!f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===currentExam.questions.length;
+}
+function postGoogleForm(actionUrl,fields){
+  return new Promise((resolve,reject)=>{
+    try{
+      if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
+      const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
+      const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
+      Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
+      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      document.body.appendChild(form);
+      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
+      frame.onload=()=>finish();form.submit();form.remove();setTimeout(finish,2500);
+    }catch(e){reject(e)}
+  });
+}
+async function sendCurrentExamToGoogle(answers,name){
+  if(!currentExam.formSubmission)return {sent:false,reason:'not_configured'};
+  if(!validFormSubmissionConfig())throw new Error('Googleフォーム連携設定が不完全です。担当の先生に知らせてください。');
+  const f=currentExam.formSubmission,fields={};
+  fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
+  for(const m of f.questionEntries){fields[m.entry]=answers[m.questionId]??answers[String(m.questionId)]??''}
+  await postGoogleForm(f.actionUrl,fields);
+  return {sent:true,attemptedAt:new Date().toISOString()};
+}
+async function submitExam(){
+  const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length,linked=!!currentExam.formSubmission;
+  if(linked&&missing){alert(`未回答が${missing}個あります。Googleフォームへ確実に記録するため、すべての解答欄を回答してから提出してください。`);return}
+  if(!linked&&missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;
+  let name='';
+  if(linked){name=$('studentName').value.trim();if(!name){alert('氏名を入力してください。');$('studentName').focus();return}currentStudentName=name}
+  const btn=$('submitBtn'),old=btn.textContent;btn.disabled=true;btn.textContent=linked?'Googleフォームへ送信中…':'採点中…';
+  try{
+    if(linked)lastFormSendState=await sendCurrentExamToGoogle(answers,name);else lastFormSendState={sent:false,reason:'not_configured'};
+    const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0);
+  }catch(e){console.error(e);if(!confirm(`Googleフォームへの送信処理でエラーが発生しました。\n${e.message||''}\n\nGoogleフォームへの記録なしで採点結果だけ表示しますか？`))return;lastFormSendState={sent:false,error:e.message||'送信エラー'};const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}finally{btn.disabled=false;btn.textContent=old}
+}
 function sectionStat(section,r){
   const rows=r.detail.filter(d=>d.q.section===section.id),correct=rows.filter(d=>d.correct).length,total=rows.length;
   return {score:r.sectionScores[section.id]||0,points:section.points||0,correct,total,rate:total?Math.round(correct/total*100):0};
 }
 function renderResult(r,answers){
   const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
-  $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('scoreDen').textContent=` / ${totalPoints}`;$('resultCode').textContent=`4桁番号：${currentUser.studentCode}`;
+  $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('scoreDen').textContent=` / ${totalPoints}`;$('resultCode').textContent=currentStudentName?`氏名：${currentStudentName}　｜　4桁番号：${currentUser.studentCode}`:`4桁番号：${currentUser.studentCode}`;
+  const sendBox=$('formSendResult');if(currentExam.formSubmission){sendBox.classList.remove('hidden');if(lastFormSendState?.sent){sendBox.className='form-send-result success';sendBox.innerHTML='<strong>✓ Googleフォーム送信</strong><span>回答の送信処理を実行しました。速報PDFには氏名と4桁番号も記載されます。</span>'}else{sendBox.className='form-send-result error';sendBox.innerHTML=`<strong>⚠ Googleフォーム未送信</strong><span>${lastFormSendState?.error||'送信状態を確認できませんでした。'} 担当の先生に知らせてください。</span>`}}else{sendBox.classList.add('hidden');sendBox.innerHTML=''};
   const bars=$('sectionBars');bars.innerHTML='';currentExam.sections.forEach(s=>{const st=sectionStat(s,r);bars.insertAdjacentHTML('beforeend',`<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${st.rate}%"></div></div><div>${st.score}/${st.points}点<br><span class="small muted">正答率 ${st.rate}%</span></div></div>`) });
   const body=$('detailBody');body.innerHTML='';r.detail.forEach(d=>{const answer=d.answer||'未回答';let correctText=d.q.answer;if(d.q.type.includes('unordered')&&d.q.groupAnswers)correctText=d.q.groupAnswers.join('・');const earned=d.groupAward??d.earned;body.insertAdjacentHTML('beforeend',`<tr><td>${d.q.label}</td><td>${answer}</td><td>${correctText}</td><td class="${d.correct?'ok':'ng'}">${d.correct?'○':'×'}</td><td>${earned}</td></tr>`) });
 }
@@ -80,7 +125,7 @@ function buildQuickPdfSheet(r){
   sheet.appendChild(header);
   const title=document.createElement('h1');title.className='pdf-quick-title';title.textContent=currentExam.title;sheet.appendChild(title);
   const meta=document.createElement('div');meta.className='pdf-quick-meta';
-  const metaItems=[['教科',currentExam.subject||'-'],['4桁番号',currentUser.studentCode],['実施日',new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())]];
+  const metaItems=[['氏名',currentStudentName||'-'],['教科',currentExam.subject||'-'],['4桁番号',currentUser.studentCode],['実施日',new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())]];
   metaItems.forEach(([k,v])=>{const box=document.createElement('div');const key=document.createElement('span');key.textContent=k;const val=document.createElement('strong');val.textContent=v;box.append(key,val);meta.appendChild(box)});sheet.appendChild(meta);
   const score=document.createElement('div');score.className='pdf-quick-score';
   const scoreMain=document.createElement('div');scoreMain.className='pdf-score-main';scoreMain.innerHTML=`<span>${r.total}</span><small> / ${totalPoints} 点</small>`;
@@ -102,7 +147,7 @@ function buildQuestionPdfSheet(r){
   const correctCount=r.detail.filter(d=>d.correct).length;
   const wrongCount=r.detail.length-correctCount;
   const summary=document.createElement('div');summary.className='pdf-question-summary';
-  summary.innerHTML=`<div><span>4桁番号</span><strong>${currentUser.studentCode}</strong></div><div class="good"><span>○ 正解</span><strong>${correctCount}</strong></div><div class="bad"><span>× 不正解</span><strong>${wrongCount}</strong></div><div><span>解答欄</span><strong>${r.detail.length}</strong></div>`;
+  summary.innerHTML=`<div class="name"><span>氏名</span><strong>${currentStudentName||'-'}</strong></div><div><span>4桁番号</span><strong>${currentUser.studentCode}</strong></div><div class="good"><span>○ 正解</span><strong>${correctCount}</strong></div><div class="bad"><span>× 不正解</span><strong>${wrongCount}</strong></div><div><span>解答欄</span><strong>${r.detail.length}</strong></div>`;
   sheet.appendChild(summary);
   const note=document.createElement('div');note.className='pdf-question-note';note.textContent='各解答欄の判定を一覧で確認できます。完答問題は、グループ全体が正解した場合に○となります。';sheet.appendChild(note);
   const columnCount=r.detail.length>72?3:2;
@@ -173,6 +218,6 @@ async function closeQrScanner(){
   if(qrScanner){try{await qrScanner.stop()}catch(e){} try{await qrScanner.clear()}catch(e){} qrScanner=null}
   $('qrModal').classList.add('hidden');
 }
-$('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;accessibleExams=[];show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
+$('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;currentExam=null;currentStudentName='';lastFormSendState=null;accessibleExams=[];$('studentName').value='';show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
 $('qrLoginBtn').onclick=openQrScanner;$('qrCloseBtn').onclick=closeQrScanner;
 loadData().catch(e=>{$('loginMsg').className='error small';$('loginMsg').textContent='データ読み込みに失敗しました。GitHub PagesまたはローカルWebサーバーで開いてください。'});

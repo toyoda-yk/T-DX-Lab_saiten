@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.17">
+  <link rel="stylesheet" href="css/style.css?v=1.18">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -201,6 +204,56 @@
           </div>
         </div>
         <div id="pointsCheckMsg" class="small muted"></div>
+
+        <section class="google-form-link-panel">
+          <div class="section-title google-form-link-head">
+            <div>
+              <span class="section-eyebrow">GOOGLE FORM LINK</span>
+              <h3>Googleフォーム連携設定</h3>
+              <p class="muted small">推奨フォーマットは「氏名（必須）→ 4桁番号（必須）→ 解答欄」です。Googleフォームの「フォームに事前入力する」で全項目にテスト値を入れ、取得したリンクを貼り付けます。</p>
+            </div>
+            <span class="google-form-standard-badge">1フォームにつき1回</span>
+          </div>
+          <div class="google-form-standard">
+            <div><b>1</b><span><strong>氏名</strong><small>生徒が試験時に入力。PDFにも表示</small></span></div>
+            <div><b>2</b><span><strong>4桁番号</strong><small>ログイン情報から自動送信</small></span></div>
+            <div><b>3</b><span><strong>解答欄</strong><small>T-DX Labの回答と自動対応</small></span></div>
+          </div>
+          <div class="google-form-caution"><strong>推奨設定：</strong>メールアドレス収集・ファイルアップロード・回答者のログイン必須・分岐は使わず、1ページのフォームにしてください。</div>
+          <label class="google-prefill-label">事前入力したリンク
+            <textarea id="formPrefillUrl" rows="3" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&entry...."></textarea>
+          </label>
+          <div class="actions compact-actions google-form-actions">
+            <button id="analyzeFormLinkBtn" type="button" class="teacher-action">連携情報を解析</button>
+            <button id="autoMapFormBtn" type="button" class="secondary glass-btn" disabled>解答欄を順番に自動対応</button>
+            <button id="clearFormLinkBtn" type="button" class="secondary glass-btn">連携設定をリセット</button>
+          </div>
+          <div id="formLinkMsg" class="small muted"></div>
+
+          <div id="formMappingPanel" class="google-form-mapping hidden">
+            <div id="formMappingKpis" class="grid four analysis-kpis"></div>
+            <div class="google-identity-map">
+              <label>氏名を送る項目<select id="formNameEntrySelect"></select></label>
+              <label>4桁番号を送る項目<select id="formCodeEntrySelect"></select></label>
+            </div>
+            <details class="google-answer-map-details" open>
+              <summary>解答欄の対応を確認する</summary>
+              <div class="table-shell google-map-table-shell"><table><thead><tr><th>T-DX Lab</th><th>Googleフォーム entry</th><th>事前入力値</th></tr></thead><tbody id="formAnswerMappingBody"></tbody></table></div>
+            </details>
+            <div class="google-form-test-zone">
+              <div>
+                <strong>テスト送信</strong>
+                <span>現在の対応でGoogleフォームへテスト回答を1件送ります。送信後、Googleフォームの「回答」タブで受信を確認してください。</span>
+              </div>
+              <div class="actions compact-actions">
+                <button id="testGoogleFormBtn" type="button" class="orange">テスト送信（1件追加）</button>
+                <label class="test-confirm-check"><input id="formTestConfirmed" type="checkbox"> Googleフォームで受信を確認した</label>
+              </div>
+            </div>
+            <div id="formTestMsg" class="small muted"></div>
+          </div>
+        </section>
+
         <div class="actions">
           <button id="registerExamBtn" class="teacher-action">この内容で試験データに登録（非公開）</button>
           <button id="saveDraftExamBtn" class="secondary glass-btn">編集内容を下書き保存</button>
@@ -230,6 +283,8 @@
 
       <div class="grid two admin-form-grid">
         <div>
+          <label>教科で絞り込み</label>
+          <select id="publishSubjectSelect"></select>
           <label>対象試験</label>
           <select id="publishExamSelect"></select>
           <label class="publish-switch-row"><input id="publishToggle" type="checkbox"> <span>この試験を生徒画面に公開する</span></label>
@@ -267,7 +322,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
-<script src="js/common.js?v=1.17"></script>
-<script src="js/teacher.js?v=1.17"></script>
+<script src="js/common.js?v=1.18"></script>
+<script src="js/teacher.js?v=1.18"></script>
 </body>
 </html>
