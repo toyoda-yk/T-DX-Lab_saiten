@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 9,
   "systemName": "T-DX Lab☆問題演習システム",
   "exams": [
     {
@@ -4733,7 +4733,950 @@
         }
       ],
       "createdAt": "2026-10-08T11:22:07.005Z"
+    },
+    {
+      "id": "exam_20261008_ejhxcc",
+      "title": "たいむ【複製】",
+      "subject": "情報",
+      "schoolYear": "2026",
+      "status": "published",
+      "published": true,
+      "totalPoints": 100,
+      "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSdwSixrh-5HpMKSITK7ViHVyCerztUfR56tYKcmLJ8rnX8xGg/viewform",
+      "formSubmission": {
+        "provider": "google_forms",
+        "version": 1,
+        "actionUrl": "https://docs.google.com/forms/d/e/1FAIpQLSdwSixrh-5HpMKSITK7ViHVyCerztUfR56tYKcmLJ8rnX8xGg/formResponse",
+        "nameEntry": "entry.1610297517",
+        "studentCodeEntry": "entry.234286074",
+        "questionEntries": [
+          {
+            "questionId": 1,
+            "entry": "entry.1399939356"
+          },
+          {
+            "questionId": 2,
+            "entry": "entry.61558457"
+          },
+          {
+            "questionId": 3,
+            "entry": "entry.1047535006"
+          },
+          {
+            "questionId": 4,
+            "entry": "entry.553560392"
+          },
+          {
+            "questionId": 5,
+            "entry": "entry.176901569"
+          },
+          {
+            "questionId": 6,
+            "entry": "entry.1942803149"
+          },
+          {
+            "questionId": 7,
+            "entry": "entry.658777438"
+          },
+          {
+            "questionId": 8,
+            "entry": "entry.1678955758"
+          },
+          {
+            "questionId": 9,
+            "entry": "entry.321929426"
+          },
+          {
+            "questionId": 10,
+            "entry": "entry.1264471151"
+          },
+          {
+            "questionId": 11,
+            "entry": "entry.545150729"
+          },
+          {
+            "questionId": 12,
+            "entry": "entry.323572090"
+          },
+          {
+            "questionId": 13,
+            "entry": "entry.612119944"
+          },
+          {
+            "questionId": 14,
+            "entry": "entry.774111631"
+          },
+          {
+            "questionId": 15,
+            "entry": "entry.1347055158"
+          },
+          {
+            "questionId": 16,
+            "entry": "entry.1693716424"
+          },
+          {
+            "questionId": 17,
+            "entry": "entry.459733388"
+          },
+          {
+            "questionId": 18,
+            "entry": "entry.1753806435"
+          },
+          {
+            "questionId": 19,
+            "entry": "entry.151318887"
+          },
+          {
+            "questionId": 20,
+            "entry": "entry.712397759"
+          },
+          {
+            "questionId": 21,
+            "entry": "entry.600784386"
+          },
+          {
+            "questionId": 22,
+            "entry": "entry.385050212"
+          },
+          {
+            "questionId": 23,
+            "entry": "entry.1766796271"
+          },
+          {
+            "questionId": 24,
+            "entry": "entry.1437486597"
+          },
+          {
+            "questionId": 25,
+            "entry": "entry.1838963526"
+          },
+          {
+            "questionId": 26,
+            "entry": "entry.1376479228"
+          },
+          {
+            "questionId": 27,
+            "entry": "entry.1700907894"
+          },
+          {
+            "questionId": 28,
+            "entry": "entry.1105825242"
+          },
+          {
+            "questionId": 29,
+            "entry": "entry.55771341"
+          },
+          {
+            "questionId": 30,
+            "entry": "entry.1447427027"
+          },
+          {
+            "questionId": 31,
+            "entry": "entry.1292122375"
+          },
+          {
+            "questionId": 32,
+            "entry": "entry.2096932741"
+          },
+          {
+            "questionId": 33,
+            "entry": "entry.1097487678"
+          },
+          {
+            "questionId": 34,
+            "entry": "entry.1590160727"
+          },
+          {
+            "questionId": 35,
+            "entry": "entry.1126265167"
+          },
+          {
+            "questionId": 36,
+            "entry": "entry.379794467"
+          },
+          {
+            "questionId": 37,
+            "entry": "entry.1494142345"
+          },
+          {
+            "questionId": 38,
+            "entry": "entry.614184756"
+          },
+          {
+            "questionId": 39,
+            "entry": "entry.1363584672"
+          },
+          {
+            "questionId": 40,
+            "entry": "entry.174925107"
+          },
+          {
+            "questionId": 41,
+            "entry": "entry.1319015348"
+          },
+          {
+            "questionId": 42,
+            "entry": "entry.795450835"
+          }
+        ],
+        "nameRequired": true,
+        "testConfirmed": true,
+        "configuredAt": "2026-10-08T11:22:07.005Z"
+      },
+      "choiceConfig": {
+        "options": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "label": "0〜9"
+      },
+      "access": {
+        "mode": "restricted",
+        "classes": [],
+        "students": [
+          "3301"
+        ]
+      },
+      "sections": [
+        {
+          "id": "s1",
+          "name": "第1問",
+          "points": 20
+        },
+        {
+          "id": "s2",
+          "name": "第2問",
+          "points": 30
+        },
+        {
+          "id": "s3",
+          "name": "第3問",
+          "points": 25
+        },
+        {
+          "id": "s4",
+          "name": "第4問",
+          "points": 25
+        }
+      ],
+      "questions": [
+        {
+          "id": 1,
+          "section": "s1",
+          "label": "第1問 ア",
+          "answer": "2",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 2,
+          "section": "s1",
+          "label": "第1問 イ",
+          "answer": "3",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "unordered_item",
+          "group": "g_1_1"
+        },
+        {
+          "id": 3,
+          "section": "s1",
+          "label": "第1問 ウ",
+          "answer": "4",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "unordered_item",
+          "group": "g_1_1"
+        },
+        {
+          "id": 4,
+          "section": "s1",
+          "label": "第1問 エ",
+          "answer": "3",
+          "points": 3,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 5,
+          "section": "s1",
+          "label": "第1問 オ",
+          "answer": "3",
+          "points": 3,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 6,
+          "section": "s1",
+          "label": "第1問 カ",
+          "answer": "2",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 7,
+          "section": "s1",
+          "label": "第1問 キ",
+          "answer": "0",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 8,
+          "section": "s1",
+          "label": "第1問 ク",
+          "answer": "3",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 9,
+          "section": "s1",
+          "label": "第1問 ケ",
+          "answer": "7",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 10,
+          "section": "s1",
+          "label": "第1問 コ",
+          "answer": "3",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 11,
+          "section": "s2",
+          "label": "第2問 ア",
+          "answer": "2",
+          "points": 0,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "complete_item",
+          "group": "g_2_2",
+          "groupPoints": 5
+        },
+        {
+          "id": 12,
+          "section": "s2",
+          "label": "第2問 イ",
+          "answer": "5",
+          "points": 0,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "complete_item",
+          "group": "g_2_2",
+          "groupPoints": 5
+        },
+        {
+          "id": 13,
+          "section": "s2",
+          "label": "第2問 ウ",
+          "answer": "4",
+          "points": 0,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "complete_item",
+          "group": "g_2_2",
+          "groupPoints": 5
+        },
+        {
+          "id": 14,
+          "section": "s2",
+          "label": "第2問 エ",
+          "answer": "0",
+          "points": 3,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 15,
+          "section": "s2",
+          "label": "第2問 オ",
+          "answer": "6",
+          "points": 3,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 16,
+          "section": "s2",
+          "label": "第2問 カ",
+          "answer": "1",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "unordered_item",
+          "group": "g_2_3"
+        },
+        {
+          "id": 17,
+          "section": "s2",
+          "label": "第2問 キ",
+          "answer": "5",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "unordered_item",
+          "group": "g_2_3"
+        },
+        {
+          "id": 18,
+          "section": "s2",
+          "label": "第2問 ク",
+          "answer": "1",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 19,
+          "section": "s2",
+          "label": "第2問 ケ",
+          "answer": "2",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 20,
+          "section": "s2",
+          "label": "第2問 コ",
+          "answer": "2",
+          "points": 0,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "unordered_complete_item",
+          "group": "g_2_4",
+          "groupPoints": 5,
+          "groupAnswers": [
+            "2",
+            "3"
+          ]
+        },
+        {
+          "id": 21,
+          "section": "s2",
+          "label": "第2問 サ",
+          "answer": "3",
+          "points": 0,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "unordered_complete_item",
+          "group": "g_2_4",
+          "groupPoints": 5,
+          "groupAnswers": [
+            "2",
+            "3"
+          ]
+        },
+        {
+          "id": 22,
+          "section": "s3",
+          "label": "第3問 ア",
+          "answer": "2",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 23,
+          "section": "s3",
+          "label": "第3問 イ",
+          "answer": "3",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 24,
+          "section": "s3",
+          "label": "第3問 ウ",
+          "answer": "3",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 25,
+          "section": "s3",
+          "label": "第3問 エ",
+          "answer": "1",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 26,
+          "section": "s3",
+          "label": "第3問 オ",
+          "answer": "0",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 27,
+          "section": "s3",
+          "label": "第3問 カ",
+          "answer": "2",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 28,
+          "section": "s3",
+          "label": "第3問 キ",
+          "answer": "0",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 29,
+          "section": "s3",
+          "label": "第3問 ク",
+          "answer": "2",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 30,
+          "section": "s3",
+          "label": "第3問 ケ",
+          "answer": "1",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 31,
+          "section": "s3",
+          "label": "第3問 コ",
+          "answer": "3",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 32,
+          "section": "s3",
+          "label": "第3問 サ",
+          "answer": "1",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 33,
+          "section": "s3",
+          "label": "第3問 シ",
+          "answer": "3",
+          "points": 1,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 34,
+          "section": "s3",
+          "label": "第3問 ス",
+          "answer": "1",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+          ],
+          "type": "unordered_item",
+          "group": "g_3_5"
+        },
+        {
+          "id": 35,
+          "section": "s3",
+          "label": "第3問 セ",
+          "answer": "4",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+          ],
+          "type": "unordered_item",
+          "group": "g_3_5"
+        },
+        {
+          "id": 36,
+          "section": "s3",
+          "label": "第3問 ソ",
+          "answer": "3",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 37,
+          "section": "s3",
+          "label": "第3問 タ",
+          "answer": "6",
+          "points": 2,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 38,
+          "section": "s4",
+          "label": "第4問 ア",
+          "answer": "1",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 39,
+          "section": "s4",
+          "label": "第4問 イ",
+          "answer": "1",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 40,
+          "section": "s4",
+          "label": "第4問 ウ",
+          "answer": "4",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 41,
+          "section": "s4",
+          "label": "第4問 エ",
+          "answer": "2",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        },
+        {
+          "id": 42,
+          "section": "s4",
+          "label": "第4問 オ",
+          "answer": "0",
+          "points": 5,
+          "options": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "type": "normal"
+        }
+      ],
+      "createdAt": "2026-10-08T12:13:59.970Z",
+      "publishWindow": {
+        "startAt": "2026-10-08T12:14:00.000Z",
+        "endAt": "2026-10-08T12:20:00.000Z",
+        "mode": "auto"
+      },
+      "endedAt": null,
+      "updatedAt": "2026-10-08T12:14:28.701Z",
+      "clonedFrom": "exam_20261008_dthqs5"
     }
   ],
-  "updatedAt": "2026-10-08T11:22:36.899Z"
+  "updatedAt": "2026-10-08T12:15:55.326Z"
 }
