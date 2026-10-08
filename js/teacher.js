@@ -11,6 +11,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='';
+let startupDataWarning='';
 
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
@@ -78,10 +79,29 @@ function updateSystemAdminUi(){
   const btn=$('systemAdminBtn');if(btn)btn.textContent=systemAdminUnlocked?'管理者メニューを開く':'システム管理者';
 }
 async function init(){
-  [allExamData,usersData]=await Promise.all([
-    fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()),
-    fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>({version:6,users:[],issuedCodeIds:[]}))
-  ]);
+  // ログイン操作はデータ読込より先に有効化する。
+  // data/*.json の一時的な読込失敗や古いデータ形式の不整合があっても、
+  // 教員ログイン自体が無反応にならないようにする。
+  bind();
+
+  try{
+    const r=await fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok)throw new Error(`exams.json: HTTP ${r.status}`);
+    allExamData=await r.json();
+  }catch(e){
+    console.error(e);
+    allExamData={version:5,systemName:'T-DX Lab☆問題演習システム',exams:[]};
+    startupDataWarning='exams.jsonを読み込めませんでした。GitHubのdata/exams.jsonを確認してください。';
+  }
+  try{
+    const r=await fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok)throw new Error(`users.json: HTTP ${r.status}`);
+    usersData=await r.json();
+  }catch(e){
+    console.error(e);
+    usersData={version:6,users:[],issuedCodeIds:[]};
+    startupDataWarning+=(startupDataWarning?'\n':'')+'users.jsonを読み込めませんでした。GitHubのdata/users.jsonを確認してください。';
+  }
   exams=allExamData.exams||[];
   exams.forEach(e=>{e.status=examStoredStatus(e);e.published=e.status==='published'});
   usersData.users=(usersData.users||[]).filter(u=>u?.credential?.codeId!=='demo-annual-3101');
@@ -92,7 +112,6 @@ async function init(){
   if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   refreshExamSelects();
   initChoiceRangeControls();
-  bind();
   renderRosterRanges();
   renderRosterSummary();
   renderAdminStudentList();
@@ -196,6 +215,9 @@ async function adminLogin(){
   $('adminMsg').textContent='';
   showSection('examManager');
   requestAnimationFrame(()=>$('adminApp').scrollIntoView({behavior:'smooth',block:'start'}));
+  if(startupDataWarning){
+    setTimeout(()=>alert('教員ログインは成功しましたが、データ読込に問題があります。\n\n'+startupDataWarning),50);
+  }
 }
 async function systemAdminLogin(){
   const h=await TDX.sha256Hex($('systemAdminPass').value);
