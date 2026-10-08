@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
-const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
-const SYSTEM_ADMIN_HASH='888df25ae35772424a560c7152a1de794440e0ea5cfee62828333a456a506e05'; // 9999
+const TEACHER_PASSWORD='T-DXLab9999'; // 静的GitHub Pagesのため誤操作防止用の簡易ロック
+const SYSTEM_ADMIN_PASSWORD='9999'; // システム管理者用の簡易ロック
 const QR_VAULT_STORAGE='tdxQrReprintVaultV1';
 let exams=[],usersData={version:6,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
 let publishRoster=[],annualSecrets=[],accessVault=[];
@@ -207,9 +207,11 @@ function bind(){
   $('exportExamDataBtn').onclick=exportExamData;
 }
 async function adminLogin(){
-  const h=await TDX.sha256Hex($('adminPass').value);
-  if(h!==ADMIN_HASH){$('adminMsg').className='error small';$('adminMsg').textContent='管理用パスワードが違います。';return}
-  teacherSessionPassword=$('adminPass').value;
+  // 教員ログインはWeb Cryptoの可否に依存させない。
+  // GitHub Pages上の簡易ロックなので、入力文字列を直接比較する。
+  const entered=String($('adminPass')?.value||'');
+  if(entered!==TEACHER_PASSWORD){$('adminMsg').className='error small';$('adminMsg').textContent='教員共通パスワードが違います。';return}
+  teacherSessionPassword=entered;
   $('adminGate').classList.add('hidden');
   $('adminApp').classList.remove('hidden');
   $('adminMsg').textContent='';
@@ -220,8 +222,8 @@ async function adminLogin(){
   }
 }
 async function systemAdminLogin(){
-  const h=await TDX.sha256Hex($('systemAdminPass').value);
-  if(h!==SYSTEM_ADMIN_HASH){$('systemAdminMsg').className='error small';$('systemAdminMsg').textContent='システム管理者パスワードが違います。';return}
+  const entered=String($('systemAdminPass')?.value||'');
+  if(entered!==SYSTEM_ADMIN_PASSWORD){$('systemAdminMsg').className='error small';$('systemAdminMsg').textContent='システム管理者パスワードが違います。';return}
   systemAdminUnlocked=true;
   $('systemAdminMsg').className='success small';$('systemAdminMsg').textContent='管理者機能を開きました。';
   $('systemAdminPass').value='';$('systemAdminGate').classList.add('hidden');
