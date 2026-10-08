@@ -1,12 +1,6 @@
 {
   "version": 9,
   "systemName": "T-DX Lab☆問題演習システム",
-  "exams": [],
-  "updatedAt": null
-}
-{
-  "version": 9,
-  "systemName": "T-DX Lab☆問題演習システム",
   "exams": [
     {
       "id": "exam_20261008_dthqs5",
