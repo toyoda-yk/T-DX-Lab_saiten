@@ -13,13 +13,26 @@ async function loadData(){
 }
 
 function show(id){['loginPanel','examListPanel','examPanel','resultPanel'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
-function examStatus(exam){
+function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
   if(['published','unpublished','ended'].includes(s))return s;
   return exam?.published?'published':'unpublished';
 }
+function parseExamDate(value){if(!value)return null;const t=Date.parse(value);return Number.isFinite(t)?t:null}
+function examEffectiveStatus(exam,now=Date.now()){
+  const stored=examStoredStatus(exam);
+  if(stored!=='published')return stored;
+  const start=parseExamDate(exam?.publishWindow?.startAt),end=parseExamDate(exam?.publishWindow?.endAt);
+  if(start!==null&&now<start)return 'scheduled';
+  if(end!==null&&now>=end)return 'ended';
+  return 'published';
+}
+function formatExamDeadline(exam){
+  const t=parseExamDate(exam?.publishWindow?.endAt);if(t===null)return '';
+  const d=new Date(t);return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+}
 function eligible(exam,user){
-  if(examStatus(exam)!=='published')return false;
+  if(examEffectiveStatus(exam)!=='published')return false;
   const a=exam.access;
   if(!a||a.mode==='all')return true;
   const classes=a.classes||[], students=a.students||[];
@@ -51,11 +64,13 @@ async function login(){
 }
 function renderExamList(){
   const root=$('examList');root.innerHTML='';
-  accessibleExams.forEach(e=>{const d=document.createElement('div');d.className='exam-card';d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄</div><div class="actions"><button data-id="${e.id}">この試験を開く</button></div>`;d.querySelector('button').onclick=()=>openExam(e.id);root.appendChild(d)});
+  accessibleExams=accessibleExams.filter(e=>eligible(e,currentUser));
+  accessibleExams.forEach(e=>{const deadline=formatExamDeadline(e),d=document.createElement('div');d.className='exam-card';d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄${deadline?` / <strong>受験期限 ${deadline}</strong>`:''}</div><div class="actions"><button data-id="${e.id}">この試験を開く</button></div>`;d.querySelector('button').onclick=()=>openExam(e.id);root.appendChild(d)});
   if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、あなたに公開されている試験はありません。</div>';
 }
 function openExam(id){
   currentExam=accessibleExams.find(e=>e.id===id);if(!currentExam)return;
+  if(!eligible(currentExam,currentUser)){renderExamList();show('examListPanel');alert('この試験の公開期間は終了しました。');return}
   const linked=!!currentExam.formSubmission;
   $('examTitle').textContent=currentExam.title;$('examSubject').textContent=currentExam.subject;$('questionCount').textContent=currentExam.questions.length;
   $('submitNote').textContent=linked?'提出時に氏名・4桁番号・解答をGoogleフォームへ自動送信します。Googleフォーム連携試験は全解答欄を回答してから提出してください。':'この試験はT-DX Lab内で即時採点します。';
@@ -99,6 +114,7 @@ async function sendCurrentExamToGoogle(answers,name){
   return {sent:true,attemptedAt:new Date().toISOString()};
 }
 async function submitExam(){
+  if(!eligible(currentExam,currentUser)){alert('この試験の公開期間は終了しました。回答は送信できません。');accessibleExams=exams.filter(e=>eligible(e,currentUser));renderExamList();show('examListPanel');return}
   const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length,linked=!!currentExam.formSubmission;
   if(linked&&missing){alert(`未回答が${missing}個あります。Googleフォームへ確実に記録するため、すべての解答欄を回答してから提出してください。`);return}
   if(!linked&&missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;

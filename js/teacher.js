@@ -6,14 +6,46 @@ let editorRows=[];
 let editorSectionTargets={};
 let rosterRanges=[];
 let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
+let previewMode='before';
 
-function examStatus(exam){
+function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
   if(['published','unpublished','ended'].includes(s))return s;
   return exam?.published?'published':'unpublished';
 }
-function examStatusLabel(exam){return ({published:'公開中',unpublished:'非公開',ended:'終了'})[examStatus(exam)]||'非公開'}
-function examStatusClass(exam){return ({published:'live',unpublished:'off',ended:'ended'})[examStatus(exam)]||'off'}
+function parseExamDate(value){
+  if(!value)return null;
+  const t=Date.parse(value);return Number.isFinite(t)?t:null;
+}
+function examEffectiveStatus(exam,now=Date.now()){
+  const stored=examStoredStatus(exam);
+  if(stored==='unpublished')return 'unpublished';
+  if(stored==='ended')return 'ended';
+  const start=parseExamDate(exam?.publishWindow?.startAt);
+  const end=parseExamDate(exam?.publishWindow?.endAt);
+  if(start!==null&&now<start)return 'scheduled';
+  if(end!==null&&now>=end)return 'ended_auto';
+  return 'published';
+}
+function examStatusLabel(exam){return ({published:'公開中',scheduled:'公開予定',unpublished:'非公開',ended:'終了',ended_auto:'終了（自動）'})[examEffectiveStatus(exam)]||'非公開'}
+function examStatusClass(exam){return ({published:'live',scheduled:'scheduled',unpublished:'off',ended:'ended',ended_auto:'ended'})[examEffectiveStatus(exam)]||'off'}
+function formatLocalDateTime(value){
+  const t=parseExamDate(value);if(t===null)return '';
+  return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(t));
+}
+function toDatetimeLocal(value){
+  const t=parseExamDate(value);if(t===null)return '';
+  const d=new Date(t),pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function scheduleSummary(exam){
+  if(examStoredStatus(exam)!=='published')return '';
+  const s=formatLocalDateTime(exam?.publishWindow?.startAt),e=formatLocalDateTime(exam?.publishWindow?.endAt);
+  if(s&&e)return `${s} ～ ${e}`;
+  if(s)return `${s} から`;
+  if(e)return `${e} まで`;
+  return '期間指定なし（旧データ）';
+}
 
 async function init(){
   [allExamData,usersData]=await Promise.all([
@@ -21,7 +53,7 @@ async function init(){
     fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>({version:5,users:[],issuedCodeIds:[]}))
   ]);
   exams=allExamData.exams||[];
-  exams.forEach(e=>{e.status=examStatus(e);e.published=e.status==='published'});
+  exams.forEach(e=>{e.status=examStoredStatus(e);e.published=e.status==='published'});
   usersData.users=(usersData.users||[]).filter(u=>u?.credential?.codeId!=='demo-annual-3101');
   usersData.issuedCodeIds=usersData.issuedCodeIds||[];
   usersData.users.forEach(u=>{u.classKey=u.classKey||String(u.studentCode||'').slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null});
@@ -103,6 +135,12 @@ function bind(){
 
   $('publishSubjectSelect').onchange=()=>{refreshPublishSelectors();loadPublishExam()};
   $('publishExamSelect').onchange=loadPublishExam;
+  $('publishStatusSelect').onchange=()=>{updatePublishScheduleVisibility();renderExamReadiness(exams.find(e=>e.id===$('publishExamSelect')?.value))};
+  $('cloneExamBtn').onclick=cloneCurrentExam;
+  $('togglePreviewBtn').onclick=toggleExamPreview;
+  $('closePreviewBtn').onclick=()=>{$('examPreviewPanel')?.classList.add('hidden')};
+  document.querySelectorAll('.previewModeBtn').forEach(b=>b.onclick=()=>{previewMode=b.dataset.previewMode||'before';renderExamPreview(previewMode)});
+  $('deleteExamBtn').onclick=deleteCurrentExam;
   $('selectAllAudienceBtn').onclick=()=>setAllAudience(true);
   $('clearAudienceBtn').onclick=()=>setAllAudience(false);
   $('applyPublishBtn').onclick=applyPublish;
@@ -762,7 +800,9 @@ function analyzeAnswerSource(source='pdf'){
   const parsed=parseExamText(text);editorRows=parsed.rows||[];editorSectionTargets=parsed.targets||{};
   if(!editorRows.length)editorRows=[blankEditorRow()];
   applyConfiguredOptionsToEmptyRows(false);
-  $('examReviewPanel').classList.remove('hidden');renderEditor();
+  $('examReviewPanel').classList.remove('hidden');
+  document.querySelector('.pdf-review-workspace')?.classList.toggle('no-pdf-source',source==='pasted');
+  renderEditor();
   $('examSourceMsg').className=editorRows.some(r=>r.confidence==='要確認')?'notice small':'success small';
   $('examSourceMsg').textContent=`${source==='pasted'?'テキスト':'PDF'}から ${editorRows.length}個の解答欄を解析しました。確認画面で正答と配点を確認してください。`;
   $('examReviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -1141,11 +1181,102 @@ function loadPublishExam(){
   const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);
   if(!exam){
     if($('audienceBuilder'))$('audienceBuilder').innerHTML='<div class="notice">先にSTEP 1で試験を登録してください。</div>';
+    if($('publishSchedulePanel'))$('publishSchedulePanel').classList.add('hidden');
+    if($('currentPublishState'))$('currentPublishState').innerHTML='';
+    if($('examReadiness'))$('examReadiness').innerHTML='';
+    if($('studentExamPreview'))$('studentExamPreview').innerHTML='<div class="notice small">試験を選択してください。</div>';
     return;
   }
-  $('publishExamSelect').value=exam.id;if($('publishStatusSelect'))$('publishStatusSelect').value=examStatus(exam);
+  $('publishExamSelect').value=exam.id;
+  if($('publishStatusSelect'))$('publishStatusSelect').value=examStoredStatus(exam);
+  if($('publishStartAt'))$('publishStartAt').value=toDatetimeLocal(exam?.publishWindow?.startAt);
+  if($('publishEndAt'))$('publishEndAt').value=toDatetimeLocal(exam?.publishWindow?.endAt);
+  updatePublishScheduleVisibility();
+  renderCurrentPublishState(exam);
+  renderExamReadiness(exam);
   buildAudience();renderRegisteredRosterSummary();
-  requestAnimationFrame(()=>applyExistingAudience(exam));
+  requestAnimationFrame(()=>{applyExistingAudience(exam);if(!$('examPreviewPanel')?.classList.contains('hidden'))renderExamPreview(previewMode)});
+}
+function updatePublishScheduleVisibility(){
+  const published=$('publishStatusSelect')?.value==='published';
+  $('publishSchedulePanel')?.classList.toggle('hidden',!published);
+}
+function renderCurrentPublishState(exam){
+  const root=$('currentPublishState');if(!root)return;
+  const state=examEffectiveStatus(exam),label=examStatusLabel(exam),schedule=scheduleSummary(exam);
+  const detail=state==='scheduled'?'開始日時になると自動で生徒画面に表示されます。':state==='published'?'現在、生徒画面に表示される状態です。':state==='ended_auto'?'終了日時を過ぎたため自動で非表示になっています。':state==='ended'?'手動で終了したため生徒画面には表示されません。':'生徒画面には表示されません。';
+  root.innerHTML=`<div class="publish-live-state ${examStatusClass(exam)}"><span>${label}</span><strong>${esc(schedule||'期間設定なし')}</strong><small>${detail}</small></div>`;
+}
+
+function examAudienceCodes(exam){
+  const a=exam?.access||{};
+  if(a.mode==='all')return usersData.users.map(u=>u.studentCode).filter(Boolean);
+  const classes=new Set(a.classes||[]),students=new Set(a.students||[]);
+  usersData.users.forEach(u=>{const code=String(u.studentCode||'');const cls=String(u.classKey||code.slice(0,2));if(classes.has(cls))students.add(code)});
+  return [...students].filter(Boolean);
+}
+function renderExamReadiness(exam){
+  const root=$('examReadiness');if(!root)return;
+  if(!exam){root.innerHTML='';return}
+  const qCount=(exam.questions||[]).length;
+  const scoreReady=qCount>0&&(exam.sections||[]).length>0;
+  const hasForm=!!String(exam.googleFormUrl||'').trim();
+  const formReady=!hasForm||!!exam.formSubmission;
+  const formConfirmed=!hasForm||!!exam.formSubmission?.testConfirmed;
+  const audience=examAudienceCodes(exam).length;
+  const stored=examStoredStatus(exam);
+  const scheduleReady=stored!=='published'||(!!parseExamDate(exam?.publishWindow?.startAt)&&!!parseExamDate(exam?.publishWindow?.endAt));
+  const chips=[
+    `<span class="ready-chip ${scoreReady?'ok':'warn'}">採点設定 ${scoreReady?'✓':'未設定'}</span>`,
+    `<span class="ready-chip ${formReady&&formConfirmed?'ok':formReady?'mid':'warn'}">Googleフォーム ${!hasForm?'なし':formConfirmed?'✓':formReady?'受信未確認':'未設定'}</span>`,
+    `<span class="ready-chip ${audience?'ok':'warn'}">受験対象 ${audience?`${audience}人`:'未設定'}</span>`,
+    `<span class="ready-chip ${scheduleReady?'ok':'warn'}">公開期間 ${stored==='published'?(scheduleReady?'✓':'未設定'):'—'}</span>`
+  ];
+  root.innerHTML=`<div class="readiness-main"><strong>${esc(exam.subject||'教科未設定')}</strong><span>${esc(exam.title||'(無題)')}</span><small>${qCount}解答欄 / ${Number(exam.totalPoints||0)}点</small></div><div class="readiness-chips">${chips.join('')}</div>`;
+}
+function uniqueCloneTitle(base){
+  let title=`${base}【複製】`,n=2;
+  while(exams.some(e=>e.title===title)){title=`${base}【複製${n}】`;n++}
+  return title;
+}
+function cloneCurrentExam(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);if(!exam)return;
+  const defaultTitle=uniqueCloneTitle(exam.title||'試験');
+  const entered=prompt('複製後の試験名を入力してください。',defaultTitle);if(entered===null)return;
+  const newTitle=entered.trim()||defaultTitle;
+  if(exams.some(e=>e.title===newTitle)&&!confirm(`同じ試験名「${newTitle}」がすでにあります。この名前で複製しますか？`))return;
+  const clone=JSON.parse(JSON.stringify(exam));
+  clone.id=makeExamId();
+  clone.title=newTitle;
+  clone.status='unpublished';clone.published=false;clone.publishWindow=null;clone.endedAt=null;
+  clone.access={mode:'restricted',classes:[],students:[]};
+  clone.createdAt=new Date().toISOString();clone.updatedAt=clone.createdAt;clone.clonedFrom=exam.id;
+  exams.push(clone);allExamData.exams=exams;
+  refreshExamSelects(clone.id);
+  if($('publishSubjectSelect'))$('publishSubjectSelect').value=clone.subject||'';
+  refreshPublishSelectors(clone.id);if($('publishExamSelect'))$('publishExamSelect').value=clone.id;
+  loadPublishExam();renderExamExportSummary();
+  $('publishMsg').className='success small';
+  $('publishMsg').innerHTML=`<strong>✓ 「${esc(exam.title)}」を複製しました。</strong> 正答・配点・設問ごとの選択肢${exam.formSubmission?'・Googleフォーム連携':''}を引き継ぎ、<strong>非公開・受験対象未設定</strong>で作成しています。試験名と公開設定を確認してください。`;
+}
+function toggleExamPreview(){
+  const panel=$('examPreviewPanel');if(!panel)return;
+  const willOpen=panel.classList.contains('hidden');panel.classList.toggle('hidden',!willOpen);
+  if(willOpen)renderExamPreview(previewMode);
+}
+function renderExamPreview(mode='before'){
+  previewMode=mode;
+  document.querySelectorAll('.previewModeBtn').forEach(b=>b.classList.toggle('active',b.dataset.previewMode===mode));
+  const root=$('studentExamPreview');if(!root)return;
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);
+  if(!exam){root.innerHTML='<div class="notice small">試験を選択してください。</div>';return}
+  if(mode!=='live'){
+    const before=mode==='before';
+    root.innerHTML=`<div class="preview-hidden-state ${before?'before':'after'}"><div class="preview-eye">${before?'◷':'✓'}</div><div><strong>${before?'公開開始前：生徒の試験一覧には表示されません':'公開終了後：生徒の試験一覧から自動で消えます'}</strong><span>${before?'開始日時になると自動で表示されます。':'試験データは教員画面に残るため、分析や再利用ができます。'}</span></div></div>`;
+    return;
+  }
+  const deadline=formatLocalDateTime(exam?.publishWindow?.endAt)||'終了日時未設定';
+  root.innerHTML=`<article class="student-preview-card"><div class="student-preview-top"><span class="exam-subject-chip"><small>教科</small><strong>${esc(exam.subject||'未設定')}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${esc(exam.title||'(無題)')}</h3><div class="student-preview-meta"><span>${(exam.questions||[]).length}解答欄</span><span>${Number(exam.totalPoints||0)}点満点</span><span>受験期限 ${esc(deadline)}</span></div><button type="button" disabled>受験する</button></article><p class="preview-caption">※ 動作確認用プレビューです。実際の公開状態やデータは変更していません。</p>`;
 }
 function renderRegisteredRosterSummary(){
   if(!$('registeredRosterSummary'))return;
@@ -1179,11 +1310,48 @@ function collectAudience(){
 function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
   const status=$('publishStatusSelect')?.value||'unpublished';
-  const selected=selectedAudienceCodes();if(status==='published'&&!selected.length){alert('公開中にする場合は受験対象生徒を選択してください。');return}
-  const a=collectAudience();exam.status=status;exam.published=status==='published';exam.access={mode:'restricted',classes:a.classes,students:a.students};
-  $('publishMsg').className='success small';$('publishMsg').textContent=`設定を反映しました：${examStatusLabel(exam)} / 対象 ${selected.length}人。次に「exams.jsonを書き出す」を押し、システム管理者へ送付してください。`;
+  const selected=selectedAudienceCodes();
+  if(status==='published'&&!selected.length){alert('公開する場合は受験対象生徒を選択してください。');return}
+  let publishWindow=exam.publishWindow||null;
+  if(status==='published'){
+    const startValue=$('publishStartAt')?.value||'',endValue=$('publishEndAt')?.value||'';
+    if(!startValue||!endValue){alert('自動公開では、公開開始日時と公開終了日時の両方を設定してください。');return}
+    const start=new Date(startValue),end=new Date(endValue);
+    if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())){alert('公開日時を確認してください。');return}
+    if(start.getTime()>=end.getTime()){alert('公開終了日時は、公開開始日時より後に設定してください。');return}
+    publishWindow={startAt:start.toISOString(),endAt:end.toISOString(),mode:'auto'};
+  }
+  const a=collectAudience();
+  exam.status=status;exam.published=status==='published';
+  exam.publishWindow=publishWindow;
+  exam.endedAt=status==='ended'?new Date().toISOString():null;
+  exam.access={mode:'restricted',classes:a.classes,students:a.students};
+  exam.updatedAt=new Date().toISOString();
+  allExamData.exams=exams;
+  const effective=examStatusLabel(exam),windowText=scheduleSummary(exam);
+  $('publishMsg').className='success small';
+  $('publishMsg').innerHTML=`<strong>✓ 公開設定を反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>この変更をGitHubへ反映するには、最後に <code>exams.json</code> を書き出して担当者へ送付してください。自動終了後は再送付不要です。</span>`;
   refreshPublishSelectors(exam.id);$('publishExamSelect').value=exam.id;
-  renderExamExportSummary();
+  renderCurrentPublishState(exam);renderExamReadiness(exam);renderExamExportSummary();if(!$('examPreviewPanel')?.classList.contains('hidden'))renderExamPreview(previewMode);
+}
+
+function deleteCurrentExam(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);if(!exam)return;
+  const first=confirm(`「${exam.title}」をT-DX Labから完全に削除しますか？
+
+終了とは違い、試験設定・模範解答・配点・Googleフォーム連携・公開設定が exams.json から削除されます。
+Googleフォーム側に保存済みの回答は削除されません。`);
+  if(!first)return;
+  const typed=prompt('誤操作防止のため「削除」と入力してください。');
+  if(typed!=='削除'){if(typed!==null)alert('入力が一致しないため削除しませんでした。');return}
+  const id=exam.id,subject=exam.subject;
+  exams=exams.filter(e=>e.id!==id);allExamData.exams=exams;
+  if(analysisExam?.id===id)analysisExam=null;
+  refreshExamSelects();
+  if($('publishSubjectSelect')&&[...$('publishSubjectSelect').options].some(o=>o.value===subject))$('publishSubjectSelect').value=subject;
+  refreshPublishSelectors();loadPublishExam();renderExamExportSummary();
+  $('publishMsg').className='notice small';
+  $('publishMsg').innerHTML=`<strong>「${esc(exam.title)}」をこの試験データから削除しました。</strong><br>GitHub上にも存在する試験の場合は、削除後の <code>exams.json</code> を書き出して担当者へ送付すると完全削除が反映されます。`;
 }
 
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
@@ -1196,12 +1364,13 @@ function renderExamExportSummary(){
     const studentText=(a.students||[]).length?`${(a.students||[]).length}人個別`:'';
     const target=[classText,studentText].filter(Boolean).join('＋')||((!a||a.mode==='all')?'全員':'対象未設定');
     const formText=e.formSubmission?'Googleフォーム連携✓':(e.googleFormUrl?'Googleフォーム未連携':'フォームなし');
-    return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${examStatusLabel(e)} / ${esc(target)} / ${formText}</small></div><span class="exam-export-state ${examStatusClass(e)}">${examStatusLabel(e)}</span></div>`;
+    const windowText=scheduleSummary(e);
+    return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${examStatusLabel(e)}${windowText?` / ${esc(windowText)}`:''} / ${esc(target)} / ${formText}</small></div><span class="exam-export-state ${examStatusClass(e)}">${examStatusLabel(e)}</span></div>`;
   }).join('');
   root.innerHTML=`<div class="exam-export-head"><div><span class="section-eyebrow">EXPORT CONTENTS</span><h3>書き出す試験：${list.length}件</h3></div><small>exams.json は差分ではなく、登録済み試験をすべて含む累積ファイルです。</small></div>${rows||'<div class="notice small">登録済み試験はありません。</div>'}<div class="github-upload-note"><strong>GitHub反映先：<code>data/exams.json</code></strong><span>ダウンロード名が <code>exams(1).json</code> などになった場合は、GitHubへ上げる前に <code>exams.json</code> に戻して上書きしてください。</span></div>`;
 }
 function exportExamData(){
-  allExamData.version=Math.max(Number(allExamData.version||0),7);
+  allExamData.version=Math.max(Number(allExamData.version||0),9);
   allExamData.exams=exams;
   allExamData.updatedAt=new Date().toISOString();
   renderExamExportSummary();

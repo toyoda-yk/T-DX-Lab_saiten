@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.20">
+  <link rel="stylesheet" href="css/style.css?v=1.22">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -50,69 +50,73 @@
       </div>
       <div class="admin-menu-grid">
         <button class="admin-menu-card menuBtn active-look" data-target="studentManager"><span class="menu-index">STEP 0</span><strong>生徒名簿</strong><small>クラス範囲を一度だけ登録</small></button>
-        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">STEP 1</span><strong>試験作成</strong><small>模範解答PDF・採点設定</small></button>
+        <button class="admin-menu-card menuBtn" data-target="examManager"><span class="menu-index">STEP 1</span><strong>試験作成</strong><small>採点・選択肢・Googleフォーム連携</small></button>
         <button class="admin-menu-card menuBtn" data-target="analysisManager"><span class="menu-index">STEP 2</span><strong>回答分析</strong><small>得点分布・正答率</small></button>
-        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">STEP 3</span><strong>公開・受験者</strong><small>対象選択・コード発行</small></button>
+        <button class="admin-menu-card menuBtn" data-target="publishManager"><span class="menu-index">STEP 3</span><strong>公開・運用</strong><small>対象・公開期間・複製・確認</small></button>
       </div>
     </section>
 
     <section id="studentManager" class="future-panel adminSection">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。年度初めに1回だけ年間アクセスキーを発行し、そのQRカードを生徒へ配布します。</p></div><div class="admin-symbol">00</div></div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 0 / STUDENT ROSTER</span><h2>生徒名簿登録</h2><p>各クラスの「最初の4桁番号」と「最後の4桁番号」だけ登録します。年度初めに1回だけ年間アクセスキーを発行し、そのQRカードを生徒へ配布します。</p></div><div class="admin-symbol">00</div></div>
       <input id="classDigits" type="hidden" value="2">
 
-      <div class="grid two admin-form-grid roster-layout">
-        <div>
-          <div class="section-title compact-title"><div><h3>クラス範囲</h3><p class="muted small">例：3101 ～ 3138 を登録すると、31クラスの3101～3138を自動登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
+      <div class="roster-setup-grid">
+        <section class="roster-compact-card">
+          <div class="section-title compact-title"><div><h3>クラス範囲</h3><p class="muted small">例：3101 ～ 3138 なら、31クラスの3101～3138を自動登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
           <div id="rosterRangeRows" class="roster-range-list"></div>
-          <div class="actions">
-            <button id="saveRosterBtn" class="teacher-action">この名簿を登録</button>
-          </div>
-          <div class="annual-access-panel">
-            <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">同じ生徒は、年度内のどの教科・どの模擬試験でも同じアクセスキーを使います。</p></div>
-            <div class="actions">
-              <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
-              <button id="regenerateAnnualCodesBtn" class="secondary glass-btn">全員再発行（緊急用）</button>
-              <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分のQRカードPDF</button>
-              <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカードPDF</button>
-              <button id="exportAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSVを書き出す</button>
-              <button id="exportRosterUsersBtn" class="teacher-action">users.jsonを書き出す</button>
-            </div>
-            <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターCSVの準備状況を確認しています。</div>
-            <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、「未発行者にアクセスキーを発行」を押してください。</div></div>
-            <div class="access-key-manager">
-              <div class="section-title compact-title"><div><span class="section-eyebrow">REPRINT / REISSUE</span><h3>既存アクセスカードの再印刷・個別再発行</h3><p class="muted small">紛失・汚損なら同じQRを再印刷します。漏えいの可能性がある場合だけ、その生徒のアクセスキーを再発行してください。</p></div></div>
-              <input id="importAnnualSecretsInput" type="file" accept=".csv,text/csv" class="hidden">
-              <div class="actions">
-                <button id="importAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSVを読み込む</button>
-                <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
-                <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
-                <button id="selectMissingVaultBtn" class="secondary glass-btn">要再発行を選択</button>
-                <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
-                <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒のQRを再印刷</button>
-                <button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒だけ再発行</button>
-              </div>
-              <div class="info-strip teacher-strip"><span>MASTER</span> 「年間マスターCSV」は年度内のアクセスキー原本です。平文キーは users.json には保存しないため、必ず安全な場所に保管してください。</div>
-              <div id="accessVaultSummary" class="grid four roster-summary"></div>
-              <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のアクセスキー状態を表示します。</div></div>
-            </div>
-          </div>
+          <div class="actions compact-actions"><button id="saveRosterBtn" class="teacher-action">この名簿を登録</button></div>
           <div id="rosterMsg" class="small muted"></div>
-        </div>
-        <div>
-          <div class="info-strip teacher-strip"><span>ONCE</span> 名簿登録と年間アクセスキー発行は基本的に年度当初の1回だけ。生徒は同じQRカードを年度内ずっと使用します。</div>
+        </section>
+        <section class="roster-compact-card roster-current-card">
+          <div class="compact-card-head"><div><span class="section-eyebrow">CURRENT ROSTER</span><h3>登録状況</h3></div><span class="one-time-badge">年度初めに1回</span></div>
           <div id="rosterSummary" class="grid two roster-summary"></div>
           <div id="rosterPreview" class="roster-preview"></div>
+        </section>
+      </div>
+
+      <div class="annual-access-panel roster-annual-wide">
+        <div class="annual-access-head-v122">
+          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">年度内は全教科・全試験で同じQRを使用します。通常は年度当初に一度だけ発行します。</p></div>
+          <div class="actions compact-actions annual-primary-actions">
+            <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
+            <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分のQRカードPDF</button>
+            <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカードPDF</button>
+            <button id="exportAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSV</button>
+            <button id="exportRosterUsersBtn" class="teacher-action">users.json</button>
+          </div>
+        </div>
+        <div class="annual-secondary-row">
+          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターCSVの準備状況を確認しています。</div>
+          <button id="regenerateAnnualCodesBtn" class="secondary glass-btn danger-soft">全員再発行（緊急用）</button>
+        </div>
+        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、「未発行者にアクセスキーを発行」を押してください。</div></div>
+
+        <div class="access-key-manager compact-access-manager">
+          <div class="section-title compact-title"><div><span class="section-eyebrow">REPRINT / REISSUE</span><h3>再印刷・個別再発行</h3><p class="muted small">紛失・汚損は再印刷、漏えいの可能性がある場合だけ個別再発行します。</p></div></div>
+          <input id="importAnnualSecretsInput" type="file" accept=".csv,text/csv" class="hidden">
+          <div class="actions compact-actions access-vault-actions">
+            <button id="importAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSVを読み込む</button>
+            <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
+            <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
+            <button id="selectMissingVaultBtn" class="secondary glass-btn">要再発行を選択</button>
+            <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
+            <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒を再印刷</button>
+            <button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒だけ再発行</button>
+          </div>
+          <p class="master-note">年間マスターCSVは平文アクセスキーの原本です。<code>users.json</code> からキーは復元できないため、安全な場所に保管してください。</p>
+          <div id="accessVaultSummary" class="grid four roster-summary"></div>
+          <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のアクセスキー状態を表示します。</div></div>
         </div>
       </div>
     </section>
 
     <section id="examManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>新規試験作成</h2><p>模範解答PDFまたはAIで整形したテキストから採点設定を作成します。確認画面は生徒の回答画面に近い形で表示します。</p></div><div class="admin-symbol">01</div></div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 1 / EXAM BUILDER</span><h2>試験を作成</h2><p>基本情報 → 模範解答・採点 → Googleフォーム連携 → 登録の順で設定します。</p></div><div class="admin-symbol">01</div></div>
 
-      <div class="builder-steps">
-        <div class="builder-step active"><b>1</b><span>基本情報・模範解答</span></div>
-        <div class="builder-step"><b>2</b><span>自動解析</span></div>
-        <div class="builder-step"><b>3</b><span>生徒画面風に確認</span></div>
+      <div class="builder-steps compact-builder-steps">
+        <div class="builder-step active"><b>1</b><span>基本情報・選択肢</span></div>
+        <div class="builder-step"><b>2</b><span>模範解答・採点</span></div>
+        <div class="builder-step"><b>3</b><span>Googleフォーム</span></div>
         <div class="builder-step"><b>4</b><span>非公開で登録</span></div>
       </div>
 
@@ -126,7 +130,7 @@
 
         <div class="choice-range-box choice-range-wide">
           <div class="section-title compact-title">
-            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">選択肢は模範解答PDFから推測しません。実際のマークシートにある数字・英字・カタカナの範囲を先に指定してください。</p></div>
+            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">試験全体の標準選択肢を指定します。違う設問だけ、解析後に個別変更できます。</p></div>
           </div>
           <div class="choice-range-grid">
             <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
@@ -184,7 +188,7 @@
 
       <section id="examReviewPanel" class="exam-review-panel hidden">
         <div class="section-title">
-          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">生徒が回答する画面と同じ感覚で確認します。完答問題は同じカード内に複数の解答欄をまとめて表示し、青く選択されている値が現在の正答です。</p></div>
+          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">正答・配点・採点方式・選択肢を確認します。青い選択肢が現在の正答です。</p></div>
           <div class="review-actions-top"><button id="addQuestionRowBtn" class="secondary glass-btn">＋ 設問を追加</button><button id="reparseTextBtn" class="secondary glass-btn">テキストから再解析</button></div>
         </div>
 
@@ -198,7 +202,7 @@
           <div class="pdf-answer-column">
             <div class="section-title compact-title"><div><h3>読み取り結果</h3><p class="muted small">生徒回答画面と同じ感覚で、読み取った正答を確認・修正します。</p></div></div>
             <div class="review-toolbar">
-          <div class="review-global-options"><span>選択肢</span><strong id="reviewChoiceRangeText">0〜9 / a〜f</strong><small>STEP 1で指定した範囲を全設問に使用</small></div>
+          <div class="review-global-options"><span>標準選択肢</span><strong id="reviewChoiceRangeText">0〜9 / a〜f</strong></div>
           <button id="applyDefaultOptionsBtn" class="secondary glass-btn">指定範囲を全設問へ再適用</button>
           <button id="checkPointsBtn" class="secondary glass-btn">配点をチェック</button>
             </div>
@@ -208,20 +212,21 @@
         <div id="pointsCheckMsg" class="small muted"></div>
 
         <section class="google-form-link-panel">
-          <div class="section-title google-form-link-head">
+          <div class="section-title google-form-link-head compact-section-head">
             <div>
               <span class="section-eyebrow">GOOGLE FORM LINK</span>
-              <h3>Googleフォーム連携設定</h3>
-              <p class="muted small">推奨フォーマットは「氏名（必須）→ 4桁番号（必須）→ 解答欄」です。Googleフォームの「フォームに事前入力する」で全項目にテスト値を入れ、取得したリンクを貼り付けます。</p>
+              <h3>Googleフォーム連携</h3>
+              <p class="muted small">事前入力リンクを使って、氏名・4桁番号・解答欄の送信先を1回だけ登録します。</p>
             </div>
             <span class="google-form-standard-badge">1フォームにつき1回</span>
           </div>
-          <div class="google-form-standard">
-            <div><b>1</b><span><strong>氏名</strong><small>生徒が試験時に入力。PDFにも表示</small></span></div>
-            <div><b>2</b><span><strong>4桁番号</strong><small>ログイン情報から自動送信</small></span></div>
-            <div><b>3</b><span><strong>解答欄</strong><small>T-DX Labの回答と自動対応</small></span></div>
+          <div class="google-form-quickflow" aria-label="Googleフォーム連携手順">
+            <span><b>1</b>全項目を事前入力</span><i>›</i><span><b>2</b>リンクを解析</span><i>›</i><span><b>3</b>テスト送信</span><i>›</i><span><b>4</b>受信確認</span>
           </div>
-          <div class="google-form-caution"><strong>推奨設定：</strong>メールアドレス収集・ファイルアップロード・回答者のログイン必須・分岐は使わず、1ページのフォームにしてください。</div>
+          <details class="compact-help-details">
+            <summary>Googleフォーム側の推奨設定を見る</summary>
+            <p>項目順は「氏名（必須）→ 4桁番号（必須）→ 解答欄」。事前入力リンク作成時は<strong>全項目に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
+          </details>
           <label class="google-prefill-label">事前入力したリンク
             <textarea id="formPrefillUrl" rows="3" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&entry...."></textarea>
           </label>
@@ -266,7 +271,7 @@
     </section>
 
     <section id="analysisManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 2 / DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">02</div></div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 2 / DATA ANALYTICS</span><h2>Googleフォーム回答データ分析</h2><p>回答CSV / XLSXを読み込み、その時点の回答者を母数として集計します。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答CSV / XLSX</label><input id="responseFile" type="file" accept=".csv,.xlsx,.xls"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
         <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>LIVE</span> 登録済み4桁番号の先頭2桁をクラスとして集計します。回答者数に応じて正答率・平均点は再計算されます。</div></div>
@@ -282,44 +287,73 @@
     </section>
 
     <section id="publishManager" class="future-panel adminSection hidden">
-      <div class="admin-section-hero"><div><span class="section-eyebrow">STEP 3 / PUBLISH CONTROL</span><h2>試験公開・受験者設定</h2><p>STEP 0で登録済みの名簿から、クラス全員または特定の生徒だけを選んで公開します。ログインには年度共通のアクセスキーを使います。</p></div><div class="admin-symbol">03</div></div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">STEP 3 / EXAM OPERATIONS</span><h2>公開・運用</h2><p>試験を選び、受験対象と公開期間を設定します。公開期間終了後は自動で生徒画面から消えます。</p></div><div class="admin-symbol">03</div></div>
 
-      <div class="grid two admin-form-grid">
-        <div>
-          <label>教科で絞り込み</label>
-          <select id="publishSubjectSelect"></select>
-          <label>対象試験</label>
-          <select id="publishExamSelect"></select>
+      <div class="exam-ops-toolbar">
+        <div class="exam-ops-selects">
+          <label>教科<select id="publishSubjectSelect"></select></label>
+          <label class="exam-ops-exam-select">試験<select id="publishExamSelect"></select></label>
+        </div>
+        <div id="currentPublishState" class="current-publish-state"></div>
+        <div class="exam-ops-actions">
+          <button id="cloneExamBtn" class="secondary glass-btn" type="button">複製</button>
+          <button id="togglePreviewBtn" class="secondary glass-btn" type="button">動作確認</button>
+          <button id="deleteExamBtn" class="danger-outline" type="button">完全削除</button>
+        </div>
+      </div>
+      <div id="examReadiness" class="exam-readiness"></div>
+
+      <section id="examPreviewPanel" class="exam-preview-simulator hidden" aria-live="polite">
+        <div class="simulator-head">
+          <div><span class="section-eyebrow">PREVIEW / NO DATA CHANGE</span><h3>生徒画面の表示を確認</h3><p class="muted small">試験データや公開日時は変更せず、3つの状態をその場で確認できます。</p></div>
+          <button id="closePreviewBtn" class="secondary glass-btn" type="button">閉じる</button>
+        </div>
+        <div class="simulator-controls">
+          <button class="previewModeBtn active" data-preview-mode="before" type="button">開始前</button>
+          <button class="previewModeBtn" data-preview-mode="live" type="button">公開中</button>
+          <button class="previewModeBtn" data-preview-mode="after" type="button">終了後</button>
+        </div>
+        <div id="studentExamPreview" class="student-exam-preview"></div>
+      </section>
+
+      <div class="publish-config-grid">
+        <section class="publish-config-card">
+          <div class="compact-card-head"><div><span class="section-eyebrow">STATUS & SCHEDULE</span><h3>公開状態・期間</h3></div></div>
           <label>公開状態
             <select id="publishStatusSelect">
               <option value="unpublished">非公開（準備中）</option>
-              <option value="published">公開中（生徒に表示）</option>
-              <option value="ended">終了（生徒には非表示・データは保持）</option>
+              <option value="published">公開（日時で自動管理）</option>
+              <option value="ended">終了（手動で即終了・データは保持）</option>
             </select>
           </label>
-          <div class="publish-status-help"><span><b>非公開</b> 作成・確認中</span><span><b>公開中</b> 対象生徒の一覧に表示</span><span><b>終了</b> 一覧から外すが試験データは残す</span></div>
-          <div class="actions"><button id="selectAllAudienceBtn" class="secondary glass-btn">登録生徒を全員選択</button><button id="clearAudienceBtn" class="secondary glass-btn">選択解除</button></div>
-        </div>
-        <div>
-          <div class="info-strip teacher-strip"><span>TARGET</span> 名簿を入力し直す必要はありません。クラス全員をチェックするか、選択科目なら必要な4桁番号だけ選択します。</div>
-          <div id="registeredRosterSummary" class="future-feature-stack"></div>
-        </div>
+          <div id="publishSchedulePanel" class="publish-schedule-panel hidden">
+            <div class="publish-date-grid">
+              <label>公開開始<input id="publishStartAt" type="datetime-local"></label>
+              <span class="publish-date-arrow">→</span>
+              <label>公開終了<input id="publishEndAt" type="datetime-local"></label>
+            </div>
+            <p class="inline-help">開始前＝公開予定／期間中＝公開中／終了後＝自動終了</p>
+          </div>
+        </section>
+
+        <section class="publish-config-card target-config-card">
+          <div class="compact-card-head"><div><span class="section-eyebrow">AUDIENCE</span><h3>受験対象</h3></div><div class="actions compact-actions"><button id="selectAllAudienceBtn" class="secondary glass-btn" type="button">全員選択</button><button id="clearAudienceBtn" class="secondary glass-btn" type="button">解除</button></div></div>
+          <div id="registeredRosterSummary" class="future-feature-stack compact-roster-stack"></div>
+        </section>
       </div>
 
-      <div id="audienceBuilder" class="audience-builder"></div>
+      <div id="audienceBuilder" class="audience-builder compact-audience-builder"></div>
 
-      <div class="publish-actions-panel">
-        <div>
-          <span class="section-eyebrow">PUBLISH</span>
-          <h3>公開設定を確定</h3>
-          <p class="muted small">対象者と「非公開／公開中／終了」を確定して保存します。公開中の試験だけが対象生徒の画面に表示されます。</p>
-        </div>
+      <div class="publish-actions-panel compact-publish-actions">
+        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映し、GitHubへ渡すときだけ最新JSONを書き出します。</p></div>
         <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
-      <div id="examExportSummary" class="exam-export-summary"></div>
 
-      <div class="notice small"><strong>運用：</strong>各教科の先生はこの画面で試験と対象者を設定し、最新版の <code>exams.json</code> を書き出してシステム管理者へ送付します。システム管理者がGitHubの <code>data/exams.json</code> を置き換えると生徒画面へ反映されます。<strong>このJSONは登録済み試験を全部含む累積ファイルです。</strong></div>
+      <details class="export-summary-details">
+        <summary>書き出し対象の試験一覧を確認</summary>
+        <div id="examExportSummary" class="exam-export-summary"></div>
+      </details>
       <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
     </section>
   </div>
@@ -332,7 +366,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
-<script src="js/common.js?v=1.20"></script>
-<script src="js/teacher.js?v=1.20"></script>
+<script src="js/common.js?v=1.22"></script>
+<script src="js/teacher.js?v=1.22"></script>
 </body>
 </html>
