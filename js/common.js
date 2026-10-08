@@ -12,39 +12,6 @@ window.TDX = (() => {
   function randomSalt(){const a=new Uint8Array(16);crypto.getRandomValues(a);return [...a].map(b=>b.toString(16).padStart(2,'0')).join('')}
   async function makeVerifier(code){const salt=randomSalt();return {salt,hash:await sha256Hex(`${salt}|${code}`)}}
   async function verify(code,rec){return (await sha256Hex(`${rec.salt}|${code}`))===rec.hash}
-
-  function bytesToB64(bytes){
-    let bin='';const arr=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
-    for(let i=0;i<arr.length;i++)bin+=String.fromCharCode(arr[i]);
-    return btoa(bin);
-  }
-  function b64ToBytes(text){
-    const bin=atob(String(text||''));const out=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
-    return out;
-  }
-  async function deriveAesKey(password,salt,iterations=120000){
-    const base=await crypto.subtle.importKey('raw',enc.encode(String(password||'')),'PBKDF2',false,['deriveKey']);
-    return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
-  }
-  async function encryptSecret(plaintext,password){
-    if(!password)throw new Error('教員ログイン情報を確認できません。いったん画面をロックして、もう一度ログインしてください。');
-    const salt=new Uint8Array(16),iv=new Uint8Array(12);crypto.getRandomValues(salt);crypto.getRandomValues(iv);
-    const iterations=120000,key=await deriveAesKey(password,salt,iterations);
-    const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(String(plaintext||'')));
-    return {v:1,alg:'AES-GCM',kdf:'PBKDF2-SHA256',iterations,salt:bytesToB64(salt),iv:bytesToB64(iv),data:bytesToB64(new Uint8Array(data))};
-  }
-  async function decryptSecret(record,password){
-    if(!record||!record.salt||!record.iv||!record.data)throw new Error('再印刷用の暗号化データがありません。');
-    if(!password)throw new Error('教員ログイン情報を確認できません。いったん画面をロックして、もう一度ログインしてください。');
-    const salt=b64ToBytes(record.salt),iv=b64ToBytes(record.iv),iterations=Number(record.iterations||120000);
-    const key=await deriveAesKey(password,salt,iterations);
-    try{
-      const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,b64ToBytes(record.data));
-      return new TextDecoder().decode(plain);
-    }catch(_){throw new Error('QR再印刷データを復号できません。教員パスワードまたはusers.jsonを確認してください。')}
-  }
-
   function download(name,content,type='application/json'){
     const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
   }
@@ -79,5 +46,5 @@ window.TDX = (() => {
     }
     return {total,sectionScores,detail};
   }
-  return {sha256Hex,randomCode,makeVerifier,verify,encryptSecret,decryptSecret,download,csvParse,scoreExam};
+  return {sha256Hex,randomCode,makeVerifier,verify,download,csvParse,scoreExam};
 })();

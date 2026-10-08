@@ -241,6 +241,4 @@ async function closeQrScanner(){
 }
 $('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;currentExam=null;currentStudentName='';lastFormSendState=null;accessibleExams=[];$('studentName').value='';show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
 $('qrLoginBtn').onclick=openQrScanner;$('qrCloseBtn').onclick=closeQrScanner;
-
-$('forceReloadBtn')?.addEventListener('click',()=>{const u=new URL(location.href);u.searchParams.set('refresh',Date.now());location.replace(u.toString())});
 loadData().catch(e=>{$('loginMsg').className='error small';$('loginMsg').textContent='データ読み込みに失敗しました。GitHub PagesまたはローカルWebサーバーで開いてください。'});
