@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "note": "初回導入用テンプレートです。既存運用ではGitHub上の data/users.json を上書きしないでください。",
+  "version": 6,
+  "note": "初回導入用テンプレートです。credentialは年間アクセスキー認証用、qrSecretは教員ログインパスワードから生成した鍵で暗号化したQR再印刷用データです。既存運用ではGitHub上の data/users.json を上書きしないでください。",
   "issuedCodeIds": [],
   "users": []
 }
