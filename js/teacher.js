@@ -105,6 +105,7 @@ async function init(){
   refreshExamSelects();
   renderRosterRanges();
   renderRosterSummary();
+  renderIndividualStudents();
   renderAccessVaultManager();
   loadPublishExam();
   renderExamExportSummary();
@@ -141,6 +142,10 @@ function bind(){
 
   $('addRosterRangeBtn').onclick=()=>{rosterRanges.push({start:'',end:''});renderRosterRanges()};
   $('saveRosterBtn').onclick=saveRoster;
+  $('addIndividualStudentBtn').onclick=addIndividualStudent;
+  $('individualStudentCode').addEventListener('keydown',e=>{if(e.key==='Enter')addIndividualStudent()});
+  $('individualStudentClassFilter').onchange=renderIndividualStudents;
+  $('individualStudentSearch').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);renderIndividualStudents()});
   $('generateAnnualCodesBtn').onclick=()=>generateAnnualCodes(false);
   $('regenerateAnnualCodesBtn').onclick=()=>generateAnnualCodes(true);
   $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
@@ -214,7 +219,7 @@ function showSection(id){
   if(id==='studentManager'&&!systemAdminUnlocked){$('systemAdminGate')?.classList.remove('hidden');$('systemAdminPass')?.focus();return}
   document.querySelectorAll('.adminSection').forEach(x=>x.classList.toggle('hidden',x.id!==id));
   document.querySelectorAll('.menuBtn').forEach(x=>x.classList.toggle('active-look',x.dataset.target===id));
-  if(id==='studentManager')renderRosterSummary();
+  if(id==='studentManager'){renderRosterSummary();renderIndividualStudents()}
   if(id==='qrManager')renderAccessVaultManager();
   if(id==='publishManager')loadPublishExam();
   requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));
@@ -270,7 +275,7 @@ function saveRoster(){
     localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges));
     $('rosterMsg').className='success small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。次に「年間アクセスキーを発行」を実行し、QRカードと users.json を保存してください。`;
     accessVault=accessVault.filter(x=>codes.includes(x.studentCode));
-    renderRosterSummary();renderAccessVaultManager();loadPublishExam();
+    renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();loadPublishExam();
   }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message}
 }
 function renderRosterSummary(){
@@ -281,6 +286,99 @@ function renderRosterSummary(){
   $('rosterSummary').innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${usersData.users.length}</div></div><div class="kpi"><div class="muted small">クラス</div><div class="value">${entries.length}</div></div><div class="kpi"><div class="muted small">アクセスキー発行済</div><div class="value">${issued}</div></div>`;
   $('rosterPreview').innerHTML=entries.length?entries.map(([c,list])=>`<div class="roster-class-preview"><strong>${c}組</strong><span>${list.length}人</span><small>${list[0]} ～ ${list[list.length-1]}</small></div>`).join(''):'<div class="notice small">まだ生徒名簿が登録されていません。</div>';
 }
+async function refreshIndividualStudentClassFilter(){
+  const sel=$('individualStudentClassFilter');if(!sel)return;
+  const current=sel.value;
+  const classes=[...new Set(usersData.users.map(u=>u.classKey||String(u.studentCode||'').slice(0,2)).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}組</option>`).join('');
+  if(classes.includes(current))sel.value=current;
+}
+function individualStudentRows(){
+  const c=$('individualStudentClassFilter')?.value||'';
+  const q=($('individualStudentSearch')?.value||'').trim();
+  return usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).filter(u=>(!c||(u.classKey||u.studentCode.slice(0,2))===c)&&(!q||u.studentCode.includes(q)));
+}
+function individualAccessState(u){
+  if(!u.credential)return '<span class="master-status unissued">○ 未発行</span>';
+  return accessSecretMap().has(u.studentCode)?'<span class="master-status ready">✓ 発行済</span>':'<span class="master-status missing">✓ 発行済</span>';
+}
+function renderIndividualStudents(){
+  const root=$('individualStudentTable');if(!root)return;
+  refreshIndividualStudentClassFilter();
+  const rows=individualStudentRows();
+  if($('individualStudentCount'))$('individualStudentCount').textContent=`${rows.length}人表示`;
+  if(!usersData.users.length){root.innerHTML='<div class="notice small">登録生徒はいません。上の年度名簿から登録してください。</div>';return}
+  root.innerHTML=`<div class="table-shell student-individual-table-shell"><table class="student-individual-table"><thead><tr><th>4桁番号</th><th>クラス</th><th>アクセスキー</th><th>操作</th></tr></thead><tbody>${rows.map(u=>`<tr><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${individualAccessState(u)}</td><td class="student-row-actions"><button type="button" class="secondary glass-btn student-edit-btn" data-student-edit="${esc(u.studentCode)}">編集</button><button type="button" class="danger-soft student-delete-btn" data-student-delete="${esc(u.studentCode)}">削除</button></td></tr>`).join('')}</tbody></table></div>`;
+  root.querySelectorAll('[data-student-edit]').forEach(b=>b.onclick=()=>editIndividualStudent(b.dataset.studentEdit));
+  root.querySelectorAll('[data-student-delete]').forEach(b=>b.onclick=()=>deleteIndividualStudent(b.dataset.studentDelete));
+}
+function setIndividualStudentMessage(text,type='muted'){
+  const el=$('individualStudentMsg');if(!el)return;
+  el.className=(type==='success'?'success':type==='error'?'error':type==='notice'?'notice':'muted')+' small';
+  el.textContent=text;
+}
+function syncRosterAfterIndividualChange(){
+  rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
+  if(!rosterRanges.length)rosterRanges=[{start:'',end:''}];
+  renderRosterRanges();renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();loadPublishExam();
+  try{localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges))}catch(_){}
+}
+function addIndividualStudent(){
+  const input=$('individualStudentCode');
+  const code=String(input?.value||'').replace(/\D/g,'').slice(0,4);
+  if(!/^\d{4}$/.test(code)){setIndividualStudentMessage('4桁番号を4桁の数字で入力してください。','error');input?.focus();return}
+  if(usersData.users.some(u=>u.studentCode===code)){setIndividualStudentMessage(`${code} はすでに登録されています。`,'error');return}
+  usersData.users.push({studentCode:code,classKey:code.slice(0,2),credential:null,examCredentials:{}});
+  usersData.users.sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  if(input)input.value='';
+  syncRosterAfterIndividualChange();
+  setIndividualStudentMessage(`${code} を追加しました。アクセスキーはまだ未発行です。「未発行者にアクセスキーを発行」→ users.json 書き出しの順で反映してください。`,'success');
+}
+function replaceExamStudentTarget(oldCode,newCode=''){
+  let touched=0;
+  exams.forEach(exam=>{
+    const list=exam?.access?.students;
+    if(!Array.isArray(list)||!list.includes(oldCode))return;
+    touched++;
+    exam.access.students=[...new Set(list.flatMap(x=>x===oldCode?(newCode?[newCode]:[]):[x]))].sort();
+  });
+  return touched;
+}
+function moveSecretCode(oldCode,newCode){
+  accessVault=accessVault.map(x=>x.studentCode===oldCode?{...x,studentCode:newCode,classKey:newCode.slice(0,2)}:x);
+  annualSecrets=annualSecrets.map(x=>x.studentCode===oldCode?{...x,studentCode:newCode,classKey:newCode.slice(0,2)}:x);
+  persistAccessVault();
+}
+function editIndividualStudent(oldCode){
+  const u=usersData.users.find(x=>x.studentCode===oldCode);if(!u)return;
+  const entered=prompt(`4桁番号を修正します。\n現在：${oldCode}\n\n新しい4桁番号を入力してください。`,oldCode);
+  if(entered===null)return;
+  const newCode=String(entered).replace(/\D/g,'').slice(0,4);
+  if(!/^\d{4}$/.test(newCode)){setIndividualStudentMessage('4桁番号は4桁の数字で入力してください。','error');return}
+  if(newCode===oldCode)return;
+  if(usersData.users.some(x=>x.studentCode===newCode)){setIndividualStudentMessage(`${newCode} はすでに登録されています。`,'error');return}
+  const issued=!!u.credential;
+  const msg=`${oldCode} → ${newCode} に変更します。`+(issued?'\n\n現在のQRカードには旧4桁番号が入っているため、変更後は旧QRを使用できません。新しい4桁番号でQRを再印刷してください。':'');
+  if(!confirm(msg+'\n\nよろしいですか？'))return;
+  u.studentCode=newCode;u.classKey=newCode.slice(0,2);u.examCredentials=u.examCredentials||{};
+  moveSecretCode(oldCode,newCode);
+  const touched=replaceExamStudentTarget(oldCode,newCode);
+  usersData.users.sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  syncRosterAfterIndividualChange();
+  setIndividualStudentMessage(`${oldCode} を ${newCode} に変更しました。users.json を更新してください。${touched?` 個別受験対象を設定していた試験 ${touched}件も更新したため、exams.json も書き出してください。`:''}${issued?' QRカードは新しい4桁番号で再印刷が必要です。':''}`,'notice');
+}
+function deleteIndividualStudent(code){
+  const u=usersData.users.find(x=>x.studentCode===code);if(!u)return;
+  const issued=!!u.credential;
+  const warning=`${code} を年度名簿から削除します。`+(issued?'\nこの生徒の年間アクセス認証も users.json から削除されます。':'')+'\nGoogleフォームに既に届いている回答は削除されません。\n\n本当に削除しますか？';
+  if(!confirm(warning))return;
+  usersData.users=usersData.users.filter(x=>x.studentCode!==code);
+  accessVault=accessVault.filter(x=>x.studentCode!==code);annualSecrets=annualSecrets.filter(x=>x.studentCode!==code);persistAccessVault();
+  const touched=replaceExamStudentTarget(code,'');
+  syncRosterAfterIndividualChange();
+  setIndividualStudentMessage(`${code} を削除しました。users.json を更新してください。${touched?` 個別受験対象からも ${touched}件の試験で削除したため、exams.json も書き出してください。`:''}`,'notice');
+}
+
 async function candidateCollides(pretty){
   const fp=await TDX.sha256Hex(pretty);
   if(usersData.issuedCodeIds.includes(fp)) return true;

@@ -86,6 +86,28 @@
         </section>
       </div>
 
+
+
+      <section class="student-individual-card">
+        <div class="compact-card-head student-individual-head">
+          <div><span class="section-eyebrow">INDIVIDUAL ROSTER</span><h3>生徒個別管理</h3><p class="muted small">年度名簿登録後の転入・番号訂正・削除を、1名ずつ行います。</p></div>
+          <span class="one-time-badge">管理者専用</span>
+        </div>
+        <div class="student-individual-add">
+          <label>4桁番号<input id="individualStudentCode" inputmode="numeric" maxlength="4" placeholder="例：3421"></label>
+          <button id="addIndividualStudentBtn" class="teacher-action" type="button">＋ 1名追加</button>
+          <div class="student-admin-hint">クラスは4桁番号の先頭2桁から自動判定します。</div>
+        </div>
+        <div id="individualStudentMsg" class="small muted"></div>
+        <div class="student-individual-tools">
+          <label>クラス<select id="individualStudentClassFilter"><option value="">全クラス</option></select></label>
+          <label class="student-search-field">4桁番号で検索<input id="individualStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"></label>
+          <span id="individualStudentCount" class="student-count-badge"></span>
+        </div>
+        <div id="individualStudentTable"></div>
+        <div class="student-admin-note"><strong>変更後の反映</strong><span>追加・編集・削除を行ったら、最新の <code>users.json</code> を書き出してGitHubへ反映してください。個別受験対象の4桁番号も変更された場合は <code>exams.json</code> も更新が必要です。</span></div>
+      </section>
+
       <div class="annual-access-panel roster-annual-wide">
         <div class="annual-access-head-v122">
           <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー発行</h3><p class="muted small">未発行者だけに新しい年間アクセスキーを発行します。</p></div>
