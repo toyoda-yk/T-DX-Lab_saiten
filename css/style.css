@@ -1015,3 +1015,17 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .qr-general-tools label{display:flex;flex-direction:column;gap:6px;font-weight:700;color:#334155}.qr-general-tools input,.qr-general-tools select{width:100%}
 .qr-one-reprint{padding:.62rem .9rem;white-space:nowrap}.student-reissue-btn{white-space:nowrap}
 @media (max-width:760px){.qr-role-split{grid-template-columns:1fr}.qr-migration-panel{align-items:stretch;flex-direction:column}.qr-general-tools{grid-template-columns:1fr}.qr-general-tools .qr-cache-status{width:100%}}
+
+
+/* v1.23.4 - visible version/data status without changing the stable loading structure */
+.app-header-tools{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
+.tdx-version-status{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;font-size:10px;color:#d8e9ff}
+.tdx-version-pill,.tdx-data-pill{display:inline-flex;align-items:center;min-height:30px;padding:5px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(6,25,51,.48);backdrop-filter:blur(8px);white-space:nowrap}
+.tdx-version-pill{font-weight:900;letter-spacing:.03em;color:#fff;border-color:rgba(74,153,255,.38);background:rgba(30,88,163,.34)}
+.tdx-data-pill{color:#c9dcf2}.tdx-data-pill.is-error{color:#ffd6d6;border-color:rgba(255,122,122,.35);background:rgba(108,28,28,.34)}
+.tdx-reload-btn{min-height:30px!important;padding:5px 10px!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:999px!important;background:rgba(255,255,255,.08)!important;color:#fff!important;font-size:10px!important;font-weight:800!important;white-space:nowrap;box-shadow:none!important}
+.tdx-reload-btn:hover{background:rgba(255,255,255,.14)!important}
+.tdx-home-version-status{position:fixed;z-index:30;top:14px;right:18px;display:flex;align-items:center;gap:8px;padding:6px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(3,20,43,.62);backdrop-filter:blur(12px);color:#fff;font-size:11px}
+.tdx-home-version-status span{padding:3px 7px;font-weight:900}.tdx-home-version-status button{margin:0!important;padding:6px 10px!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:999px!important;background:rgba(255,255,255,.08)!important;color:#fff!important;font-size:10px!important;font-weight:800!important;box-shadow:none!important}
+@media(max-width:900px){.portal-header-inner{align-items:flex-start}.app-header-tools{gap:6px}.tdx-version-status{max-width:440px}.tdx-data-pill{display:none}}
+@media(max-width:600px){.portal-header-inner{gap:8px}.app-header-tools{flex-direction:column;align-items:flex-end}.tdx-version-status{gap:4px}.tdx-version-pill,.tdx-reload-btn{min-height:27px!important;font-size:9px!important}.tdx-home-version-status{top:8px;right:8px}.tdx-home-version-status button{display:none}}

@@ -10,6 +10,8 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
+const APP_VERSION='1.23.4';
+let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
@@ -97,6 +99,27 @@ function setAccessMessage(text,type='muted'){
 function updateSystemAdminUi(){
   const btn=$('systemAdminBtn');if(btn)btn.textContent=systemAdminUnlocked?'管理者メニューを開く':'システム管理者';
 }
+function formatDataVersionTime(value){
+  if(!value)return '日時情報なし';
+  const t=Date.parse(value);if(!Number.isFinite(t))return '日時情報なし';
+  return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(t));
+}
+function updateVersionStatus(){
+  const e=$('tdxExamsVersion'),u=$('tdxUsersVersion');
+  if(e){e.textContent=dataVersionMeta.examError?'exams：読込失敗':`exams：${formatDataVersionTime(dataVersionMeta.exams)}`;e.classList.toggle('is-error',dataVersionMeta.examError)}
+  if(u){u.textContent=dataVersionMeta.userError?'users：読込失敗':`users：${formatDataVersionTime(dataVersionMeta.users)}`;u.classList.toggle('is-error',dataVersionMeta.userError)}
+}
+function bindVersionStatus(){
+  const btn=$('tdxReloadBtn');if(!btn)return;
+  btn.onclick=()=>{const url=new URL(location.href);url.searchParams.set('_reload',Date.now());location.replace(url.toString())};
+  updateVersionStatus();
+}
+async function fetchJsonWithMeta(path){
+  const r=await fetch(`${path}?v=${Date.now()}`,{cache:'no-store'});
+  if(!r.ok)throw new Error(`${path} HTTP ${r.status}`);
+  const data=await r.json();
+  return {data,lastModified:r.headers.get('last-modified')||''};
+}
 async function init(){
   // Bind the interface before any network/data loading.
   // Even if GitHub data or an optional library is slow, login/menu navigation stays responsive.
@@ -104,14 +127,18 @@ async function init(){
   bind();
   updateSystemAdminUi();
 
-  const examPromise=fetch(`data/exams.json?v=${Date.now()}`,{cache:'no-store'})
-    .then(r=>{if(!r.ok)throw new Error(`exams.json HTTP ${r.status}`);return r.json()});
-  const userPromise=fetch(`data/users.json?v=${Date.now()}`,{cache:'no-store'})
-    .then(r=>{if(!r.ok)throw new Error(`users.json HTTP ${r.status}`);return r.json()});
+  bindVersionStatus();
+  const examPromise=fetchJsonWithMeta('data/exams.json');
+  const userPromise=fetchJsonWithMeta('data/users.json');
   const [examResult,userResult]=await Promise.allSettled([examPromise,userPromise]);
 
-  allExamData=examResult.status==='fulfilled'?examResult.value:{version:5,systemName:'T-DX Lab☆問題演習システム',exams:[]};
-  usersData=userResult.status==='fulfilled'?userResult.value:{version:5,users:[],issuedCodeIds:[]};
+  allExamData=examResult.status==='fulfilled'?examResult.value.data:{version:5,systemName:'T-DX Lab☆問題演習システム',exams:[]};
+  usersData=userResult.status==='fulfilled'?userResult.value.data:{version:5,users:[],issuedCodeIds:[]};
+  dataVersionMeta.examError=examResult.status==='rejected';
+  dataVersionMeta.userError=userResult.status==='rejected';
+  dataVersionMeta.exams=examResult.status==='fulfilled'?(allExamData.updatedAt||examResult.value.lastModified||''):'';
+  dataVersionMeta.users=userResult.status==='fulfilled'?(usersData.updatedAt||userResult.value.lastModified||''):'';
+  updateVersionStatus();
   if(examResult.status==='rejected')console.error('exams.json load failed:',examResult.reason);
   if(userResult.status==='rejected')console.error('users.json load failed:',userResult.reason);
 
@@ -1542,7 +1569,7 @@ function exportUserData(){
   const st=annualMasterState();
   if(st.unissued&&!confirm(`未発行の生徒が ${st.unissued}人います。この状態で users.json を書き出しますか？`))return;
   if(st.missing&&!confirm(`発行済みですが一般教員のQR再印刷に必要な移行が未完了の生徒が ${st.missing}人います。先に年間マスターCSVを読み込んで移行することをおすすめします。このまま書き出しますか？`))return;
-  const payload={version:6,note:'年度共通の生徒認証情報。credential は認証用salt+hash、qrSecret は教員ログイン時だけ復号するQR再印刷用暗号化データです。平文アクセスキーは含みません。',issuedCodeIds:usersData.issuedCodeIds,qrVault:usersData.qrVault||null,users:usersData.users.map(u=>({studentCode:u.studentCode,classKey:u.classKey,credential:u.credential||null,qrSecret:u.qrSecret||null}))};
+  const payload={version:6,note:'年度共通の生徒認証情報。credential は認証用salt+hash、qrSecret は教員ログイン時だけ復号するQR再印刷用暗号化データです。平文アクセスキーは含みません。',updatedAt:new Date().toISOString(),issuedCodeIds:usersData.issuedCodeIds,qrVault:usersData.qrVault||null,users:usersData.users.map(u=>({studentCode:u.studentCode,classKey:u.classKey,credential:u.credential||null,qrSecret:u.qrSecret||null}))};
   TDX.download('users.json',JSON.stringify(payload,null,2));
 }
 init().catch(console.error);

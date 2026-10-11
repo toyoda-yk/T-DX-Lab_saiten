@@ -1,12 +1,34 @@
 let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null;
 const $=id=>document.getElementById(id);
 let qrScanner=null;
+const APP_VERSION='1.23.4';
+let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
+function formatDataVersionTime(value){
+  if(!value)return '日時情報なし';
+  const t=Date.parse(value);if(!Number.isFinite(t))return '日時情報なし';
+  return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(t));
+}
+function updateVersionStatus(){
+  const e=$('tdxExamsVersion'),u=$('tdxUsersVersion');
+  if(e){e.textContent=dataVersionMeta.examError?'exams：読込失敗':`exams：${formatDataVersionTime(dataVersionMeta.exams)}`;e.classList.toggle('is-error',dataVersionMeta.examError)}
+  if(u){u.textContent=dataVersionMeta.userError?'users：読込失敗':`users：${formatDataVersionTime(dataVersionMeta.users)}`;u.classList.toggle('is-error',dataVersionMeta.userError)}
+}
+function bindVersionStatus(){
+  const btn=$('tdxReloadBtn');if(!btn)return;
+  btn.onclick=()=>{const url=new URL(location.href);url.searchParams.set('_reload',Date.now());location.replace(url.toString())};
+  updateVersionStatus();
+}
+async function fetchJsonWithMeta(path){
+  const r=await fetch(`${path}?v=${Date.now()}`,{cache:'no-store'});
+  if(!r.ok)throw new Error(`${path}: ${r.status}`);
+  const data=await r.json();return {data,lastModified:r.headers.get('last-modified')||''};
+}
 async function loadData(){
-  const bust=Date.now();
-  const [e,u]=await Promise.all([
-    fetch(`data/exams.json?v=${bust}`,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`exams.json: ${r.status}`);return r.json()}),
-    fetch(`data/users.json?v=${bust}`,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(`users.json: ${r.status}`);return r.json()})
-  ]);
+  const [er,ur]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json')]);
+  dataVersionMeta.examError=er.status==='rejected';dataVersionMeta.userError=ur.status==='rejected';
+  if(er.status==='rejected'||ur.status==='rejected'){updateVersionStatus();throw (er.status==='rejected'?er.reason:ur.reason)}
+  const e=er.value.data,u=ur.value.data;
+  dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';updateVersionStatus();
   exams=e.exams||[];
   // v1.5以前の配布用デモ3101だけを除外。本番で再発行済みの3101は残ります。
   users=(u.users||[]).filter(x=>x?.credential?.codeId!=='demo-annual-3101');
@@ -241,4 +263,5 @@ async function closeQrScanner(){
 }
 $('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;currentExam=null;currentStudentName='';lastFormSendState=null;accessibleExams=[];$('studentName').value='';show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
 $('qrLoginBtn').onclick=openQrScanner;$('qrCloseBtn').onclick=closeQrScanner;
+bindVersionStatus();
 loadData().catch(e=>{$('loginMsg').className='error small';$('loginMsg').textContent='データ読み込みに失敗しました。GitHub PagesまたはローカルWebサーバーで開いてください。'});
