@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "note": "年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。",
+  "version": 6,
+  "note": "年度共通の生徒認証情報。credential は認証用salt+hash、qrSecret は教員ログイン時だけ復号するQR再印刷用暗号化データです。平文アクセスキーは含みません。",
   "issuedCodeIds": [
     "c3b30d823997711c0f631505d1f3b6566278f801469b1fddca8ad7943520e4b4",
     "962a201ec44e60bf2ec09930f37e6264f08db331b3b5dc8e12277d82b4523e7b",
@@ -22,207 +22,334 @@
     "b9c8a5104447d9e4204d6a60d5d52897a94d8cd49e52676255a15511f376b5cd",
     "cd3e213c5122d147735f18b18b662258d60f37c1192f3a932652de424d449ed1",
     "c32b64083a66b039d3e91d3082dc087cf4a8539c67eb0f2e7b08287fcd974372",
-    "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc"
+    "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc",
+    "29f57497965d7e764d9f7c52356daa4fda632cd5c6b1e28aa2a72ecd6ae6d37e",
+    "4208e58032910011374858fc9b7eaac341eaa1e9219ea691a8326b9cf960fd96",
+    "89c847114e0555263d17d1c11041f472b9125152387f4c1de597243afafcf3d5",
+    "3bb5b0c1055a5a05aa8cf7257d040c42d2ebb90e45caae69aeb08b80bd0cfbb3",
+    "34f01d16d25fca60876d97184063af6d453b94df453ceb07a3ba1f19d4757639",
+    "deb787686905ef0f9adae5d29a5f0728e7681ef0c32f6782c48694d8258c5a45",
+    "ffea91f6017a598530c98149dbc9206d11775ba9d57893964ad37c303286d46f",
+    "d07f29572439d6dd60ab776520959977e146fec003c022223d5d340c1e620d27",
+    "1d6afebc3b11385b05efc65625e6014c45c417dc3df2fd7c9fb683287722e10f",
+    "e2ab26203b9c9a27934e1c2d15108ccdd41c9d3eac68283a80141d9995a6752a",
+    "806462c98a53e461e69a15333f5eb851ffe9852fa23d2bb3592b62601eb1f832",
+    "500657ba2d8d8ba6120f44e34d53ad379b75dea5e4c43bf38725e2255fe34559",
+    "9b52b3493d29e0d20bf083a982c3691827e467a3b8e2544ea23b12a026824b2e",
+    "65533bace545f9bdd108f455d3569a0afc68a796f7ae37f0e0f0e537cf223148",
+    "e7c2f881923acead89de4b0ec937a94d1ff36b3f327305057905f5622400ce33",
+    "8d979d83f34624873e08406874ba74208cf7b3617ac72723a59aeff2897a21db",
+    "c44346a91ff05603af6841c8f3371a4d85f44b7415d9bf008bef53658abfa18c",
+    "f81c7e06d584989a4b767cd40a6e3dc27266c9866e365fd2b026c78441915259",
+    "178d3beb8e0b90f8ec9acfdd7a14b6d3c60f01ac7403d0ca1ec022d02b55233c",
+    "2fcad8599c8e52db7e25a7295e7e13345a1043ab94d0243c15cea8499185abb4"
   ],
+  "qrVault": {
+    "version": 1,
+    "algorithm": "AES-GCM",
+    "kdf": "PBKDF2-SHA256",
+    "iterations": 100000,
+    "salt": "O14+uW9vRyJSB48GBSP7EA=="
+  },
   "users": [
     {
       "studentCode": "3301",
       "classKey": "33",
       "credential": {
-        "salt": "53a26490c82bf9ac3a0212d828fd67e4",
-        "hash": "ba9db066690de2c0a56defda9ee15aea2e6d00980725e2e61d0b4cff7a11f6df",
-        "codeId": "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc",
-        "issuedAt": "2026-10-08T10:32:31.786Z"
+        "salt": "58e4468f422cd155791a409d980fd921",
+        "hash": "02c989255116ab991d3448c003a32d9858288f04d19c59fa31b2d70b09258252",
+        "codeId": "29f57497965d7e764d9f7c52356daa4fda632cd5c6b1e28aa2a72ecd6ae6d37e",
+        "issuedAt": "2026-10-11T14:32:18.753Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "3YilAGm4ydeQRjD5",
+        "ciphertext": "SSwAvyv4Z7fymXw6/lr6iYZ5Inl/DOipgtd2XGgmLzhtwPM="
       }
     },
     {
       "studentCode": "3302",
       "classKey": "33",
       "credential": {
-        "salt": "8d728da419ec5ffbfd5a5801431c8d50",
-        "hash": "f28a8a1ee76c1344cfc2f440bf756cb9897b2199f7c04d4e91782fc5ab388637",
-        "codeId": "962a201ec44e60bf2ec09930f37e6264f08db331b3b5dc8e12277d82b4523e7b",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "00c3ac1c8273e8716da6a818ff8a603d",
+        "hash": "b16cbb8b60caf65724b4482f5a42ed9c1d3fd02a766ca0e7681ee53d0c4a6425",
+        "codeId": "4208e58032910011374858fc9b7eaac341eaa1e9219ea691a8326b9cf960fd96",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "+gZnCcFq519/lY4J",
+        "ciphertext": "92K10ulf+ZBU8GgmkCyL+NZ42Lh9U/26EjiteaVidSOy1PE="
       }
     },
     {
       "studentCode": "3303",
       "classKey": "33",
       "credential": {
-        "salt": "485ed31be916ddb9797fb82c49dcd8d2",
-        "hash": "6c513949f716d01cfb1789a427077ea56d5f56c80c5718ddc6f872be990002b0",
-        "codeId": "62bce819672cc4db6d8c6d0a46b009e8773f347132341b71e5881e8b4d35e787",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "114622b5f34b5dd2fd7ad0001fd0a792",
+        "hash": "f315497a83375a4b432be472beb0a56f2699e355836310dad8f77f354d4e56ac",
+        "codeId": "89c847114e0555263d17d1c11041f472b9125152387f4c1de597243afafcf3d5",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "ECpTXoaqwnwON/e9",
+        "ciphertext": "ucQmh9ZyLWnU7uC8eZPbaRpLTsU6Zb0XpEwIc8K8zDYMBN0="
       }
     },
     {
       "studentCode": "3304",
       "classKey": "33",
       "credential": {
-        "salt": "be486b65f4b3d9668a87d0a3252be389",
-        "hash": "9e2d5b93eec9737c66a45e432db9d22b37d5ec81f0f9a2f6aea750553e5d2317",
-        "codeId": "5e6d4746f91bc2a8332ca629404b402d8d92d796cbb325cb62215a9d17cd58f7",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "94b0d4f9a7fdbb53dae55c3d6f99f807",
+        "hash": "f1ef5c8187f50a7db8fd9290676aac7a824966de2cf17f8d9c34536c613fde73",
+        "codeId": "3bb5b0c1055a5a05aa8cf7257d040c42d2ebb90e45caae69aeb08b80bd0cfbb3",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "b0lEN1IGpQnIRD2/",
+        "ciphertext": "mc3zEAPYjRw8VFYd47eXjponLHVG6kusc2XHoT/rrfzxjWw="
       }
     },
     {
       "studentCode": "3305",
       "classKey": "33",
       "credential": {
-        "salt": "b53b0e5618eee7e975ec4701400300d2",
-        "hash": "9136d0fdd495f4f63685ee32c1e9b09936a5b05be3ab782bd173355036cf0d8c",
-        "codeId": "cb9b4c5b29959c6df4de151e1ff802ca46093dfe20e4561da0937d3afbfd7c6f",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "a2614ce33f9e0c0e810926c5ebc02818",
+        "hash": "ac878bf14ef8d3d14820c49818c972e8689b8553c9ced1273a55c3c79297e185",
+        "codeId": "34f01d16d25fca60876d97184063af6d453b94df453ceb07a3ba1f19d4757639",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "/RDzkoocljmAwbqs",
+        "ciphertext": "Brq/MdJhgnD/6XyZIFYRx+LHFkIGQK0TNtiuGYqQ71Jr0gg="
       }
     },
     {
       "studentCode": "3306",
       "classKey": "33",
       "credential": {
-        "salt": "c5f7beade654c139700b1027d8ff3e2f",
-        "hash": "405925f2e2307fe1ba3c8ee5fcb4109b6bd427e2f1700ab2b8bf26bee59e7fe1",
-        "codeId": "87eb9ceb44290d2649d7bf2494484ea4994a2fc803fca799c6c8a8688255e214",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "0b0526c6a38b75d8f8340000768f0c10",
+        "hash": "3e501b146f6a49edacb4b1b6b808676655219efb3150793c292261340877b149",
+        "codeId": "deb787686905ef0f9adae5d29a5f0728e7681ef0c32f6782c48694d8258c5a45",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "ny7hWcrCunfbiLEv",
+        "ciphertext": "NGyWzfAJuwxYR5Iw+wWNOca/2auSjUy4nx8rgCJYPwriW7c="
       }
     },
     {
       "studentCode": "3307",
       "classKey": "33",
       "credential": {
-        "salt": "5f39344644f70e04e4f1c476215848dd",
-        "hash": "ac48b8d2f4120f4d0c4a8fcc9de896fe82830cfa54bb43df91559b57f7f3d124",
-        "codeId": "c577233f2b0c219f2ee14820a21652233a0580b68a133261d01ef7fdfe97a5bb",
-        "issuedAt": "2026-10-07T12:09:07.955Z"
+        "salt": "df72c7a5a6acf5b93d5f606e435e133b",
+        "hash": "bbd387f12bc2850301fef3735117e1f91eb697be8116321e3e8147abfffabb89",
+        "codeId": "ffea91f6017a598530c98149dbc9206d11775ba9d57893964ad37c303286d46f",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "RPESJlfO/oQyQ/JE",
+        "ciphertext": "9Mh+DdObFiElw02l6lBx5l/FJS+Z6Bq1Uc/xIkOFL6v0x08="
       }
     },
     {
       "studentCode": "3308",
       "classKey": "33",
       "credential": {
-        "salt": "b06f3a604945c2beee135ed77b41e04e",
-        "hash": "e1f998315675ef8919e36be799db352f5bdc6c327b44081f6bb8c57b740be7d8",
-        "codeId": "3174955e6207f72dcea0ea51f49a98117b278fd1c327310bafe2a997a6f2ff28",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "643ac41d487f27890f9717cfb5ed6074",
+        "hash": "a6b969d40159fa2056c817333846f3e32340f1a180bddb9aad186cdb79ecb5e7",
+        "codeId": "d07f29572439d6dd60ab776520959977e146fec003c022223d5d340c1e620d27",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "N72Fq1efm4PF2Dwk",
+        "ciphertext": "gGuBQcvoYbwJ7dqkhjbKxGIzQ+GSN13rHDPe7+wktPEEnWc="
       }
     },
     {
       "studentCode": "3309",
       "classKey": "33",
       "credential": {
-        "salt": "52b1631384680af1977dba457f26cdf4",
-        "hash": "03b50214de2cd495f868998b31a671a403ab7264b114d40d9ba9d198f87e738a",
-        "codeId": "a34dd744f5b6519ad843cf22edd718d8800e68ee13ee685ea35e485324dceabd",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "0d45b6b0ff8c3b28d36b965d714c1cbe",
+        "hash": "2490578d969f854bced92800488711a3dbd482cc5fd9a6b5eb524d0d336473a1",
+        "codeId": "1d6afebc3b11385b05efc65625e6014c45c417dc3df2fd7c9fb683287722e10f",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "s8Fa+pixpchiAbJg",
+        "ciphertext": "pxcXM9oDN3DBY7NBPM5+n/OSnJiFqAe0HSUPQE6LzEfzYzY="
       }
     },
     {
       "studentCode": "3310",
       "classKey": "33",
       "credential": {
-        "salt": "8092dc8a84c39666f134f4cbfe76a5b3",
-        "hash": "ca3569275387ccf010fa9ca11b3ad35518c403dffe47ae8d23feb4c77e3fd49c",
-        "codeId": "722b50d108a7f3d1a9a1dcf460ebfddd0ee8274975d4d9cf231288d142429d11",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "a7c7b8e88ed6003cf6d7a9367ab834f1",
+        "hash": "0b401b423f6311fb0790709a1e453b27a4890831891412adb1c02116842b013b",
+        "codeId": "e2ab26203b9c9a27934e1c2d15108ccdd41c9d3eac68283a80141d9995a6752a",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "3R30uqL1ZVtNfdbP",
+        "ciphertext": "SjecrJ7OrG9srYcXSA++00rHAsYPQFX+hEahgMwbz33Yj5A="
       }
     },
     {
       "studentCode": "3311",
       "classKey": "33",
       "credential": {
-        "salt": "716486b448a32098e26d54467f0eab2a",
-        "hash": "73dcefb54e196a8ab362ece78b0d8e7892d5a97a010d3ce37f0568a4f525dec9",
-        "codeId": "3fb184cd332eead5ddbeae096cdfa815bcfd54882098894af578edd9ac353f93",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "b5ee70762fdd46bcd79f27b2e00de8e8",
+        "hash": "b64ca412db7d3f3d5eaa10f9527e0d3d1957bcf121823947a54326e96f7a6eb4",
+        "codeId": "806462c98a53e461e69a15333f5eb851ffe9852fa23d2bb3592b62601eb1f832",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "ILAyU7G6ybrmv298",
+        "ciphertext": "itHUQAogUQV0elaC34kxvm2pHUSQgTw03GrxGWwfRyirVEE="
       }
     },
     {
       "studentCode": "3312",
       "classKey": "33",
       "credential": {
-        "salt": "38783773dcb13aae7a6730f65f71bbc2",
-        "hash": "fff1fea5d4f8f2c1e53b3ba828dcf48c1edfe5f47f5139b6af47808402ff4ad5",
-        "codeId": "268a2b073c7ae06178a3130d055063818e177d6b6a108bbb7feaa4784df03cc0",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "110bc5aff025b26a5cc6dbddc9eda6c4",
+        "hash": "80a16712abbfb11156a9c998f25c2be5ac2b8e7888a7d46fd37df607d76cc321",
+        "codeId": "500657ba2d8d8ba6120f44e34d53ad379b75dea5e4c43bf38725e2255fe34559",
+        "issuedAt": "2026-10-11T14:32:18.775Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "ZB8cZvXUjZvUsEWg",
+        "ciphertext": "gM+/xk3RYKoTw9lvaipRB4gr6q38HpnLYxT+wG04wAKV1Xs="
       }
     },
     {
       "studentCode": "3313",
       "classKey": "33",
       "credential": {
-        "salt": "d16339ac8b7efc2a661d6eb76cdcd0f1",
-        "hash": "85228e9d400fb66cf969ce863cc7ea06a149d324cc92a4b12b8c6b6bde9a7f1a",
-        "codeId": "b1ed1d509bcca5f9bebc280a71c9a8d1d57495fbeff31315b0c68b060c473849",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "7de8734ff35cb4be7489653a98739c7b",
+        "hash": "4b710f58c9bd8ad904ffee21738d1c01d5b66cc9a80d41cd21665486a857c685",
+        "codeId": "9b52b3493d29e0d20bf083a982c3691827e467a3b8e2544ea23b12a026824b2e",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "liDQKLaTlWNsvk33",
+        "ciphertext": "66MqC229Zi72W0AjhF9c0p6GS5cy3AsF7XwQtwnQ/9pUmJU="
       }
     },
     {
       "studentCode": "3314",
       "classKey": "33",
       "credential": {
-        "salt": "26a97695ed37742d1d17ff510a8ce92f",
-        "hash": "ad29646500fb08bee87091ec1d5ef369e956a1499167779bf78cf95bd617774f",
-        "codeId": "8c85094fe5be4ca391de66b8fc3646e72240b27482dc87c997a156c7bce121f4",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "77fe0e9f8ede6c1460937075478e1b06",
+        "hash": "2de0eb2b1387352c2fa75e63cb181fe8a74082702854a8775571362e0dc96c36",
+        "codeId": "65533bace545f9bdd108f455d3569a0afc68a796f7ae37f0e0f0e537cf223148",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "9s6owoY9nSRdzNWI",
+        "ciphertext": "0RKjATFbccE6ONgG+/N/WxTeHAZId1CH1x2zDIs4knt5rmE="
       }
     },
     {
       "studentCode": "3315",
       "classKey": "33",
       "credential": {
-        "salt": "8c896acb6cb4c24d3638cb4ff34a9b55",
-        "hash": "81b4fe7c62c41697a112864b835d6531f2ff29e31c15e6718533ef13feacbc9e",
-        "codeId": "4bcfab35a1093e9d242733f3410ca6d2ed4add8c591749f7b22cd1fd5fa0cd8f",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "4150bb31cdd2c9dce2b03808bc9e92cb",
+        "hash": "f8794456dea5a5130204f72813f76a761cca3556bc753c005e076319606f7d48",
+        "codeId": "e7c2f881923acead89de4b0ec937a94d1ff36b3f327305057905f5622400ce33",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "7eaAM2A+9Byf9tJg",
+        "ciphertext": "bPxo2fBc2WsVWFbf1cvwIZ/uV7XSfQX3GIeG7vxI9Xj5NLg="
       }
     },
     {
       "studentCode": "3316",
       "classKey": "33",
       "credential": {
-        "salt": "587aa23d20c96ab4edf8934f551e1233",
-        "hash": "6438ecbb4f43aecc07d8bedce2f8f68c947d60a8c51f62c2136767dcb7ba3c62",
-        "codeId": "39646295ecd7c4d4b7c75a6a3d2fd91605f2651eb7abc26be6016c931bfef0d4",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "59c4e23c1dc5330d862783be9f87d7cd",
+        "hash": "d4e059cff19190a934f248d974d8fc06f32a60e523b0a464d63957c6ce3ac7ae",
+        "codeId": "8d979d83f34624873e08406874ba74208cf7b3617ac72723a59aeff2897a21db",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "NQ9/elTjqJJ7XWN7",
+        "ciphertext": "cGRhl09XTEqxYfIPcUBLB+GwrioMRC+e4USHZLLhuCb3Ro4="
       }
     },
     {
       "studentCode": "3317",
       "classKey": "33",
       "credential": {
-        "salt": "76dd352151632c41c808d5c16384b011",
-        "hash": "35058a4706cd688a9e54e860f834cbf5f0147982b88c2014a801d3ac7793051f",
-        "codeId": "9b3360b1a36e591893ce0a6de61a5b0dee5a2920ed2292d1bd3a7a413fc7a9c2",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "809ddec188bedcfd6faed5349cbd2207",
+        "hash": "10bae8f6a52e7721cbb91e0c39acb5fcd6542ba743498e8f2be5f1bab0535424",
+        "codeId": "c44346a91ff05603af6841c8f3371a4d85f44b7415d9bf008bef53658abfa18c",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "qibo4OndJqYQQcx0",
+        "ciphertext": "KB2etZo1mSNP7Ufho5qRnaNykb+dcCn15EBgh/SWR1aGSaE="
       }
     },
     {
       "studentCode": "3318",
       "classKey": "33",
       "credential": {
-        "salt": "bfa7618d2bb3a867703ae6b635d0efa1",
-        "hash": "4bac3e0da31e48ffcf354c2a62854ce23a313caa594e6e856f9b1cc173e0e070",
-        "codeId": "b9c8a5104447d9e4204d6a60d5d52897a94d8cd49e52676255a15511f376b5cd",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "047787809f7e9cd4d6398ad47466c617",
+        "hash": "06e1e3054a233dfc81ae5cd34ba231c6c21632754f60c1eca70797493ea48051",
+        "codeId": "f81c7e06d584989a4b767cd40a6e3dc27266c9866e365fd2b026c78441915259",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "7hPLE8AsPVGMq81/",
+        "ciphertext": "foF4HxscTwuNmZx5FO5OMugEad6KNdxJFdHJd7bN8EKIQhM="
       }
     },
     {
       "studentCode": "3319",
       "classKey": "33",
       "credential": {
-        "salt": "2834ead9b5985c377e4fd5b5f23e3105",
-        "hash": "5cb42e55dddb714968fe4760773871a40fde0ed22822104d824090ba8745e4ff",
-        "codeId": "cd3e213c5122d147735f18b18b662258d60f37c1192f3a932652de424d449ed1",
-        "issuedAt": "2026-10-07T12:09:07.956Z"
+        "salt": "1b9b80879390e9ca1517a3545c15f212",
+        "hash": "eb9bac4de58b981bf44d24a51d218200deac3ce0416ef601fc15cb0f797c7b4b",
+        "codeId": "178d3beb8e0b90f8ec9acfdd7a14b6d3c60f01ac7403d0ca1ec022d02b55233c",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "5EaPEa25vdh4RjzS",
+        "ciphertext": "fbXrT4XqM098QGWsy43P7O2uoxb2R2/BQMg4UxkrHfP5OpA="
       }
     },
     {
       "studentCode": "3320",
       "classKey": "33",
       "credential": {
-        "salt": "e0711dd1e09955306910a4a63e690b89",
-        "hash": "09a35fbc444a8a1fba3a56290e0eb20607296d87d2aecb401f3d0fd734adfe32",
-        "codeId": "c32b64083a66b039d3e91d3082dc087cf4a8539c67eb0f2e7b08287fcd974372",
-        "issuedAt": "2026-10-07T12:09:07.957Z"
+        "salt": "0f2416d2f3d3ce9a7a1f41cf7f44173b",
+        "hash": "c1e8b36c18e6fe1c26e21455db6bd21f87c58a42ce4a9b70a0d3a772bbc6f548",
+        "codeId": "2fcad8599c8e52db7e25a7295e7e13345a1043ab94d0243c15cea8499185abb4",
+        "issuedAt": "2026-10-11T14:32:18.776Z"
+      },
+      "qrSecret": {
+        "version": 1,
+        "iv": "j56h2EGEjRydPNVt",
+        "ciphertext": "NMQPtGSjSL8oXHXUAYaDZ5x/MG5oBQvCBhn7I9LaLmLv4eM="
       }
     }
   ]
