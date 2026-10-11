@@ -1,6 +1,7 @@
 {
-  "version": 5,
+  "version": 6,
   "note": "初回導入用テンプレートです。既存運用ではGitHub上の data/users.json を上書きしないでください。",
   "issuedCodeIds": [],
+  "qrVault": null,
   "users": []
 }

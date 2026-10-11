@@ -69,7 +69,11 @@
 
     <section id="studentManager" class="future-panel adminSection teacher-tone-admin hidden">
       <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度設定・年間アクセス管理</h2><p>年度初めの名簿登録とアクセスキー発行を行います。通常の試験作成では操作しません。</p></div><div class="admin-symbol">SYS</div></div>
-      <div class="admin-lock-note"><strong>管理者専用</strong><span>アクセスキーの「再発行」はログイン情報そのものを変更します。紛失・汚損は「QRカード再印刷」を使用してください。</span></div>
+      <div class="admin-lock-note"><strong>管理者専用</strong><span>アクセスキーの「発行・再発行」と名簿変更はシステム管理者だけが行います。一般教員は「QRカード再印刷」で、現在有効なQRをそのまま再印刷します。</span></div>
+      <div class="qr-role-split">
+        <div class="qr-role-card teacher-role"><span class="section-eyebrow">GENERAL TEACHER</span><strong>一般教員：QR再印刷</strong><small>紛失・汚損時に同じQRを再印刷。アクセスキーは変更しません。</small></div>
+        <div class="qr-role-card admin-role"><span class="section-eyebrow">SYSTEM ADMIN</span><strong>システム管理者：発行・再発行</strong><small>年度名簿、新規発行、漏えい時の再発行、users.json・年間マスターを管理します。</small></div>
+      </div>
       <input id="classDigits" type="hidden" value="2">
 
       <div class="roster-setup-grid">
@@ -116,12 +120,16 @@
             <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分QRカード</button>
             <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカード</button>
             <button id="exportAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSV</button>
-            <button id="exportQrReprintDataBtn" class="secondary glass-btn">QR再印刷用データ</button>
             <button id="exportRosterUsersBtn" class="teacher-action">users.json</button>
           </div>
         </div>
         <div class="annual-secondary-row">
           <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターの準備状況を確認しています。</div>
+        </div>
+        <div id="qrMigrationPanel" class="qr-migration-panel hidden">
+          <div><span class="section-eyebrow">ONE-TIME MIGRATION</span><strong>既存のアクセスキーを「一般教員が直接QR再印刷できる形式」に移行</strong><small>v1.23.2以前に発行済みの生徒だけ必要です。年間マスターCSV（または旧QR再印刷用データ）を1回読み込み、移行後に users.json を書き出してください。</small></div>
+          <input id="importAnnualSecretsInput" type="file" accept=".json,.csv,application/json,text/csv" class="hidden">
+          <button id="importAnnualSecretsBtn" class="secondary glass-btn" type="button">年間マスターCSVを読み込んで移行</button>
         </div>
         <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
         <details class="danger-admin-details">
@@ -292,26 +300,17 @@
     </section>
 
     <section id="qrManager" class="future-panel adminSection teacher-tone-qr hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒へ、現在有効なアクセスキーのQRをそのまま再印刷します。</p></div><div class="admin-symbol">QR</div></div>
-      <div class="qr-safety-strip"><strong>再印刷ではアクセスキーは変わりません</strong><span>「再発行」は管理者専用です。通常の先生はここから同じQRカードを印刷できます。</span></div>
-      <input id="importAnnualSecretsInput" type="file" accept=".json,.csv,application/json,text/csv" class="hidden">
-      <div class="qr-reprint-toolbar">
-        <button id="importAnnualSecretsBtn" class="secondary glass-btn">QR再印刷用データを読み込む</button>
-        <div id="qrCacheStatus" class="qr-cache-status"><span>DATA</span> 再印刷データを確認しています。</div>
-        <select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select>
-        <button id="selectVisibleVaultBtn" class="secondary glass-btn">表示中を全選択</button>
-        <button id="clearVaultSelectionBtn" class="secondary glass-btn">選択解除</button>
-        <button id="reprintSelectedCardsBtn" class="teacher-action" disabled>選択した生徒を再印刷</button>
-        <button id="clearQrCacheBtn" class="secondary glass-btn qr-cache-clear" type="button">この端末の再印刷データを消去</button>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT / GENERAL TEACHER</span><h2>QRカード再印刷</h2><p>一般教員が、紛失・汚損した生徒の「現在有効なQR」をそのまま再印刷する画面です。</p></div><div class="admin-symbol">QR</div></div>
+      <div class="qr-safety-strip"><strong>一般教員は「再印刷」だけ</strong><span>アクセスキーは変わりません。新規発行・再発行はシステム管理者だけが行います。</span></div>
+      <div class="qr-general-tools">
+        <label>クラス<select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select></label>
+        <label>4桁番号で検索<input id="qrStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"></label>
+        <div id="qrCacheStatus" class="qr-cache-status"><span>CHECK</span> 再印刷準備を確認しています。</div>
       </div>
-      <p class="master-note">QR再印刷用データは管理者が年度初めに出力します。一度読み込んだデータはこのブラウザに保存されるため、通常は毎回読み込む必要はありません。</p>
-      <div id="accessVaultSummary" class="grid four roster-summary"></div>
+      <p class="master-note">別ファイルの読み込みは不要です。システム管理者が年度初めに設定した <code>users.json</code> から、教員ログイン中だけQR再印刷に必要な情報を復号します。</p>
+      <div id="accessVaultSummary" class="grid three roster-summary"></div>
       <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
       <div id="qrMsg" class="small muted"></div>
-      <div id="qrAdminTools" class="qr-admin-tools hidden">
-        <div><span class="section-eyebrow">SYSTEM ADMIN ONLY</span><strong>アクセスキー再発行</strong><small>漏えいなど、現在のQRを無効化する必要がある場合だけ使用します。</small></div>
-        <div class="actions compact-actions"><button id="selectMissingVaultBtn" class="secondary glass-btn">再印刷データ不足を選択</button><button id="reissueSelectedCodesBtn" class="danger" disabled>選択した生徒のアクセスキーを再発行</button></div>
-      </div>
     </section>
 
     <section id="analysisManager" class="future-panel adminSection teacher-tone-analysis hidden">
