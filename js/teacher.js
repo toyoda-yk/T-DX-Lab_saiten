@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.23.4';
+const APP_VERSION='1.23.5';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -522,6 +522,12 @@ function mergeIntoAccessVault(rows){
   accessVault=[...m.values()].sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
   refreshAccessVaultClassFilter();updateAnnualMasterButtons();
 }
+function setMigrationMessage(text,type='muted'){
+  const el=$('qrMigrationResult');if(!el)return;
+  el.className=`migration-result small ${type}`;
+  el.textContent=text;
+}
+
 function refreshAccessVaultClassFilter(){
   const sel=$('accessVaultClassFilter');if(!sel)return;
   const current=sel.value;
@@ -531,6 +537,10 @@ function refreshAccessVaultClassFilter(){
 }
 async function importAnnualSecretsCsv(e){
   const f=e.target.files?.[0];if(!f)return;
+  setMigrationMessage(`「${f.name}」を読み込み中です…`,'notice');
+  const btn=$('importAnnualSecretsBtn');
+  const oldLabel=btn?.textContent||'';
+  if(btn){btn.disabled=true;btn.textContent='移行処理中…'}
   try{
     const text=(await f.text()).replace(/^\uFEFF/,'');
     let rows=[];
@@ -545,7 +555,7 @@ async function importAnnualSecretsCsv(e){
       const idxClass=header.findIndex(x=>/クラス|class/i.test(x));
       rows=table.map(parts=>({studentCode:String(parts[idxCode]||'').trim(),accessCode:String(parts[idxKey>=0?idxKey:1]||'').trim().toUpperCase(),classKey:String(parts[idxClass>=0?idxClass:2]||'').trim()})).filter(x=>/^\d{4}$/.test(x.studentCode)&&x.accessCode);
     }
-    if(!rows.length)throw new Error('有効な年間アクセスキーが見つかりませんでした。');
+    if(!rows.length)throw new Error('有効な年間アクセスキーが見つかりませんでした。CSVの「4桁番号」「年間アクセスキー」列を確認してください。');
     ensureQrVaultMeta();
     const migrated=[],stale=[],unknown=[];
     for(const row of rows){
@@ -555,10 +565,28 @@ async function importAnnualSecretsCsv(e){
       u.qrSecret=await encryptQrAccessCode(row.accessCode);migrated.push(row.studentCode);
     }
     await hydrateAccessVaultFromUsers();renderAccessVaultManager();renderIndividualStudents();updateAnnualMasterButtons();
-    setIndividualStudentMessage(`${migrated.length}人をQR再印刷対応へ移行しました。次に users.json を書き出してGitHubへ反映してください。`+(stale.length?` キー不一致 ${stale.length}人。`:``)+(unknown.length?` 名簿外 ${unknown.length}人。`:``),stale.length||unknown.length?'notice':'success');
-  }catch(err){setIndividualStudentMessage('移行できませんでした：'+err.message,'error')}
-  finally{e.target.value=''}
+    const st=annualMasterState();
+    let detail=`${rows.length}件読込 → ${migrated.length}人を移行しました。`;
+    if(stale.length)detail+=` キー不一致 ${stale.length}人（${stale.slice(0,8).join('、')}${stale.length>8?'ほか':''}）。`;
+    if(unknown.length)detail+=` 名簿外 ${unknown.length}人（${unknown.slice(0,8).join('、')}${unknown.length>8?'ほか':''}）。`;
+    if(migrated.length===0&&stale.length){
+      detail+=' 年間マスターCSVと現在の users.json が同じ発行データではない可能性があります。組み合わせを確認してください。';
+    }else if(st.complete){
+      detail+=' 全員「再印刷可」になりました。次に users.json を書き出してGitHubへ反映してください。';
+    }else if(migrated.length){
+      detail+=` 残り「移行必要」${st.missing}人です。全員分のキーが入った年間マスターCSVか確認してください。`;
+    }
+    setMigrationMessage(detail,stale.length||unknown.length||!migrated.length?'notice':'success');
+    setIndividualStudentMessage(detail,stale.length||unknown.length||!migrated.length?'notice':'success');
+  }catch(err){
+    const msg='移行できませんでした：'+err.message;
+    setMigrationMessage(msg,'error');setIndividualStudentMessage(msg,'error');
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent=oldLabel||'年間マスターCSVを読み込んで移行'}
+    e.target.value='';
+  }
 }
+
 function currentManagedUsers(){
   const c=$('accessVaultClassFilter')?.value||'',q=String($('qrStudentSearch')?.value||'').trim();
   return usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).filter(x=>(!c||(x.classKey||x.studentCode.slice(0,2))===c)&&(!q||x.studentCode.includes(q)));

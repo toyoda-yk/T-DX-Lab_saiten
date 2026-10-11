@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.23.4</span>
+        <span class="tdx-version-pill">v1.23.5</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -138,6 +138,7 @@
           <div><span class="section-eyebrow">ONE-TIME MIGRATION</span><strong>既存のアクセスキーを「一般教員が直接QR再印刷できる形式」に移行</strong><small>v1.23.2以前に発行済みの生徒だけ必要です。年間マスターCSV（または旧QR再印刷用データ）を1回読み込み、移行後に users.json を書き出してください。</small></div>
           <input id="importAnnualSecretsInput" type="file" accept=".json,.csv,application/json,text/csv" class="hidden">
           <button id="importAnnualSecretsBtn" class="secondary glass-btn" type="button">年間マスターCSVを読み込んで移行</button>
+          <div id="qrMigrationResult" class="migration-result small muted" aria-live="polite">CSVを選択すると、ここに移行結果を表示します。</div>
         </div>
         <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
         <details class="danger-admin-details">

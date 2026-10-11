@@ -1029,3 +1029,9 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .tdx-home-version-status span{padding:3px 7px;font-weight:900}.tdx-home-version-status button{margin:0!important;padding:6px 10px!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:999px!important;background:rgba(255,255,255,.08)!important;color:#fff!important;font-size:10px!important;font-weight:800!important;box-shadow:none!important}
 @media(max-width:900px){.portal-header-inner{align-items:flex-start}.app-header-tools{gap:6px}.tdx-version-status{max-width:440px}.tdx-data-pill{display:none}}
 @media(max-width:600px){.portal-header-inner{gap:8px}.app-header-tools{flex-direction:column;align-items:flex-end}.tdx-version-status{gap:4px}.tdx-version-pill,.tdx-reload-btn{min-height:27px!important;font-size:9px!important}.tdx-home-version-status{top:8px;right:8px}.tdx-home-version-status button{display:none}}
+
+/* v1.23.5 - one-time QR migration feedback shown beside the migration button */
+.migration-result{flex:1 1 100%;margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.56);border:1px solid rgba(97,123,164,.18)}
+.migration-result.success{background:#edf9f2;border-color:#bfe5cd;color:#247148}
+.migration-result.notice{background:#fff7e8;border-color:#f2d29a;color:#87561b}
+.migration-result.error{background:#fff0f0;border-color:#efb9b9;color:#a63d3d}
