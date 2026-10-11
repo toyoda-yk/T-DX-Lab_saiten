@@ -1,0 +1,249 @@
+{
+  "version": 5,
+  "note": "年度共通の生徒認証情報。平文アクセスキーは含みません。credential は年間アクセスキーの salt+hash です。",
+  "issuedCodeIds": [
+    "c3b30d823997711c0f631505d1f3b6566278f801469b1fddca8ad7943520e4b4",
+    "962a201ec44e60bf2ec09930f37e6264f08db331b3b5dc8e12277d82b4523e7b",
+    "62bce819672cc4db6d8c6d0a46b009e8773f347132341b71e5881e8b4d35e787",
+    "5e6d4746f91bc2a8332ca629404b402d8d92d796cbb325cb62215a9d17cd58f7",
+    "cb9b4c5b29959c6df4de151e1ff802ca46093dfe20e4561da0937d3afbfd7c6f",
+    "87eb9ceb44290d2649d7bf2494484ea4994a2fc803fca799c6c8a8688255e214",
+    "c577233f2b0c219f2ee14820a21652233a0580b68a133261d01ef7fdfe97a5bb",
+    "3174955e6207f72dcea0ea51f49a98117b278fd1c327310bafe2a997a6f2ff28",
+    "a34dd744f5b6519ad843cf22edd718d8800e68ee13ee685ea35e485324dceabd",
+    "722b50d108a7f3d1a9a1dcf460ebfddd0ee8274975d4d9cf231288d142429d11",
+    "3fb184cd332eead5ddbeae096cdfa815bcfd54882098894af578edd9ac353f93",
+    "268a2b073c7ae06178a3130d055063818e177d6b6a108bbb7feaa4784df03cc0",
+    "b1ed1d509bcca5f9bebc280a71c9a8d1d57495fbeff31315b0c68b060c473849",
+    "8c85094fe5be4ca391de66b8fc3646e72240b27482dc87c997a156c7bce121f4",
+    "4bcfab35a1093e9d242733f3410ca6d2ed4add8c591749f7b22cd1fd5fa0cd8f",
+    "39646295ecd7c4d4b7c75a6a3d2fd91605f2651eb7abc26be6016c931bfef0d4",
+    "9b3360b1a36e591893ce0a6de61a5b0dee5a2920ed2292d1bd3a7a413fc7a9c2",
+    "b9c8a5104447d9e4204d6a60d5d52897a94d8cd49e52676255a15511f376b5cd",
+    "cd3e213c5122d147735f18b18b662258d60f37c1192f3a932652de424d449ed1",
+    "c32b64083a66b039d3e91d3082dc087cf4a8539c67eb0f2e7b08287fcd974372",
+    "a3048db07f7a29796fa919a3a0c70a4d5acf6fcc1488609bde4414b88efd0bcc",
+    "61b8cfc5bfd57471a9160974e50e3128e8c87291d8d5b53107620992ed50699d",
+    "bbea628f0ddc3261dddfbbaa9784b9f3bf122409b14791d14c9460db07d35fa5",
+    "f65bf72f8c90ebb566e73433f1cbf60b828d9c55f1e3199b8c45c62c1edea6e1",
+    "f2c49323f65caff9b8a1a215d90c8c133d942d44b65cf81d4e12d580173949fc",
+    "7303249f5323f383e6015a8da5aef27b18bcca7820564bfe187226df8b71a771",
+    "567477528723394a685b760a18954a383c4f15c2521931a8376b3c290f9a779b",
+    "2c2a226d440be7da4914bcf232089ba9a74426debb473113b8383d5b549df547",
+    "0cd987820ee899ddeaee18b1dd2b66c80e44395bf2f9c23bb5b35e0c1a6404bf",
+    "77038abc1ba45eb47fbe0eacf27fd3a71802b1ccdd5c1644cf6a87e01c35de60",
+    "d0a41f85ae91df14914798abc8e975552006c4c6c417db95b8d0397fb578dfed",
+    "ef3cb9aad034d061a44a39749671e95075d8b3578aabddc3d9a0935a0ea026db",
+    "fa64a77fbc8a016c5386ebd320954ef0d3d0d43b77977401d1aa9636e1cfea9f",
+    "9d9bdf20e1cbe6b6dc83ac694907cb12e64884b4ddec9a6bbb4028f844f4438f",
+    "0c8ce4e60e4e9021c19a9da39f8e4855b724997210657d187d2ef745943f731c",
+    "c6f068787b2e740cf95f0d779f8e900a22bedb27ef2c0ca29c91f2e087fdc7ed",
+    "08df006c0f85bd803bdf55674609af832a2ae2ae9f30fc47c3f5c6da4a8577c9",
+    "29fbc69119778c9fbd848fa7d989ac81ffd09bda57af9592dd6544cd2aba6590",
+    "356df34a5784d8279f6e080392b8e33a65fcf39842064ad3aeb2cf8d7d1a28d3",
+    "23af0183a47664d40465738e6dca3fdf911595a0002f0b4be84f4e47ffebb2e5",
+    "23c8658e1893160d28312d1ebf6bf42ea9f3b8a5ef7c2db136f56f8aa07cb959"
+  ],
+  "users": [
+    {
+      "studentCode": "3301",
+      "classKey": "33",
+      "credential": {
+        "salt": "b41182829fdb3b1009365a8a72edb0ca",
+        "hash": "9cec4a0a6a2f9a61959f5de595a9a0698d2fe911751ad77bacc6b133ce7596ea",
+        "codeId": "61b8cfc5bfd57471a9160974e50e3128e8c87291d8d5b53107620992ed50699d",
+        "issuedAt": "2026-10-11T11:03:26.309Z"
+      }
+    },
+    {
+      "studentCode": "3302",
+      "classKey": "33",
+      "credential": {
+        "salt": "e0e4e375986f2069d45e56b159937444",
+        "hash": "7d24b536c6cbd667031fd5bf1f38becc72b073a15b9e8961500a639488380690",
+        "codeId": "bbea628f0ddc3261dddfbbaa9784b9f3bf122409b14791d14c9460db07d35fa5",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3303",
+      "classKey": "33",
+      "credential": {
+        "salt": "f312cb5435b91a2fac8cefcd71cc8d97",
+        "hash": "505c20131dd4ae0cccb29f2a75b523eecbdef859f008d2a0339696555d01abf8",
+        "codeId": "f65bf72f8c90ebb566e73433f1cbf60b828d9c55f1e3199b8c45c62c1edea6e1",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3304",
+      "classKey": "33",
+      "credential": {
+        "salt": "bf0ff16347713f108e39e547f5046c7a",
+        "hash": "1a1daabf2a6d48dc0e083d755375aa1e417c5f499d086ddc91a7c4d520a57d40",
+        "codeId": "f2c49323f65caff9b8a1a215d90c8c133d942d44b65cf81d4e12d580173949fc",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3305",
+      "classKey": "33",
+      "credential": {
+        "salt": "39330c7f2265ceb68a74d9a49c944ecb",
+        "hash": "0b43148ecc9f87ae8743ad583711dcbfc25a23206de88f4ac2243fd5f21e6583",
+        "codeId": "7303249f5323f383e6015a8da5aef27b18bcca7820564bfe187226df8b71a771",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3306",
+      "classKey": "33",
+      "credential": {
+        "salt": "12ba671dc4db41f4c9caf8e81e1c71d9",
+        "hash": "5e9a942674e0a5a36974f4d26b3c344af0e6b7d6f8c2237ea1e2aa57de1f495e",
+        "codeId": "567477528723394a685b760a18954a383c4f15c2521931a8376b3c290f9a779b",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3307",
+      "classKey": "33",
+      "credential": {
+        "salt": "f1050d4d0e43d25b16f46ddc61e6093f",
+        "hash": "e2864dcef3e6fd0f22e2ec1af97920368beb22818971a612d0a2ae37d290f8c1",
+        "codeId": "2c2a226d440be7da4914bcf232089ba9a74426debb473113b8383d5b549df547",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3308",
+      "classKey": "33",
+      "credential": {
+        "salt": "04a799b8d112973b9c41fd9ae84425ea",
+        "hash": "0c21a76396c4453563e158a337dc3d1bc9a815801e9ed6a539aecac22ba503f5",
+        "codeId": "0cd987820ee899ddeaee18b1dd2b66c80e44395bf2f9c23bb5b35e0c1a6404bf",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3309",
+      "classKey": "33",
+      "credential": {
+        "salt": "4562096cf07330d1e5a588f984eab882",
+        "hash": "4f908bd679481cd325f7bc1b49ce1590a31352b99ab60f249104734d3768f286",
+        "codeId": "77038abc1ba45eb47fbe0eacf27fd3a71802b1ccdd5c1644cf6a87e01c35de60",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3310",
+      "classKey": "33",
+      "credential": {
+        "salt": "a7ec69ddd983ea59a4defe6bcb376faf",
+        "hash": "7de94bd049476bb146c6e664356de2019ad0b13473294985ccb44a2995dfffe0",
+        "codeId": "d0a41f85ae91df14914798abc8e975552006c4c6c417db95b8d0397fb578dfed",
+        "issuedAt": "2026-10-11T11:03:26.310Z"
+      }
+    },
+    {
+      "studentCode": "3311",
+      "classKey": "33",
+      "credential": {
+        "salt": "73a9a2f2dd148cd49e860a8c7f481a5d",
+        "hash": "3a8000bd1a36c5bb9c8788c23ed51ebe3cfb660b75197a3aecc95f45f75755f7",
+        "codeId": "ef3cb9aad034d061a44a39749671e95075d8b3578aabddc3d9a0935a0ea026db",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3312",
+      "classKey": "33",
+      "credential": {
+        "salt": "3d05daa5234df002190f68319a8193e2",
+        "hash": "830f237629b8f4eed81458b3e6993b3533430f610b25d38b0823559051c6dd9e",
+        "codeId": "fa64a77fbc8a016c5386ebd320954ef0d3d0d43b77977401d1aa9636e1cfea9f",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3313",
+      "classKey": "33",
+      "credential": {
+        "salt": "7086fa7949cbdbc0b2f874c9d64cc011",
+        "hash": "1bfcfaca89cb3b442e59f382c9d83bbf81a805c0faa22f989c656ab38af04148",
+        "codeId": "9d9bdf20e1cbe6b6dc83ac694907cb12e64884b4ddec9a6bbb4028f844f4438f",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3314",
+      "classKey": "33",
+      "credential": {
+        "salt": "f7ce7623dce54a6ba680e9d132046e4d",
+        "hash": "58ad73ab7fa363a9f18f60b82b5be4b8e4c046a4527afe1b9845c959bdf2f0f8",
+        "codeId": "0c8ce4e60e4e9021c19a9da39f8e4855b724997210657d187d2ef745943f731c",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3315",
+      "classKey": "33",
+      "credential": {
+        "salt": "7ecfe85f564d4e9455eb94a5803cdcf2",
+        "hash": "bd5d63a3fdc5a94a854ad65243a6c2856ceeb7a12b7b2d34191ffe92148aaa3c",
+        "codeId": "c6f068787b2e740cf95f0d779f8e900a22bedb27ef2c0ca29c91f2e087fdc7ed",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3316",
+      "classKey": "33",
+      "credential": {
+        "salt": "4ab8bfd438967a005ddb7223c0bfc758",
+        "hash": "8d96adebeb2340f0b43af5c4ab20998d490ef453d7720b1ecb1b2ee8f8512f44",
+        "codeId": "08df006c0f85bd803bdf55674609af832a2ae2ae9f30fc47c3f5c6da4a8577c9",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3317",
+      "classKey": "33",
+      "credential": {
+        "salt": "5b21997ab26ecb2e219a725cc01dd2d2",
+        "hash": "3e7921e8d0a6367240b3555e6bf77acba0dd7488a1d0ce1e77030a32b1bd1744",
+        "codeId": "29fbc69119778c9fbd848fa7d989ac81ffd09bda57af9592dd6544cd2aba6590",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3318",
+      "classKey": "33",
+      "credential": {
+        "salt": "cbbf438b300c717ba8a387f0019663a5",
+        "hash": "6036b536016767b7579667e84531eb275c45fc53e857cbbfa212d1c1b3d29892",
+        "codeId": "356df34a5784d8279f6e080392b8e33a65fcf39842064ad3aeb2cf8d7d1a28d3",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3319",
+      "classKey": "33",
+      "credential": {
+        "salt": "0560ec24d44bbda6e7a0146aabe8e2c9",
+        "hash": "3132dded24d0f939edf8cf6b86d6dd151ce13d26ed920e79900528c984a37bc6",
+        "codeId": "23af0183a47664d40465738e6dca3fdf911595a0002f0b4be84f4e47ffebb2e5",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    },
+    {
+      "studentCode": "3320",
+      "classKey": "33",
+      "credential": {
+        "salt": "ad616cdae77b43782587ecaaa4e3dce4",
+        "hash": "db655e67d12c756b8b12fbcef5f2600feecaebc9f654a27a7a5d2a566c9bbc21",
+        "codeId": "23c8658e1893160d28312d1ebf6bf42ea9f3b8a5ef7c2db136f56f8aa07cb959",
+        "issuedAt": "2026-10-11T11:03:26.311Z"
+      }
+    }
+  ]
+}
