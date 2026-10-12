@@ -1,17 +1,22 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.5';
-let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
+const APP_VERSION='1.24.6';
+let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
   const t=Date.parse(value);if(!Number.isFinite(t))return '日時情報なし';
   return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(t));
 }
 function updateVersionStatus(){
-  const e=$('tdxExamsVersion'),u=$('tdxUsersVersion');
+  const e=$('tdxExamsVersion'),u=$('tdxUsersVersion'),a=$('tdxAnalysisVersion');
   if(e){e.textContent=dataVersionMeta.examError?'exams：読込失敗':`exams：${formatDataVersionTime(dataVersionMeta.exams)}`;e.classList.toggle('is-error',dataVersionMeta.examError)}
   if(u){u.textContent=dataVersionMeta.userError?'users：読込失敗':`users：${formatDataVersionTime(dataVersionMeta.users)}`;u.classList.toggle('is-error',dataVersionMeta.userError)}
+  if(a){
+    const suffix=dataVersionMeta.analysisSource?` / ${dataVersionMeta.analysisSource}`:'';
+    a.textContent=dataVersionMeta.analysisError?'analysis：読込失敗':`analysis：${formatDataVersionTime(dataVersionMeta.analysis)}${suffix}`;
+    a.classList.toggle('is-error',dataVersionMeta.analysisError);
+  }
 }
 function bindVersionStatus(){
   const btn=$('tdxReloadBtn');if(!btn)return;
@@ -23,22 +28,44 @@ async function fetchJsonWithMeta(path){
   if(!r.ok)throw new Error(`${path}: ${r.status}`);
   const data=await r.json();return {data,lastModified:r.headers.get('last-modified')||''};
 }
+const ANALYSIS_RAW_URL='https://raw.githubusercontent.com/toyoda-yk/T-DX-Lab_saiten/main/data/analysis.json';
+function analysisTimestamp(candidate){
+  const value=candidate?.data?.updatedAt||candidate?.lastModified||'';
+  const t=Date.parse(value);
+  return Number.isFinite(t)?t:0;
+}
+async function fetchAnalysisCandidate(url,label){
+  const r=await fetch(`${url}${url.includes('?')?'&':'?'}v=${Date.now()}`,{cache:'no-store',mode:'cors'});
+  if(!r.ok)throw new Error(`${label}: ${r.status}`);
+  const data=await r.json();
+  if(!data||typeof data!=='object'||!Array.isArray(data.analyses))throw new Error(`${label}: invalid analysis.json`);
+  return {data,lastModified:r.headers.get('last-modified')||'',label};
+}
 async function loadAnalysisIndex(){
-  try{
-    const r=await fetchJsonWithMeta('data/analysis.json');
-    const data=r.data||{version:2,analyses:[]};
-    return {version:Number(data.version||2),updatedAt:data.updatedAt||r.lastModified||'',analyses:Array.isArray(data.analyses)?data.analyses:[]};
-  }catch(e){
-    console.warn('analysis.json load failed',e);
-    return {version:2,analyses:[]};
+  const results=await Promise.allSettled([
+    fetchAnalysisCandidate('data/analysis.json','Pages'),
+    fetchAnalysisCandidate(ANALYSIS_RAW_URL,'GitHub')
+  ]);
+  const ok=results.filter(x=>x.status==='fulfilled').map(x=>x.value);
+  if(!ok.length){
+    results.forEach(x=>{if(x.status==='rejected')console.warn('analysis.json load failed',x.reason)});
+    return {version:2,updatedAt:'',analyses:[],source:'',loaded:false};
   }
+  ok.sort((a,b)=>analysisTimestamp(b)-analysisTimestamp(a));
+  const picked=ok[0],data=picked.data||{version:2,analyses:[]};
+  return {version:Number(data.version||2),updatedAt:data.updatedAt||picked.lastModified||'',analyses:Array.isArray(data.analyses)?data.analyses:[],source:picked.label,loaded:true};
 }
 async function loadData(){
   const [er,ur,ar]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json'),loadAnalysisIndex()]);
   dataVersionMeta.examError=er.status==='rejected';dataVersionMeta.userError=ur.status==='rejected';
   if(er.status==='rejected'||ur.status==='rejected'){updateVersionStatus();throw (er.status==='rejected'?er.reason:ur.reason)}
-  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value:{version:2,analyses:[]};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
-  dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';updateVersionStatus();
+  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value:{version:2,updatedAt:'',analyses:[],source:'',loaded:false};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
+  dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';
+  dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';
+  dataVersionMeta.analysis=analysisData.updatedAt||'';
+  dataVersionMeta.analysisSource=analysisData.source||'';
+  dataVersionMeta.analysisError=!analysisData.loaded;
+  updateVersionStatus();
   exams=e.exams||[];
   // v1.5以前の配布用デモ3101だけを除外。本番で再発行済みの3101は残ります。
   users=(u.users||[]).filter(x=>x?.credential?.codeId!=='demo-annual-3101');users.forEach(x=>{x.classKey=x.classKey||String(x.studentCode||'').slice(0,2)});
