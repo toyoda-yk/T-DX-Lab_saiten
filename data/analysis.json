@@ -1,0 +1,797 @@
+{
+  "version": 2,
+  "systemName": "T-DX Lab☆問題演習システム",
+  "updatedAt": "2026-10-12T13:42:43.365Z",
+  "analyses": [
+    {
+      "examId": "exam_20261012_gr8wc9",
+      "title": "サンプル②",
+      "subject": "情報",
+      "totalPoints": 100,
+      "generatedAt": "2026-10-12T13:42:39.621Z",
+      "publishToken": "d160a62c-3c3e-494b-8c67-9f5816c20d51",
+      "overall": {
+        "participants": 3,
+        "averageScore": 22.3,
+        "maxScore": 28,
+        "minScore": 13,
+        "sectionRates": [
+          {
+            "id": "s1",
+            "name": "第1問",
+            "rate": 31.7
+          },
+          {
+            "id": "s2",
+            "name": "第2問",
+            "rate": 7.8
+          },
+          {
+            "id": "s3",
+            "name": "第3問",
+            "rate": 28
+          },
+          {
+            "id": "s4",
+            "name": "第4問",
+            "rate": 26.7
+          }
+        ],
+        "questions": [
+          {
+            "key": "q:1",
+            "order": 0,
+            "label": "第1問 ア",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "g:g_1_1",
+            "order": 1,
+            "label": "第1問 イ・ウ",
+            "section": "第1問",
+            "type": "unordered_item",
+            "typeLabel": "順不同（各欄採点）",
+            "metricLabel": "平均正答マーク率",
+            "pct": 16.7
+          },
+          {
+            "key": "q:4",
+            "order": 3,
+            "label": "第1問 エ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:5",
+            "order": 4,
+            "label": "第1問 オ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:6",
+            "order": 5,
+            "label": "第1問 カ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:7",
+            "order": 6,
+            "label": "第1問 キ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 33.3
+          },
+          {
+            "key": "q:8",
+            "order": 7,
+            "label": "第1問 ク",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 33.3
+          },
+          {
+            "key": "q:9",
+            "order": 8,
+            "label": "第1問 ケ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:10",
+            "order": 9,
+            "label": "第1問 コ",
+            "section": "第1問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "g:g_2_2",
+            "order": 10,
+            "label": "第2問 ア・イ・ウ",
+            "section": "第2問",
+            "type": "complete_item",
+            "typeLabel": "完答",
+            "metricLabel": "完答率",
+            "pct": 0
+          },
+          {
+            "key": "q:14",
+            "order": 13,
+            "label": "第2問 エ",
+            "section": "第2問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:15",
+            "order": 14,
+            "label": "第2問 オ",
+            "section": "第2問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "g:g_2_3",
+            "order": 15,
+            "label": "第2問 カ・キ",
+            "section": "第2問",
+            "type": "unordered_item",
+            "typeLabel": "順不同（各欄採点）",
+            "metricLabel": "平均正答マーク率",
+            "pct": 16.7
+          },
+          {
+            "key": "q:18",
+            "order": 17,
+            "label": "第2問 ク",
+            "section": "第2問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:19",
+            "order": 18,
+            "label": "第2問 ケ",
+            "section": "第2問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 33.3
+          },
+          {
+            "key": "g:g_2_4",
+            "order": 19,
+            "label": "第2問 コ・サ",
+            "section": "第2問",
+            "type": "unordered_complete_item",
+            "typeLabel": "順不同＋完答",
+            "metricLabel": "完答率",
+            "pct": 0
+          },
+          {
+            "key": "q:22",
+            "order": 21,
+            "label": "第3問 ア",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:23",
+            "order": 22,
+            "label": "第3問 イ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:24",
+            "order": 23,
+            "label": "第3問 ウ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 100
+          },
+          {
+            "key": "q:25",
+            "order": 24,
+            "label": "第3問 エ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:26",
+            "order": 25,
+            "label": "第3問 オ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:27",
+            "order": 26,
+            "label": "第3問 カ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:28",
+            "order": 27,
+            "label": "第3問 キ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:29",
+            "order": 28,
+            "label": "第3問 ク",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:30",
+            "order": 29,
+            "label": "第3問 ケ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:31",
+            "order": 30,
+            "label": "第3問 コ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:32",
+            "order": 31,
+            "label": "第3問 サ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:33",
+            "order": 32,
+            "label": "第3問 シ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "g:g_3_5",
+            "order": 33,
+            "label": "第3問 ス・セ",
+            "section": "第3問",
+            "type": "unordered_item",
+            "typeLabel": "順不同（各欄採点）",
+            "metricLabel": "平均正答マーク率",
+            "pct": 33.3
+          },
+          {
+            "key": "q:36",
+            "order": 35,
+            "label": "第3問 ソ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:37",
+            "order": 36,
+            "label": "第3問 タ",
+            "section": "第3問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:38",
+            "order": 37,
+            "label": "第4問 ア",
+            "section": "第4問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          },
+          {
+            "key": "q:39",
+            "order": 38,
+            "label": "第4問 イ",
+            "section": "第4問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 66.7
+          },
+          {
+            "key": "q:40",
+            "order": 39,
+            "label": "第4問 ウ",
+            "section": "第4問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 33.3
+          },
+          {
+            "key": "q:41",
+            "order": 40,
+            "label": "第4問 エ",
+            "section": "第4問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 33.3
+          },
+          {
+            "key": "q:42",
+            "order": 41,
+            "label": "第4問 オ",
+            "section": "第4問",
+            "type": "normal",
+            "typeLabel": "normal",
+            "metricLabel": "正答率",
+            "pct": 0
+          }
+        ]
+      },
+      "classes": {
+        "33": {
+          "participants": 3,
+          "averageScore": 22.3,
+          "maxScore": 28,
+          "minScore": 13,
+          "sectionRates": [
+            {
+              "id": "s1",
+              "name": "第1問",
+              "rate": 31.7
+            },
+            {
+              "id": "s2",
+              "name": "第2問",
+              "rate": 7.8
+            },
+            {
+              "id": "s3",
+              "name": "第3問",
+              "rate": 28
+            },
+            {
+              "id": "s4",
+              "name": "第4問",
+              "rate": 26.7
+            }
+          ],
+          "questions": [
+            {
+              "key": "q:1",
+              "order": 0,
+              "label": "第1問 ア",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "g:g_1_1",
+              "order": 1,
+              "label": "第1問 イ・ウ",
+              "section": "第1問",
+              "type": "unordered_item",
+              "typeLabel": "順不同（各欄採点）",
+              "metricLabel": "平均正答マーク率",
+              "pct": 16.7
+            },
+            {
+              "key": "q:4",
+              "order": 3,
+              "label": "第1問 エ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:5",
+              "order": 4,
+              "label": "第1問 オ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:6",
+              "order": 5,
+              "label": "第1問 カ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:7",
+              "order": 6,
+              "label": "第1問 キ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 33.3
+            },
+            {
+              "key": "q:8",
+              "order": 7,
+              "label": "第1問 ク",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 33.3
+            },
+            {
+              "key": "q:9",
+              "order": 8,
+              "label": "第1問 ケ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:10",
+              "order": 9,
+              "label": "第1問 コ",
+              "section": "第1問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "g:g_2_2",
+              "order": 10,
+              "label": "第2問 ア・イ・ウ",
+              "section": "第2問",
+              "type": "complete_item",
+              "typeLabel": "完答",
+              "metricLabel": "完答率",
+              "pct": 0
+            },
+            {
+              "key": "q:14",
+              "order": 13,
+              "label": "第2問 エ",
+              "section": "第2問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:15",
+              "order": 14,
+              "label": "第2問 オ",
+              "section": "第2問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "g:g_2_3",
+              "order": 15,
+              "label": "第2問 カ・キ",
+              "section": "第2問",
+              "type": "unordered_item",
+              "typeLabel": "順不同（各欄採点）",
+              "metricLabel": "平均正答マーク率",
+              "pct": 16.7
+            },
+            {
+              "key": "q:18",
+              "order": 17,
+              "label": "第2問 ク",
+              "section": "第2問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:19",
+              "order": 18,
+              "label": "第2問 ケ",
+              "section": "第2問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 33.3
+            },
+            {
+              "key": "g:g_2_4",
+              "order": 19,
+              "label": "第2問 コ・サ",
+              "section": "第2問",
+              "type": "unordered_complete_item",
+              "typeLabel": "順不同＋完答",
+              "metricLabel": "完答率",
+              "pct": 0
+            },
+            {
+              "key": "q:22",
+              "order": 21,
+              "label": "第3問 ア",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:23",
+              "order": 22,
+              "label": "第3問 イ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:24",
+              "order": 23,
+              "label": "第3問 ウ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 100
+            },
+            {
+              "key": "q:25",
+              "order": 24,
+              "label": "第3問 エ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:26",
+              "order": 25,
+              "label": "第3問 オ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:27",
+              "order": 26,
+              "label": "第3問 カ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:28",
+              "order": 27,
+              "label": "第3問 キ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:29",
+              "order": 28,
+              "label": "第3問 ク",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:30",
+              "order": 29,
+              "label": "第3問 ケ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:31",
+              "order": 30,
+              "label": "第3問 コ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:32",
+              "order": 31,
+              "label": "第3問 サ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:33",
+              "order": 32,
+              "label": "第3問 シ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "g:g_3_5",
+              "order": 33,
+              "label": "第3問 ス・セ",
+              "section": "第3問",
+              "type": "unordered_item",
+              "typeLabel": "順不同（各欄採点）",
+              "metricLabel": "平均正答マーク率",
+              "pct": 33.3
+            },
+            {
+              "key": "q:36",
+              "order": 35,
+              "label": "第3問 ソ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:37",
+              "order": 36,
+              "label": "第3問 タ",
+              "section": "第3問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:38",
+              "order": 37,
+              "label": "第4問 ア",
+              "section": "第4問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            },
+            {
+              "key": "q:39",
+              "order": 38,
+              "label": "第4問 イ",
+              "section": "第4問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 66.7
+            },
+            {
+              "key": "q:40",
+              "order": 39,
+              "label": "第4問 ウ",
+              "section": "第4問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 33.3
+            },
+            {
+              "key": "q:41",
+              "order": 40,
+              "label": "第4問 エ",
+              "section": "第4問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 33.3
+            },
+            {
+              "key": "q:42",
+              "order": 41,
+              "label": "第4問 オ",
+              "section": "第4問",
+              "type": "normal",
+              "typeLabel": "normal",
+              "metricLabel": "正答率",
+              "pct": 0
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
