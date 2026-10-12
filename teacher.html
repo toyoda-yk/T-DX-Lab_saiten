@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.23.5</span>
+        <span class="tdx-version-pill">v1.23.6</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -195,7 +195,7 @@
 
           <section class="answer-route-card ai-route-card">
             <div class="route-card-head">
-              <div><span class="route-kicker">ROUTE B</span><h3>AIで作ったテキストから読み取る</h3><p class="muted small">AIに模範解答PDFを読ませ、T-DX Lab形式で出力したテキストを貼り付けます。複雑な2列表にもおすすめです。</p></div>
+              <div><span class="route-kicker">ROUTE B</span><h3>AIで作ったテキストから読み取る</h3><p class="muted small">AIに問題用紙PDFと模範解答PDFの両方を読ませ、解答欄の数・順番を照合してT-DX Lab形式で出力したテキストを貼り付けます。</p></div>
               <span class="route-badge recommend">おすすめ</span>
             </div>
             <div class="answer-source-box answer-source-box-v113">
@@ -350,10 +350,12 @@
         <div class="exam-ops-actions">
           <button id="cloneExamBtn" class="secondary glass-btn" type="button">複製</button>
           <button id="togglePreviewBtn" class="secondary glass-btn" type="button">動作確認</button>
+          <button id="testPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォーム テスト送信</button>
           <button id="deleteExamBtn" class="danger-outline" type="button">完全削除</button>
         </div>
       </div>
       <div id="examReadiness" class="exam-readiness"></div>
+      <div id="publishFormTestMsg" class="small muted" aria-live="polite"></div>
 
       <section id="examPreviewPanel" class="exam-preview-simulator hidden" aria-live="polite">
         <div class="simulator-head">
@@ -413,7 +415,7 @@
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
 <script src="js/common.js?v=1.23.3"></script>
-<script src="js/teacher.js?v=1.23.3"></script>
+<script src="js/teacher.js?v=1.23.6"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

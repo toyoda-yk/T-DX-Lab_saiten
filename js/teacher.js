@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.23.5';
+const APP_VERSION='1.23.6';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -234,6 +234,7 @@ function bind(){
   $('publishStatusSelect').onchange=()=>{updatePublishScheduleVisibility();renderExamReadiness(exams.find(e=>e.id===$('publishExamSelect')?.value))};
   $('cloneExamBtn').onclick=cloneCurrentExam;
   $('togglePreviewBtn').onclick=toggleExamPreview;
+  $('testPublishedGoogleFormBtn').onclick=testSelectedExamGoogleForm;
   $('closePreviewBtn').onclick=()=>{$('examPreviewPanel')?.classList.add('hidden')};
   document.querySelectorAll('.previewModeBtn').forEach(b=>b.onclick=()=>{previewMode=b.dataset.previewMode||'before';renderExamPreview(previewMode)});
   $('deleteExamBtn').onclick=deleteCurrentExam;
@@ -1033,10 +1034,10 @@ async function copyTextTemplate(){
 }
 function aiPromptText(){
   const choices=configuredChoices().join('、')||'（未設定）';
-  return `添付した模範解答PDFを読み取り、T-DX Lab☆問題演習システムに貼り付けられるテキストへ変換してください。\n\n【厳守】\n・説明や前置きは書かず、最後に示すフォーマットだけを出力する。\n・PDFに書かれている「大問」「解答記号」「正答」「配点」を忠実に転記する。\n・推測しない。読めない箇所は正答または配点に「要確認」と書く。\n・この試験のマーク選択肢は ${choices}。選択肢そのものの一覧は出力しない。\n・複数の解答記号が1行にまとまり、その行全体で配点されている場合は「完答」。\n・「解答の順序は問わない」「順不同」等の注記があり、グループ全体で配点される場合は「順不同+完答」。\n・「解答の順序は問わない」かつ「各2点」のように各欄に配点される場合は「順不同」とし、配点欄には各欄1つ分の点数を書く。\n・単独の解答欄は「通常」。\n・大問ごとの配点も必ず出力する。\n\n【出力形式】\n試験名|PDFに記載された試験名\n教科|PDFに記載された教科\n満点|100\n\n第1問|20\nア,イ|0,3|2|完答\nウ|3|2|通常\nエ,オ|e,4|2|完答\n\n第2問|30\nア,イ|2,4|3|順不同+完答\n...\n\n各設問行は必ず「解答記号|正答|配点|採点方式」の4項目にしてください。`;
+  return `添付した「問題用紙PDF」と「模範解答PDF」の両方を読み取り、T-DX Lab☆問題演習システムに貼り付けられるテキストへ変換してください。\n\n【役割】\n・問題用紙PDFから「大問構成」「解答記号」「解答欄の個数」「解答順」を確認する。\n・模範解答PDFから「正答」「配点」「完答・順不同などの採点条件」を確認する。\n・必ず両方を照合し、問題用紙に存在するすべての解答欄を、問題用紙と同じ順番で出力する。\n・模範解答だけを見て解答欄数を推測しない。出力前に、問題用紙で確認した解答欄数と出力する解答欄数が一致していることを確認する。\n\n【厳守】\n・説明や前置き、確認結果の文章は書かず、最後に示すフォーマットだけを出力する。\n・「大問」「解答記号」は問題用紙を基準にし、「正答」「配点」「採点条件」は模範解答を基準に忠実に転記する。\n・問題用紙に解答欄があるのに、模範解答から正答または配点を確認できない場合は、その項目を「要確認」とする。解答欄そのものは省略しない。\n・推測で解答記号、正答、配点を補わない。\n・この試験のマーク選択肢は ${choices}。選択肢そのものの一覧は出力しない。\n・複数の解答記号が1行にまとまり、その行全体で配点されている場合は「完答」。\n・「解答の順序は問わない」「順不同」等の注記があり、グループ全体で配点される場合は「順不同+完答」。\n・「解答の順序は問わない」かつ「各2点」のように各欄に配点される場合は「順不同」とし、配点欄には各欄1つ分の点数を書く。\n・単独の解答欄は「通常」。\n・大問ごとの配点も必ず出力する。\n・問題用紙と模範解答で大問名や解答記号が食い違う場合は、問題用紙側の構造を残し、確認できない正答または配点を「要確認」とする。\n\n【出力形式】\n試験名|問題用紙または模範解答に記載された試験名\n教科|問題用紙または模範解答に記載された教科\n満点|100\n\n第1問|20\nア,イ|0,3|2|完答\nウ|3|2|通常\nエ,オ|e,4|2|完答\n\n第2問|30\nア,イ|2,4|3|順不同+完答\n...\n\n各設問行は必ず「解答記号|正答|配点|採点方式」の4項目にしてください。問題用紙にある解答欄を省略しないでください。`;
 }
 async function copyAiPrompt(){
-  try{await navigator.clipboard.writeText(aiPromptText());$('examSourceMsg').className='success small';$('examSourceMsg').textContent='AI読取用プロンプトをコピーしました。模範解答PDFと一緒にChatGPTやClaude等へ渡してください。'}catch(e){alert(aiPromptText())}
+  try{await navigator.clipboard.writeText(aiPromptText());$('examSourceMsg').className='success small';$('examSourceMsg').textContent='AI読取用プロンプトをコピーしました。問題用紙PDFと模範解答PDFの両方をChatGPTやClaude等へ渡してください。'}catch(e){alert(aiPromptText())}
 }
 function editorBlocks(){
   const blocks=[],used=new Set();
@@ -1347,6 +1348,51 @@ async function testGoogleFormSubmission(){
   }catch(e){console.error(e);$('formTestMsg').className='error small';$('formTestMsg').textContent=e.message}finally{$('testGoogleFormBtn').disabled=false}
 }
 
+function storedGoogleFormConfigValid(exam){
+  const f=exam?.formSubmission;
+  return !!(f&&f.provider==='google_forms'&&f.actionUrl&&f.nameEntry&&f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===(exam.questions||[]).length);
+}
+function updatePublishGoogleFormTestButton(exam){
+  const btn=$('testPublishedGoogleFormBtn');if(!btn)return;
+  const ready=storedGoogleFormConfigValid(exam);
+  btn.disabled=!ready;
+  btn.title=ready?'選択中の試験が保持しているGoogleフォーム連携設定で、ダミー回答を1件送信します。':'この試験にはテスト送信できるGoogleフォーム連携設定がありません。';
+  const msg=$('publishFormTestMsg');if(msg){msg.className='small muted';msg.textContent=ready?'必要なときだけテスト送信できます。試験データや公開設定は変更しません。':''}
+}
+async function testSelectedExamGoogleForm(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);
+  const msg=$('publishFormTestMsg'),btn=$('testPublishedGoogleFormBtn');
+  try{
+    if(!exam)throw new Error('試験を選択してください。');
+    if(!storedGoogleFormConfigValid(exam))throw new Error('この試験のGoogleフォーム連携設定が不完全です。試験作成画面で連携設定を確認してください。');
+    const f=exam.formSubmission,fields={};
+    const audience=examAudienceCodes(exam);
+    const fallbackCode=usersData.users.find(u=>/^\d{4}$/.test(String(u.studentCode||'')))?.studentCode||'3301';
+    const code=audience.find(x=>/^\d{4}$/.test(String(x)))||fallbackCode;
+    fields[f.nameEntry]='T-DXテスト';
+    fields[f.studentCodeEntry]=code;
+    const qMap=new Map((exam.questions||[]).map(q=>[String(q.id),q]));
+    for(const m of f.questionEntries){
+      const q=qMap.get(String(m.questionId));
+      if(!q)throw new Error(`Googleフォーム連携に対応する設問 ${m.questionId} が見つかりません。`);
+      const sample=String(q.answer??q.options?.[0]??'').trim();
+      if(sample==='')throw new Error(`${q.label||`設問${q.id}`} のテスト送信用回答を作れません。正答または選択肢を確認してください。`);
+      fields[m.entry]=sample;
+    }
+    btn.disabled=true;
+    msg.className='small muted';
+    msg.textContent=`「${exam.title}」のGoogleフォームへテスト送信しています…`;
+    await postGoogleForm(f.actionUrl,fields);
+    msg.className='success small';
+    msg.innerHTML=`<strong>テスト送信処理を実行しました。</strong> 氏名「T-DXテスト」・4桁番号「${esc(code)}」で送っています。Googleフォームの「回答」タブを開き、1件追加されたか確認してください。<br><span>※ ブラウザからGoogleフォーム側の受理結果までは確認できないため、この操作では試験データを変更しません。</span>`;
+  }catch(e){
+    console.error(e);
+    if(msg){msg.className='error small';msg.textContent=e.message||'Googleフォームのテスト送信に失敗しました。'}
+  }finally{
+    if(btn)btn.disabled=!storedGoogleFormConfigValid(exam);
+  }
+}
+
 function makeExamId(){let id;do{id=`exam_${new Date().toISOString().slice(0,10).replace(/-/g,'')}_${TDX.randomCode(6).toLowerCase()}`}while(exams.some(e=>e.id===id));return id}
 function buildExamFromEditor(){
   const title=$('examName').value.trim(),subject=$('examSubjectInput').value.trim(),googleFormUrl=$('formUrl').value.trim(),target=Number($('examTotalPoints').value)||100;
@@ -1400,6 +1446,7 @@ function loadPublishExam(){
     if($('currentPublishState'))$('currentPublishState').innerHTML='';
     if($('examReadiness'))$('examReadiness').innerHTML='';
     if($('studentExamPreview'))$('studentExamPreview').innerHTML='<div class="notice small">試験を選択してください。</div>';
+    updatePublishGoogleFormTestButton(null);
     return;
   }
   $('publishExamSelect').value=exam.id;
@@ -1409,6 +1456,7 @@ function loadPublishExam(){
   updatePublishScheduleVisibility();
   renderCurrentPublishState(exam);
   renderExamReadiness(exam);
+  updatePublishGoogleFormTestButton(exam);
   buildAudience();renderRegisteredRosterSummary();
   requestAnimationFrame(()=>{applyExistingAudience(exam);if(!$('examPreviewPanel')?.classList.contains('hidden'))renderExamPreview(previewMode)});
 }
