@@ -1,15 +1,15 @@
 {
   "version": 2,
   "systemName": "T-DX Lab☆問題演習システム",
-  "updatedAt": "2026-10-12T13:42:43.365Z",
+  "updatedAt": "2026-10-12T13:55:19.696Z",
   "analyses": [
     {
       "examId": "exam_20261012_gr8wc9",
       "title": "サンプル②",
       "subject": "情報",
       "totalPoints": 100,
-      "generatedAt": "2026-10-12T13:42:39.621Z",
-      "publishToken": "d160a62c-3c3e-494b-8c67-9f5816c20d51",
+      "generatedAt": "2026-10-12T13:55:15.688Z",
+      "publishToken": "874270ff-acf1-40c9-a4b5-0c7d8302eea1",
       "overall": {
         "participants": 3,
         "averageScore": 22.3,
