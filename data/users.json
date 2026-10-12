@@ -1,10 +1,251 @@
 {
   "version": 7,
   "systemName": "T-DX Lab☆問題演習システム",
-  "note": "生徒認証用の公開データ。平文アクセスキー・氏名・個人回答は含みません。",
+  "note": "生徒認証用の公開データ。credential はsalt+hashのみ。平文アクセスキー・氏名・個人回答・QR復号情報は含みません。",
   "schoolYear": "2026",
   "resetEpoch": "2058d759-4c99-49e9-953d-58bb491adf60",
-  "updatedAt": "2026-10-12T15:14:52.411Z",
+  "updatedAt": "2026-10-12T15:22:46.969Z",
   "issuedCodeIds": [],
-  "users": []
+  "users": [
+    {
+      "studentCode": "3301",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3302",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3303",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3304",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3305",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3306",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3307",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3308",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3309",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3310",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3311",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3312",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3313",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3314",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3315",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3316",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3317",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3318",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3319",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3320",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3321",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3322",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3323",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3324",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3325",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3326",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3327",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3328",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3329",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3330",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3331",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3332",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3333",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3334",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3335",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3336",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3337",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3338",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3339",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    },
+    {
+      "studentCode": "3340",
+      "classKey": "33",
+      "credential": null,
+      "qrStored": false
+    }
+  ]
 }
