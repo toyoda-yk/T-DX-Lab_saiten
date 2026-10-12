@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.3';
+const APP_VERSION='1.24.4';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -102,10 +102,32 @@ async function login(){
   accessibleExams=loginMatched.filter(e=>eligible(e,rec));
   $('who').textContent=`ログイン中：${code}`;renderExamList();show('examListPanel');
 }
+function normalizeAnalysisClassKey(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  const digits=raw.replace(/\D/g,'');
+  if(digits.length>=2)return digits.slice(0,2);
+  return raw;
+}
+function currentAnalysisClassKey(){
+  // 4桁番号の先頭2桁を分析クラスの基準にする。users.json側のclassKey表記差（33 / 33組 / 3-3等）の影響を受けない。
+  const code=String(currentUser?.studentCode||'').trim();
+  if(/^\d{4}$/.test(code))return code.slice(0,2);
+  return normalizeAnalysisClassKey(currentUser?.classKey);
+}
+function analysisClassEntry(entry){
+  const wanted=currentAnalysisClassKey();
+  if(!wanted)return {key:'',snapshot:null};
+  const classes=entry?.classes||{};
+  if(classes[wanted])return {key:wanted,snapshot:classes[wanted]};
+  const hit=Object.keys(classes).find(k=>normalizeAnalysisClassKey(k)===wanted);
+  return hit?{key:hit,snapshot:classes[hit]}:{key:wanted,snapshot:null};
+}
 function analysisVisibleToCurrentUser(entry){
   if(!entry||!currentUser)return false;
   const classKeys=Object.keys(entry.classes||{});
-  return !classKeys.length||!!entry.classes?.[currentUser.classKey];
+  if(!classKeys.length)return true;
+  return !!analysisClassEntry(entry).snapshot;
 }
 function analysisExamShell(entry){
   const real=exams.find(e=>e.id===entry.examId);
@@ -124,9 +146,9 @@ function renderExamList(){
 
   const published=(analysisData.analyses||[]).filter(analysisVisibleToCurrentUser).sort((a,b)=>String(b.generatedAt||'').localeCompare(String(a.generatedAt||'')));
   published.forEach(entry=>{
-    const exam=analysisExamShell(entry),classSnap=entry.classes?.[currentUser?.classKey],d=document.createElement('div');d.className='exam-card analysis-card';
+    const exam=analysisExamShell(entry),classInfo=analysisClassEntry(entry),classSnap=classInfo.snapshot,d=document.createElement('div');d.className='exam-card analysis-card';
     const updated=entry.generatedAt?new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt)):'';
-    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${escapeHtmlStudent(exam.subject||'未設定')}</strong></span><span class="exam-public-chip analysis-ready">分析公開</span></div><h3>${escapeHtmlStudent(exam.title)}</h3><div class="muted small">全体 ${Number(entry.overall?.participants||0)}人${classSnap?` / ${escapeHtmlStudent(currentUser.classKey)}組 ${Number(classSnap.participants||0)}人`:''}${updated?` / 更新 ${escapeHtmlStudent(updated)}`:''}</div><div class="actions"></div>`;
+    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${escapeHtmlStudent(exam.subject||'未設定')}</strong></span><span class="exam-public-chip analysis-ready">分析公開</span></div><h3>${escapeHtmlStudent(exam.title)}</h3><div class="muted small">全体 ${Number(entry.overall?.participants||0)}人${classSnap?` / ${escapeHtmlStudent(currentAnalysisClassKey())}組 ${Number(classSnap.participants||0)}人`:''}${updated?` / 更新 ${escapeHtmlStudent(updated)}`:''}</div><div class="actions"></div>`;
     const b=document.createElement('button');b.className='secondary glass-btn';b.textContent='クラス・全体分析を見る';b.onclick=()=>openStudentAnalysis(entry.examId);d.querySelector('.actions').appendChild(b);analysisRoot?.appendChild(d);
   });
   if(analysisRoot&&!published.length)analysisRoot.innerHTML='<div class="notice">現在、公開中の分析結果はありません。</div>';
@@ -219,17 +241,17 @@ function ownUnitMark(answers,unit){
   const full=!!detail(unit.members[0])?.correct;return full?{mark:'○',cls:'ok'}:{mark:'×',cls:'ng'};
 }
 function analysisScopeSnapshot(entry){
-  if(publicAnalysisScope==='class'){const c=entry.classes?.[currentUser?.classKey];if(c)return {snapshot:c,label:`${currentUser.classKey}組`}}
+  if(publicAnalysisScope==='class'){const info=analysisClassEntry(entry);if(info.snapshot)return {snapshot:info.snapshot,label:`${currentAnalysisClassKey()}組`}}
   return {snapshot:entry.overall,label:'全体'};
 }
 async function openStudentAnalysis(examId){
   const entry=await ensureAnalysisEntry(examId);if(!entry?.overall?.questions){alert('この試験の分析結果はまだ公開されていないか、OEN分析共有サーバーへ接続できませんでした。');return}
   if(!analysisVisibleToCurrentUser(entry)){alert('この分析結果はあなたのクラスには公開されていません。');return}
-  currentExam=analysisExamShell(entry);publicAnalysisScope=entry.classes?.[currentUser?.classKey]?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
+  currentExam=analysisExamShell(entry);publicAnalysisScope=analysisClassEntry(entry).snapshot?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
 }
 function renderPublicAnalysis(){
   const entry=analysisEntryFor(currentExam?.id);if(!entry)return;const scoped=analysisScopeSnapshot(entry),snap=scoped.snapshot,sort=$('publicAnalysisSort')?.value||'rate-desc';
-  $('analysisClassBtn').classList.toggle('active',publicAnalysisScope==='class');$('analysisAllBtn').classList.toggle('active',publicAnalysisScope==='all');$('analysisClassBtn').disabled=!entry.classes?.[currentUser?.classKey];
+  $('analysisClassBtn').classList.toggle('active',publicAnalysisScope==='class');$('analysisAllBtn').classList.toggle('active',publicAnalysisScope==='all');$('analysisClassBtn').disabled=!analysisClassEntry(entry).snapshot;
   $('publicAnalysisTitle').textContent=`${currentExam.title}　${scoped.label}分析`;
   const dt=entry.generatedAt?new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt)):'';
   $('publicAnalysisMeta').textContent=`集計 ${snap.participants||0}人${dt?` ／ 更新 ${dt}`:''} ／ 平均点 ${Number(snap.averageScore||0).toFixed(1)}点`;
