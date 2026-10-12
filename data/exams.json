@@ -945,12 +945,12 @@
       "updatedAt": "2026-10-08T12:32:42.644Z"
     },
     {
-      "id": "exam_20261012_pbep6y",
-      "title": "サンプル",
+      "id": "exam_20261012_gr8wc9",
+      "title": "サンプル②",
       "subject": "情報",
       "schoolYear": "2026",
-      "status": "published",
-      "published": true,
+      "status": "unpublished",
+      "published": false,
       "totalPoints": 100,
       "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSdwSixrh-5HpMKSITK7ViHVyCerztUfR56tYKcmLJ8rnX8xGg/viewform",
       "formSubmission": {
@@ -1133,7 +1133,7 @@
         "testConfirmed": false,
         "configuredAt": "2026-10-08T11:22:07.005Z",
         "verifiedAt": null,
-        "lastTestAttemptedAt": "2026-10-12T02:08:35.298Z",
+        "lastTestAttemptedAt": null,
         "verificationSource": "clone_inherited",
         "inheritedFrom": "exam_20261008_dthqs5"
       },
@@ -1154,9 +1154,7 @@
       },
       "access": {
         "mode": "restricted",
-        "classes": [
-          "33"
-        ],
+        "classes": [],
         "students": []
       },
       "sections": [
@@ -1881,16 +1879,12 @@
           "type": "normal"
         }
       ],
-      "createdAt": "2026-10-12T00:55:19.515Z",
-      "publishWindow": {
-        "startAt": "2026-10-12T00:55:00.000Z",
-        "endAt": "2026-10-12T01:55:00.000Z",
-        "mode": "auto"
-      },
+      "createdAt": "2026-10-12T04:02:54.626Z",
+      "publishWindow": null,
       "endedAt": null,
-      "updatedAt": "2026-10-12T02:08:35.298Z",
+      "updatedAt": "2026-10-12T04:02:54.626Z",
       "clonedFrom": "exam_20261008_dthqs5"
     }
   ],
-  "updatedAt": "2026-10-12T02:40:29.031Z"
+  "updatedAt": "2026-10-12T04:14:10.597Z"
 }
