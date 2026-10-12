@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.1';
+const APP_VERSION='1.25.2';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -588,6 +588,15 @@ function exportAnnualSecrets(){
   const rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
   const csv='4桁番号,年間アクセスキー,クラス\n'+rows.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
   TDX.download('T-DX_Lab_年間アクセスキー_年間マスター.csv','\ufeff'+csv,'text/csv;charset=utf-8');
+}
+
+function refreshAccessVaultClassFilter(){
+  const sel=$('accessVaultClassFilter');
+  if(!sel)return;
+  const current=sel.value;
+  const classes=[...new Set((usersData.users||[]).map(x=>x.classKey||x.studentCode.slice(0,2)))].filter(Boolean).sort();
+  sel.innerHTML='<option value="">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}組</option>`).join('');
+  if(classes.includes(current))sel.value=current;
 }
 
 function currentManagedUsers(){
