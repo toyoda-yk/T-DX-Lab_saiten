@@ -1759,7 +1759,7 @@ async function ensureTeacherPublishAccess(){
   const who=await TDX.gasJson({action:'whoami'},12000);
   if(!who?.ok)throw new Error(who?.message||'公開サーバーの確認に失敗しました。');
   if(!who.teacher)throw new Error(`このOENアカウント（${who.user||'不明'}）は公開権限がありません。共有スプレッドシートを「編集者」で共有してください。`);
-  if(!who.githubConfigured)throw new Error('GitHub自動連携が未設定です。システム管理者がApps Scriptで setupGitHubConnection を1回実行してください。');
+  if(!who.githubConfigured)throw new Error('公開連携の初期設定が完了していません。システム管理者へ連絡してください。');
   return who;
 }
 async function postGasSync(action,payload,token=newGasSyncToken()){
@@ -1782,7 +1782,7 @@ async function syncExamsToPublicData(){
 
 async function syncUsersToPublicData(vaultEntries=[]){
   const who=await ensureSystemAdminAccess();
-  if(!who.githubConfigured)throw new Error('GitHub自動連携が未設定です。システム管理者がApps Scriptで setupGitHubConnection を実行してください。');
+  if(!who.githubConfigured)throw new Error('公開連携の初期設定が完了していません。システム管理者へ連絡してください。');
   const missingLegacy=legacyQrPendingCount();
   if(missingLegacy>0){
     throw new Error(`旧バージョンのQR情報が ${missingLegacy}人分残っています。本番前にやり直す場合は「完全初期化（年度維持）」を実行してください。`);
@@ -1938,7 +1938,7 @@ async function publishStudentAnalysisToGas(){
   }catch(e){
     console.error(e);
     setAnalysisPublishMessage(`公開できませんでした：${e.message||e}`,'error');
-    alert(`分析の公開に失敗しました。\n\n${e.message||e}\n\n非常時は「analysis.jsonを書き出す」を利用できます。`);
+    alert(`分析の公開に失敗しました。\n\n${e.message||e}\n\n時間をおいて再度お試しください。改善しない場合はシステム管理者へ連絡してください。`);
   }finally{btn.disabled=false;btn.textContent=old}
 }
 function renderAnalysisInsights(rows){
@@ -2180,11 +2180,11 @@ async function applyPublish(){
   try{
     const result=await syncExamsToPublicData();
     $('publishMsg').className='success small';
-    $('publishMsg').innerHTML=`<strong>✓ 生徒画面へ反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>公開期間の延長・短縮も、このボタンだけで反映されます。GitHub担当者への依頼は不要です。</span>`;
+    $('publishMsg').innerHTML=`<strong>✓ 生徒画面へ反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>公開期間の延長・短縮も、このボタンだけで反映されます。システム側へ自動反映されます。</span>`;
   }catch(e){
     console.error(e);
     $('publishMsg').className='error small';
-    $('publishMsg').innerHTML=`<strong>設定はこの画面内では保存しましたが、生徒画面への自動反映に失敗しました。</strong><br><span>${esc(e.message||e)}　もう一度［公開設定を反映］を押してください。非常時のみ exams.json の書き出しを使用してください。</span>`;
+    $('publishMsg').innerHTML=`<strong>設定はこの画面内では保存しましたが、生徒画面への自動反映に失敗しました。</strong><br><span>${esc(e.message||e)}　もう一度［公開設定を反映］を押してください。改善しない場合はシステム管理者へ連絡してください。</span>`;
     alert(`生徒画面への反映に失敗しました。\n\n${e.message||e}`);
   }finally{
     if(btn){btn.disabled=false;btn.textContent=old}
@@ -2271,4 +2271,141 @@ function exportUserData(){
   const payload=currentUsersBundleForSync();
   TDX.download('users.json',JSON.stringify(payload,null,2));
 }
+
+
+/* ===== v1.25.5 contextual operation guides ===== */
+const OPERATION_GUIDES={
+  'exam-flow':{
+    title:'試験作成の進め方',
+    intro:'この画面は STEP 1 → 4 の順に進めます。試験登録だけでは生徒には公開されません。登録後に「公開を設定する」へ進みます。',
+    steps:[
+      ['STEP 1','基本情報・選択肢','試験名・教科・満点と、この試験で使う選択肢の範囲を設定します。'],
+      ['STEP 2','模範解答・採点','模範解答PDFまたは貼り付けた解答を読み取り、正答・配点・順不同・完答を確認します。'],
+      ['STEP 3','Googleフォーム連携','Googleフォームの「事前入力したリンク」を貼り付け、解析 → テスト送信 → 受信確認まで行います。'],
+      ['STEP 4','非公開で登録','「この内容で試験データに登録（非公開）」を押します。その後、公開設定へ進みます。']
+    ],
+    warning:'Googleフォームの普通の「送信」URLではなく、「事前入力したリンク」を使います。取得方法はGoogleフォーム欄のガイドで確認できます。'
+  },
+  'google-form-prefill':{
+    title:'Googleフォーム「事前入力URL」の取得方法',
+    intro:'T-DX Labが氏名・4桁番号・各回答を正しい欄へ送るために、Googleフォームの「事前入力したリンク」を1回だけ取得します。',
+    warning:'重要：Googleフォーム右上の「送信」からコピーするURLではありません。必ず「︙」→「事前入力したリンクを取得」を使います。',
+    steps:[
+      ['1','Googleフォームを編集画面で開く','回答先に使うフォームを開きます。項目は「氏名 → 4桁番号 → 各解答欄」の順がおすすめです。'],
+      ['2','右上の「︙」を押す','メニューから「事前入力したリンクを取得」を選びます。'],
+      ['3','すべての項目に仮の値を入れる','氏名は「T-DXテスト」、4桁番号は「9999」など、判別しやすい値を入力します。解答欄も空欄にせず、すべて入力します。'],
+      ['4','「リンクを取得」を押す','画面下部の「リンクを取得」を押し、表示されたリンクをコピーします。'],
+      ['5','T-DX Labへ貼り付ける','この画面の「Googleフォームの事前入力URL」に貼り付け、「連携情報を解析」を押します。'],
+      ['6','解答欄を対応させる','「解答欄を順番に自動対応」を押し、氏名・4桁番号・各設問の対応を確認します。'],
+      ['7','テスト送信して受信確認','「テスト送信」を押し、Googleフォームの「回答」タブに1件届いたことを確認して「受信を確認した」にチェックします。']
+    ],
+    example:'仮入力例：氏名＝<code>T-DXテスト</code> ／ 4桁番号＝<code>9999</code> ／ 問1＝<code>0</code> ／ 問2＝<code>1</code> …。値の内容よりも、全項目を空欄にしないことが大切です。'
+  },
+  'publish-flow':{
+    title:'試験を生徒へ公開する手順',
+    intro:'試験作成画面で「非公開登録」したあと、この画面で受験者と公開期間を決めます。',
+    steps:[
+      ['STEP 1','試験を選ぶ','教科と試験を選択します。'],
+      ['STEP 2','Googleフォーム受信を確認','公開前にテスト送信がGoogleフォームへ届いていることを確認します。'],
+      ['STEP 3','公開状態・期間・受験対象を設定','「公開」を選び、開始・終了日時と対象クラス／生徒を設定します。'],
+      ['STEP 4','「公開設定を反映」を押す','ここまで設定して初めて生徒画面へ反映されます。時間を延長したときも最後にこのボタンを押します。']
+    ],
+    warning:'「+10分」などを押しただけでは未保存です。最後に必ず「公開設定を反映」を押してください。'
+  },
+  'google-form-recheck':{
+    title:'公開後にGoogleフォームを変更するとき',
+    intro:'複製した試験で同じGoogleフォームを使うなら変更不要です。別のフォームへ切り替える場合だけ操作します。',
+    steps:[
+      ['1','新しいフォームで事前入力URLを取得','氏名・4桁番号・全解答欄へ仮入力し、「事前入力したリンク」を取得します。'],
+      ['2','「別のGoogleフォームへ変更する」を開く','取得した事前入力URLを貼り付けて変更します。'],
+      ['3','テスト送信','変更後は受信確認がリセットされます。新しいフォームへテスト送信します。'],
+      ['4','Googleフォームで受信確認','「回答」タブへ届いたことを確認してチェックを入れます。']
+    ]
+  },
+  'analysis-flow':{
+    title:'回答Excelを分析する手順',
+    intro:'Googleフォームの回答は、連携スプレッドシートからExcel（.xlsx）をダウンロードして読み込む方法を推奨します。',
+    steps:[
+      ['STEP 1','回答Excelを用意','Googleフォームの「回答」タブ → 緑色のスプレッドシートアイコン → 回答スプレッドシートを開きます。'],
+      ['','Excelでダウンロード','スプレッドシートで「ファイル」→「ダウンロード」→「Microsoft Excel（.xlsx）」を選びます。'],
+      ['STEP 2','試験とExcelを選ぶ','T-DX Labで対象試験を選び、今ダウンロードしたExcelを指定します。'],
+      ['STEP 3','「分析する」を押す','採点・得点分布・大問別・設問別・生徒別分析を作成します。同一4桁番号の重複は最新回答だけを採用します。'],
+      ['STEP 4','必要なら生徒へ公開','内容を確認後、「生徒に分析を公開」を押すとクラス／全体の集計結果を生徒画面へ反映します。']
+    ],
+    warning:'Excelの列は、Googleフォームの「タイムスタンプ・氏名・4桁番号・各解答欄」の並びをそのまま使ってください。'
+  },
+  'analysis-publish':{
+    title:'「生徒に分析を公開」とは？',
+    intro:'「分析する」だけでは分析結果は先生のブラウザ内にあります。「生徒に分析を公開」を押したときだけ、生徒用の集計結果が公開されます。',
+    steps:[
+      ['1','分析内容を確認','受験者数・平均点・大問別・設問別の集計を確認します。'],
+      ['2','「生徒に分析を公開」を押す','クラス別／全体の集計結果だけを生徒画面へ反映します。'],
+      ['3','公開後は先生PCを閉じてOK','公開データはシステム側に保持されるため、生徒は自分の好きな時間に閲覧できます。']
+    ],
+    warning:'氏名・4桁番号と個人成績の紐付け・個人回答は公開データに含めません。'
+  },
+  'qr-reprint':{
+    title:'QRカードを再印刷する手順',
+    intro:'生徒がQRカードを紛失・汚損した場合だけ使います。CSVなど別ファイルの読み込みは不要です。',
+    steps:[
+      ['STEP 1','生徒を探す','クラスを絞るか、4桁番号を入力して対象生徒を探します。'],
+      ['STEP 2','QRカードを再印刷','対象生徒の再印刷ボタンを押します。登録済みの年間アクセスキーを使って同じQRを再生成します。']
+    ],
+    warning:'再印刷だけではアクセスキーは変わりません。漏えいが疑われる場合はシステム管理者へ連絡してください。'
+  },
+  'admin-overview':{
+    title:'システム管理者が見る3つの場所',
+    intro:'管理者画面は「年度初め」「年度途中」「システム管理」に分けています。通常は年度初めの作業が終われば、頻繁に触る必要はありません。',
+    steps:[
+      ['年度初め','名簿 → アクセスキー → QR','クラスごとの4桁番号を登録し、未発行者へアクセスキーを発行してQRカードPDFを印刷します。'],
+      ['年度途中','生徒の変更','転入・4桁番号訂正・削除があるときだけ生徒個別管理を使います。'],
+      ['システム管理','リセット・年度更新','本番前の完全初期化、年度末の年度更新、漏えい時の全員キー再発行だけを扱います。']
+    ]
+  },
+  'admin-initial-setup':{
+    title:'初回・担当変更時の管理者設定',
+    intro:'ここは毎日の操作ではありません。システム導入時、新しい管理者への引き継ぎ、利用教員の変更時だけ確認します。',
+    steps:[
+      ['1','共有スプレッドシートの権限','T-DX Labを使う先生をOENアカウントで「編集者」として共有します。編集者になっていない先生は管理画面を利用できません。'],
+      ['2','GASを最新状態にする','管理用Apps Scriptのコードを最新にし、Webアプリを新しいバージョンでデプロイします。'],
+      ['3','GitHubトークンを登録','Fine-grained tokenはT-DX Labの1リポジトリだけ、ContentsをRead and writeにして発行し、GASのScript Propertiesへ保存します。'],
+      ['4','一般教員にはトークンを共有しない','一般教員はトークン・GAS・GitHubを触る必要がありません。共有シートの編集者になっていれば利用できます。']
+    ],
+    warning:'トークン文字列はチャット・メール・資料へ貼らず、GAS側だけで管理してください。'
+  },
+  'admin-year-start':{
+    title:'年度初めの生徒設定',
+    intro:'年間マスターCSVは不要です。画面を上から順に3STEPだけ進めます。',
+    steps:[
+      ['STEP 1','年度名簿を登録','クラスごとに「最初の4桁番号」と「最後の4桁番号」を登録します。'],
+      ['STEP 2','アクセスキーを発行','「アクセスキーを発行」を押すと、未発行の生徒だけに年間アクセスキーが生成されます。'],
+      ['','QRカードPDFを作成','続けて「QRカードPDFを作成」を押します。今回発行した生徒分のカードが作られます。印刷して配布します。'],
+      ['STEP 3','1枚だけ動作確認','発行したQRカードで生徒画面へ入り、ログインできることを確認します。']
+    ],
+    warning:'平文アクセスキーの年間CSVをダウンロードして保管する作業はありません。紛失時のQRはシステムから再印刷できます。'
+  },
+  'admin-reset':{
+    title:'完全初期化・年度更新の使い分け',
+    intro:'どちらも強い操作なので、通常運用では使いません。実行前にバックアップを確認します。',
+    steps:[
+      ['完全初期化（年度維持）','本番前に最初からやり直す','年度は変えず、生徒・試験・公開分析・QR保管庫などの運用データを空にします。'],
+      ['年度更新','年度末に次年度へ切り替える','運用データを初期化したうえで、システム年度も次年度へ変更します。'],
+      ['別管理','自動では消えないもの','Googleフォーム回答、先生PCのExcel/PDF、GitHubの過去コミット履歴は別管理です。']
+    ],
+    warning:'誤操作防止の確認文字列が必要です。内容を理解した管理者だけが実行してください。'
+  }
+};
+function guideHtml(g){
+  const steps=(g.steps||[]).map(x=>`<div class="guide-step"><b>${esc(x[0]||'•')}</b><div><strong>${esc(x[1]||'')}</strong><span>${esc(x[2]||'')}</span></div></div>`).join('');
+  return `${g.intro?`<div class="guide-intro">${esc(g.intro)}</div>`:''}${g.warning?`<div class="guide-warning">${esc(g.warning)}</div>`:''}<div class="guide-steps">${steps}</div>${g.example?`<div class="guide-example">${g.example}</div>`:''}`;
+}
+function openOperationGuide(key){
+  const g=OPERATION_GUIDES[key],modal=$('operationGuideModal');if(!g||!modal)return;
+  $('operationGuideTitle').textContent=g.title||'操作ガイド';$('operationGuideBody').innerHTML=guideHtml(g);modal.classList.remove('hidden');modal.setAttribute('aria-hidden','false');document.body.classList.add('guide-modal-open');
+}
+function closeOperationGuide(){const modal=$('operationGuideModal');if(!modal)return;modal.classList.add('hidden');modal.setAttribute('aria-hidden','true');document.body.classList.remove('guide-modal-open')}
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-guide]');if(btn){e.preventDefault();openOperationGuide(btn.dataset.guide);return}if(e.target.closest('[data-guide-close]'))closeOperationGuide()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOperationGuide()});
+setTimeout(()=>{const b=$('operationGuideClose');if(b)b.onclick=closeOperationGuide},0);
+
 init().catch(console.error);

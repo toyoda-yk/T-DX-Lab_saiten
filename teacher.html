@@ -1,223 +1,210 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.25.4">
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="no-cache, no-store, must-revalidate" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<title>教員管理 | T-DX Lab☆問題演習システム</title>
+<link href="css/style.css?v=1.25.4" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
-  <div class="app-header-inner portal-header-inner">
-    <a class="app-brand portal-brand" href="index.html" aria-label="トップへ">
-      <img src="assets/images/tdx-lab-logo.png" alt="T-DX Lab">
-      <span><strong>T-DX Lab</strong><small>問題演習システム</small></span>
-    </a>
-    <div class="app-header-tools">
-      <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.25.4</span>
-        <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
-      </div>
-      <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
-    </div>
-  </div>
+<div class="app-header-inner portal-header-inner">
+<a aria-label="トップへ" class="app-brand portal-brand" href="index.html">
+<img alt="T-DX Lab" src="assets/images/tdx-lab-logo.png"/>
+<span><strong>T-DX Lab</strong><small>問題演習システム</small></span>
+</a>
+<div class="app-header-tools">
+<div aria-label="システム更新状況" class="tdx-version-status">
+<span class="tdx-version-pill">v1.25.4</span>
+<button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
+</div>
+<a class="app-home-link portal-home-link" href="index.html">トップへ</a>
+</div>
+</div>
 </header>
-
 <main class="app-main teacher-main">
-  <section id="adminGate" class="portal-login-stage teacher-login-stage">
-    <div class="portal-login-copy">
-      <p class="portal-overline teacher-overline">T-DX Lab☆ MANAGEMENT CONSOLE</p>
-      <h1><span>教員用</span>管理コンソール</h1>
-      <p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
-      <p class="portal-sub">試験の作成・公開・回答分析・QR再印刷を、ひとつの画面から。</p>
-    </div>
+<section class="portal-login-stage teacher-login-stage" id="adminGate">
+<div class="portal-login-copy">
+<p class="portal-overline teacher-overline">T-DX Lab☆ MANAGEMENT CONSOLE</p>
+<h1><span>教員用</span>管理コンソール</h1>
+<p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
+<p class="portal-sub">一般教員はSTEPに沿って操作。迷ったところは「？ 操作ガイド」で確認できます。</p>
+</div>
+<div class="portal-login-card teacher-portal-card">
+<div class="portal-card-head">
+<span class="portal-card-icon teacher-card-icon">DX</span>
+<div><small>TEACHER ACCESS</small><h2>教員管理ログイン</h2></div>
+</div>
+<p class="small portal-login-message">学校のOENアカウントで本人確認します。教員共通パスワードは使用しません。</p>
+<button class="portal-login-btn teacher-login-btn" id="adminLoginBtn">OEN認証で管理コンソールを開く <span>›</span></button>
+<div class="small portal-admin-message" id="adminMsg"></div>
+<div class="portal-security teacher-security"><span>✓</span><p><strong>教員管理画面</strong><br/>生徒の個人回答は公開せず、回答分析は教員のブラウザ内で処理します。</p></div>
+</div>
+</section>
+<div class="hidden" id="adminApp">
+<section class="future-panel admin-dashboard-card">
+<div class="section-title app-section-head teacher-dashboard-head">
+<div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">一般教員は、試験作成 → 公開 → 回答分析の順にSTEP表示に沿って進めます。年度設定はシステム管理者だけが操作します。</p></div>
+<button class="secondary glass-btn" id="adminLogoutBtn">画面をロック</button>
+</div>
+<div class="workflow-guide-tip"><span>TIP</span><strong>上から順に進めればOK</strong><small>難しい操作には「？ 操作ガイド」があります。</small></div><div class="teacher-workflow-nav">
+<button class="admin-menu-card menuBtn tone-build active-look" data-target="examManager"><span class="menu-index">1</span><strong>試験を作る</strong><small>問題・正答・配点・Googleフォームを設定</small></button>
+<button class="admin-menu-card menuBtn tone-manage" data-target="publishManager"><span class="menu-index">2</span><strong>公開を設定する</strong><small>対象クラス・公開期間・時間延長</small></button>
+<button class="admin-menu-card menuBtn tone-analysis" data-target="analysisManager"><span class="menu-index">3</span><strong>回答を分析する</strong><small>Excelを読み込み、集計結果を確認</small></button>
+<button class="admin-menu-card menuBtn tone-qr" data-target="qrManager"><span class="menu-index">4</span><strong>QRを再印刷する</strong><small>紛失・汚損した生徒のカードを再印刷</small></button>
+</div>
+<div class="system-admin-entry">
+<div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度初めの生徒設定・アクセスキー発行・年度更新</small></div></div>
+<button class="secondary glass-btn" id="systemAdminBtn" type="button">システム管理者</button>
+</div>
+<div class="system-admin-gate hidden" id="systemAdminGate">
+<div><strong>システム管理者認証</strong><small>OENアカウントと管理者権限を確認します。</small></div>
+<div class="system-admin-login-row"><button class="teacher-action" id="systemAdminLoginBtn" type="button">OEN権限を確認して開く</button><button class="secondary glass-btn" id="systemAdminCancelBtn" type="button">閉じる</button></div>
+<div class="small muted" id="systemAdminMsg"></div>
+</div>
+</section>
+<section class="future-panel adminSection teacher-tone-admin hidden" id="studentManager">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度初め・システム管理</h2><p>年度初めの生徒登録・QR発行と、年度更新を行います。</p></div><div class="admin-symbol">SYS</div><button class="operation-guide-btn admin-guide-btn" data-guide="admin-overview" type="button">？ 管理者ガイド</button></div>
+<div class="admin-lock-note"><strong>管理者専用</strong><span>普段は「年度初め」「年度途中」「システム管理」の3つだけ意識すればOKです。</span></div><section class="admin-prereq-card">
+<div class="admin-phase-title"><span>初回・担当変更時</span><div><h3>管理者が先に確認すること</h3><p>通常の先生には不要な設定です。初回設定や担当変更時だけ確認します。</p></div><button class="operation-guide-btn mini-guide" data-guide="admin-initial-setup" type="button">？ 初期設定ガイド</button></div>
+<div class="admin-prereq-grid">
+<div><b>教員権限</b><span>利用する先生を共有スプレッドシートの「編集者」にする</span></div>
+<div><b>GAS</b><span>最新GASをデプロイしておく</span></div>
+<div><b>GitHub連携</b><span>管理者がトークンを登録。一般教員には見せない</span></div>
+</div>
+</section><div class="admin-phase admin-phase-yearstart"><div class="admin-phase-title"><span>年度初め</span><div><h3>新年度は上から順に進める</h3><p>名簿 → アクセスキー → QRカードまで終われば、生徒のログイン準備は完了です。</p></div><button class="operation-guide-btn mini-guide" data-guide="admin-year-start" type="button">？ 年度初めガイド</button></div><div class="roster-setup-grid">
+<section class="roster-compact-card">
+<div class="section-title compact-title"><div><h3>STEP 1　年度名簿を登録</h3><p class="muted small">クラスごとに最初と最後の4桁番号を登録します。</p></div><button class="secondary glass-btn" id="addRosterRangeBtn">＋ クラスを追加</button></div>
+<div class="roster-range-list" id="rosterRangeRows"></div>
+<div class="actions compact-actions"><button class="teacher-action" id="saveRosterBtn">名簿を登録</button></div>
+<div class="small muted" id="rosterMsg"></div>
+</section>
+<section class="roster-compact-card roster-current-card">
+<div class="compact-card-head"><div><span class="section-eyebrow">CURRENT ROSTER</span><h3>登録状況</h3></div><span class="one-time-badge">年度初め</span></div>
+<div class="grid two roster-summary" id="rosterSummary"></div>
+<div class="roster-preview" id="rosterPreview"></div>
+</section>
+</div><div class="annual-access-panel roster-annual-wide">
+<div class="annual-access-head-v122">
+<div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>STEP 2　アクセスキー・QRカードを発行</h3><p class="muted small">名簿登録後は、①アクセスキー発行 → ②QRカードPDF の2操作で完了です。</p></div>
+<div class="actions compact-actions annual-primary-actions">
+<button class="orange" id="generateAnnualCodesBtn">① アクセスキーを発行</button>
+<button class="teacher-action" disabled="" id="printAnnualCardsBtn">② QRカードPDFを作成</button>
+</div>
+</div>
+<div class="annual-secondary-row">
+<div class="info-strip teacher-strip" id="annualMasterStatus"><span>QR</span> 名簿登録後、未発行者のアクセスキーを発行してください。</div>
+</div>
+<div class="annual-code-preview" id="annualCodePreview"><div class="notice small">初回は登録した生徒全員のQRカードが作成されます。PDFを印刷して配布すれば完了です。紛失時は「QRを再印刷する」から1人ずつ再印刷できます。</div></div>
 
-    <div class="portal-login-card teacher-portal-card">
-      <div class="portal-card-head">
-        <span class="portal-card-icon teacher-card-icon">DX</span>
-        <div><small>TEACHER ACCESS</small><h2>教員管理ログイン</h2></div>
-      </div>
-      <p class="small portal-login-message">学校のOENアカウントで本人確認します。教員共通パスワードは使用しません。</p>
-      <button id="adminLoginBtn" class="portal-login-btn teacher-login-btn">OEN認証で管理コンソールを開く <span>›</span></button>
-      <div id="adminMsg" class="small portal-admin-message"></div>
-      <div class="portal-security teacher-security"><span>✓</span><p><strong>教員管理画面</strong><br>生徒の個人回答は公開せず、回答分析は教員のブラウザ内で処理します。</p></div>
-    </div>
-  </section>
-
-  <div id="adminApp" class="hidden">
-    <section class="future-panel admin-dashboard-card">
-      <div class="section-title app-section-head teacher-dashboard-head">
-        <div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">一般教員は、試験作成 → 公開 → 回答分析の順に利用します。年度設定はシステム管理者だけが操作します。</p></div>
-        <button id="adminLogoutBtn" class="secondary glass-btn">画面をロック</button>
-      </div>
-
-      <div class="teacher-workflow-nav">
-        <button class="admin-menu-card menuBtn tone-build active-look" data-target="examManager"><span class="menu-index">1</span><strong>試験を作る</strong><small>問題・正答・配点・Googleフォームを設定</small></button>
-        <button class="admin-menu-card menuBtn tone-manage" data-target="publishManager"><span class="menu-index">2</span><strong>公開を設定する</strong><small>対象クラス・公開期間・時間延長</small></button>
-        <button class="admin-menu-card menuBtn tone-analysis" data-target="analysisManager"><span class="menu-index">3</span><strong>回答を分析する</strong><small>Excelを読み込み、集計結果を確認</small></button>
-        <button class="admin-menu-card menuBtn tone-qr" data-target="qrManager"><span class="menu-index">4</span><strong>QRを再印刷する</strong><small>紛失・汚損した生徒のカードを再印刷</small></button>
-      </div>
-
-      <div class="system-admin-entry">
-        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度初めの生徒設定・アクセスキー発行・年度更新</small></div></div>
-        <button id="systemAdminBtn" class="secondary glass-btn" type="button">システム管理者</button>
-      </div>
-      <div id="systemAdminGate" class="system-admin-gate hidden">
-        <div><strong>システム管理者認証</strong><small>OENアカウントと管理者権限を確認します。</small></div>
-        <div class="system-admin-login-row"><button id="systemAdminLoginBtn" class="teacher-action" type="button">OEN権限を確認して開く</button><button id="systemAdminCancelBtn" class="secondary glass-btn" type="button">閉じる</button></div>
-        <div id="systemAdminMsg" class="small muted"></div>
-      </div>
-    </section>
-
-    <section id="studentManager" class="future-panel adminSection teacher-tone-admin hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度初め・システム管理</h2><p>年度初めの生徒登録・QR発行と、年度更新を行います。</p></div><div class="admin-symbol">SYS</div></div>
-      <div class="admin-lock-note"><strong>管理者専用</strong><span>年度初めは「名簿登録 → アクセスキー発行 → QRカードPDF」の順に進めます。</span></div>
-      <input id="classDigits" type="hidden" value="2">
-
-      <div class="roster-setup-grid">
-        <section class="roster-compact-card">
-          <div class="section-title compact-title"><div><h3>年度名簿</h3><p class="muted small">クラスごとに最初と最後の4桁番号を登録します。</p></div><button id="addRosterRangeBtn" class="secondary glass-btn">＋ クラスを追加</button></div>
-          <div id="rosterRangeRows" class="roster-range-list"></div>
-          <div class="actions compact-actions"><button id="saveRosterBtn" class="teacher-action">名簿を登録</button></div>
-          <div id="rosterMsg" class="small muted"></div>
-        </section>
-        <section class="roster-compact-card roster-current-card">
-          <div class="compact-card-head"><div><span class="section-eyebrow">CURRENT ROSTER</span><h3>登録状況</h3></div><span class="one-time-badge">年度初め</span></div>
-          <div id="rosterSummary" class="grid two roster-summary"></div>
-          <div id="rosterPreview" class="roster-preview"></div>
-        </section>
-      </div>
+</div><div class="admin-operation-check"><b>STEP 3　動作確認</b><span>QRカードを1枚使って、生徒画面へログインできることを確認してください。</span></div></div><div class="admin-phase admin-phase-midyear"><div class="admin-phase-title"><span>年度途中</span><div><h3>生徒の変更があるときだけ</h3><p>転入・番号訂正・削除などを1名ずつ管理します。</p></div></div><section class="student-individual-card">
+<div class="compact-card-head student-individual-head">
+<div><span class="section-eyebrow">INDIVIDUAL ROSTER</span><h3>生徒の追加・訂正・削除</h3><p class="muted small">年度名簿登録後の転入・番号訂正・削除を、1名ずつ行います。</p></div>
+<span class="one-time-badge">管理者専用</span>
+</div>
+<div class="student-individual-add">
+<label>4桁番号<input id="individualStudentCode" inputmode="numeric" maxlength="4" placeholder="例：3421"/></label>
+<button class="teacher-action" id="addIndividualStudentBtn" type="button">＋ 1名追加</button>
+<div class="student-admin-hint">クラスは4桁番号の先頭2桁から自動判定します。</div>
+</div>
+<div class="small muted" id="individualStudentMsg"></div>
+<div class="student-individual-tools">
+<label>クラス<select id="individualStudentClassFilter"><option value="">全クラス</option></select></label>
+<label class="student-search-field">4桁番号で検索<input id="individualStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"/></label>
+<span class="student-count-badge" id="individualStudentCount"></span>
+</div>
+<div id="individualStudentTable"></div>
+<div class="student-admin-note"><strong>変更後は自動反映</strong><span>生徒の追加・編集・削除は保存後、自動で生徒画面と試験設定に反映されます。</span></div>
+</section></div><div class="admin-phase admin-phase-system"><div class="admin-phase-title"><span>システム管理</span><div><h3>リセット・年度末・セキュリティ</h3><p>普段は触りません。必要なときだけ操作してください。</p></div><button class="operation-guide-btn mini-guide" data-guide="admin-reset" type="button">？ リセットガイド</button></div><section class="annual-reset-panel">
+<div class="compact-card-head">
+<div><span class="section-eyebrow">RESET / YEAR CHANGE</span><h3>完全初期化・年度更新</h3><p class="muted small">本番運用前のやり直しと、年度末の切り替えを分けて実行できます。</p></div>
+<span class="one-time-badge">管理者専用</span>
+</div>
+<div class="annual-reset-grid">
+<div>
+<strong>完全初期化（年度はそのまま）</strong>
+<p class="muted small">現在の年度 <strong id="currentSchoolYearLabel">----</strong> を維持したまま、生徒・試験・分析・QR保管庫を空にして最初からやり直します。</p>
+</div>
+<div class="actions compact-actions">
+<button class="secondary glass-btn" id="annualBackupBtn" type="button">現在データをバックアップ</button>
+<button class="danger-soft" id="currentYearResetBtn" type="button">完全初期化（年度維持）</button>
+</div>
+</div>
+<div class="notice small"><strong>完全初期化で消えるもの：</strong>生徒認証、試験・模範解答、公開分析、GASのQR再印刷用キー、GASに保存した分析、教員ブラウザの名簿範囲・試験下書き。<br/><strong>残るもの：</strong>年度、GAS本体、OEN権限、GitHub連携設定・トークン、Googleフォーム回答、先生PCのExcel/PDF、GitHubの過去コミット履歴。</div>
+<div class="annual-reset-grid">
+<label>年度末の更新先年度<input id="nextSchoolYear" max="2100" min="2026" type="number" value="2027"/></label>
+<div class="actions compact-actions">
+<button class="danger-soft" id="annualResetBtn" type="button">年度更新（次年度へ全初期化）</button>
+</div>
+</div>
+<div class="notice small"><strong>年度更新：</strong>完全初期化と同じデータを消したうえで、システム年度も更新先年度へ変更します。トークンを年度ごとに交換する場合は、年度更新後にGitHubで旧トークンを削除し、Apps Scriptの <code>setupGitHubConnection</code> から新トークンを登録してください。</div>
+<div class="small muted" id="annualResetMsg"></div>
+</section><details class="danger-admin-details">
+<summary>セキュリティ対応（漏えい時のみ）</summary>
+<div class="danger-admin-inner">
+<p>アクセスキーの漏えいが疑われる場合だけ使用します。通常は操作しません。</p>
+<div class="actions compact-actions">
+<button class="danger-soft" id="regenerateAnnualCodesBtn">全員のアクセスキーを再発行</button>
+</div>
+</div>
+</details></div>
+<input id="classDigits" type="hidden" value="2"/>
 
 
 
-      <section class="student-individual-card">
-        <div class="compact-card-head student-individual-head">
-          <div><span class="section-eyebrow">INDIVIDUAL ROSTER</span><h3>生徒個別管理</h3><p class="muted small">年度名簿登録後の転入・番号訂正・削除を、1名ずつ行います。</p></div>
-          <span class="one-time-badge">管理者専用</span>
-        </div>
-        <div class="student-individual-add">
-          <label>4桁番号<input id="individualStudentCode" inputmode="numeric" maxlength="4" placeholder="例：3421"></label>
-          <button id="addIndividualStudentBtn" class="teacher-action" type="button">＋ 1名追加</button>
-          <div class="student-admin-hint">クラスは4桁番号の先頭2桁から自動判定します。</div>
-        </div>
-        <div id="individualStudentMsg" class="small muted"></div>
-        <div class="student-individual-tools">
-          <label>クラス<select id="individualStudentClassFilter"><option value="">全クラス</option></select></label>
-          <label class="student-search-field">4桁番号で検索<input id="individualStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"></label>
-          <span id="individualStudentCount" class="student-count-badge"></span>
-        </div>
-        <div id="individualStudentTable"></div>
-        <div class="student-admin-note"><strong>変更後は自動反映</strong><span>生徒の追加・編集・削除は保存後、自動で生徒画面と試験設定に反映されます。</span></div>
-      </section>
 
-      <div class="annual-access-panel roster-annual-wide">
-        <div class="annual-access-head-v122">
-          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">名簿登録後は、①アクセスキー発行 → ②QRカードPDF の2操作で完了です。</p></div>
-          <div class="actions compact-actions annual-primary-actions">
-            <button id="generateAnnualCodesBtn" class="orange">① アクセスキーを発行</button>
-            <button id="printAnnualCardsBtn" class="teacher-action" disabled>② QRカードPDFを作成</button>
-          </div>
-        </div>
-        <div class="annual-secondary-row">
-          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>QR</span> 名簿登録後、未発行者のアクセスキーを発行してください。</div>
-        </div>
-        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">初回は登録した生徒全員のQRカードが作成されます。PDFを印刷して配布すれば完了です。紛失時は「QRを再印刷する」から1人ずつ再印刷できます。</div></div>
-        <details class="danger-admin-details">
-          <summary>セキュリティ対応（漏えい時のみ）</summary>
-          <div class="danger-admin-inner">
-            <p>アクセスキーの漏えいが疑われる場合だけ使用します。通常は操作しません。</p>
-            <div class="actions compact-actions">
-              <button id="regenerateAnnualCodesBtn" class="danger-soft">全員のアクセスキーを再発行</button>
-            </div>
-          </div>
-        </details>
-      </div>
-
-      <section class="annual-reset-panel">
-        <div class="compact-card-head">
-          <div><span class="section-eyebrow">RESET / YEAR CHANGE</span><h3>データ初期化・年度更新</h3><p class="muted small">本番運用前のやり直しと、年度末の切り替えを分けて実行できます。</p></div>
-          <span class="one-time-badge">管理者専用</span>
-        </div>
-
-        <div class="annual-reset-grid">
-          <div>
-            <strong>完全初期化（年度はそのまま）</strong>
-            <p class="muted small">現在の年度 <strong id="currentSchoolYearLabel">----</strong> を維持したまま、生徒・試験・分析・QR保管庫を空にして最初からやり直します。</p>
-          </div>
-          <div class="actions compact-actions">
-            <button id="annualBackupBtn" class="secondary glass-btn" type="button">現在データをバックアップ</button>
-            <button id="currentYearResetBtn" class="danger-soft" type="button">完全初期化（年度維持）</button>
-          </div>
-        </div>
-
-        <div class="notice small"><strong>完全初期化で消えるもの：</strong>生徒認証、試験・模範解答、公開分析、GASのQR再印刷用キー、GASに保存した分析、教員ブラウザの名簿範囲・試験下書き。<br><strong>残るもの：</strong>年度、GAS本体、OEN権限、GitHub連携設定・トークン、Googleフォーム回答、先生PCのExcel/PDF、GitHubの過去コミット履歴。</div>
-
-        <div class="annual-reset-grid">
-          <label>年度末の更新先年度<input id="nextSchoolYear" type="number" min="2026" max="2100" value="2027"></label>
-          <div class="actions compact-actions">
-            <button id="annualResetBtn" class="danger-soft" type="button">年度更新（次年度へ全初期化）</button>
-          </div>
-        </div>
-        <div class="notice small"><strong>年度更新：</strong>完全初期化と同じデータを消したうえで、システム年度も更新先年度へ変更します。トークンを年度ごとに交換する場合は、年度更新後にGitHubで旧トークンを削除し、Apps Scriptの <code>setupGitHubConnection</code> から新トークンを登録してください。</div>
-        <div id="annualResetMsg" class="small muted"></div>
-      </section>
-    </section>
-
-    <section id="examManager" class="future-panel adminSection teacher-tone-build hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM BUILDER</span><h2>試験作成・模範解答の登録</h2><p>基本情報から模範解答・採点、Googleフォーム連携までを順に設定します。</p></div><div class="admin-symbol">01</div></div>
-
-      <div class="builder-steps compact-builder-steps">
-        <div class="builder-step active"><b>1</b><span>基本情報・選択肢</span></div>
-        <div class="builder-step"><b>2</b><span>模範解答・採点</span></div>
-        <div class="builder-step"><b>3</b><span>Googleフォーム</span></div>
-        <div class="builder-step"><b>4</b><span>非公開で登録</span></div>
-      </div>
-
-      <div class="exam-builder-layout-v113">
-        <div class="exam-basics-grid">
-          <label class="exam-name-field">試験名<input id="examName" placeholder="例：2026年度 第1回 共通テスト模試"></label>
-          <label>教科<input id="examSubjectInput" placeholder="例：情報Ⅰ"></label>
-          <label>満点<input id="examTotalPoints" type="number" min="1" value="100"></label>
-          <label class="exam-formurl-field">GoogleフォームURL<input id="formUrl" placeholder="https://docs.google.com/forms/..."></label>
-        </div>
-
-        <div class="choice-range-box choice-range-wide">
-          <div class="section-title compact-title">
-            <div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">試験全体の標準選択肢を指定します。違う設問だけ、解析後に個別変更できます。</p></div>
-          </div>
-          <div class="choice-range-grid">
-            <label class="range-enable"><input id="useNumberChoices" type="checkbox" checked> 数字を使う</label>
-            <div class="range-pair"><label>最小<input id="numberChoiceStart" type="number" min="0" max="99" value="0"></label><span>〜</span><label>最大<input id="numberChoiceEnd" type="number" min="0" max="99" value="9"></label></div>
-            <label class="range-enable"><input id="useLetterChoices" type="checkbox" checked> 英字を使う</label>
-            <div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
-            <label class="range-enable"><input id="useKanaChoices" type="checkbox"> カタカナを使う</label>
-            <div class="range-pair"><label>最初<select id="kanaChoiceStart"></select></label><span>〜</span><label>最後<select id="kanaChoiceEnd"></select></label></div>
-          </div>
-          <div class="choice-preview"><span>この試験の選択肢</span><div id="globalChoicePreview" class="choice-chip-list"></div></div>
-        </div>
-
-        <div class="answer-source-layout-v113">
-          <section class="answer-route-card pdf-route-card">
-            <div class="route-card-head">
-              <div><span class="route-kicker">ROUTE A</span><h3>PDFから直接読み取る</h3><p class="muted small">文字として保存された模範解答PDFなら、そのまま解析できます。読み取り結果は後で修正できます。</p></div>
-              <span class="route-badge alt">PDF</span>
-            </div>
-            <label class="route-file-label">模範解答PDF<input id="answerPdf" type="file" accept="application/pdf"></label>
-            <div class="actions route-actions"><button id="readPdfBtn" class="teacher-action">PDFを読み取り・解析</button></div>
-            <details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。ここをコピーして右側のテキスト版模範解答へ貼り付け、修正して再解析することもできます。"></textarea></details>
-            <div class="route-note"><strong>PDFが崩れたら？</strong><span>下の「解析をリセット」を押して、右側のAIテキストルートへ切り替えればOKです。</span></div>
-          </section>
-
-          <section class="answer-route-card ai-route-card">
-            <div class="route-card-head">
-              <div><span class="route-kicker">ROUTE B</span><h3>AIで作ったテキストから読み取る</h3><p class="muted small">AIに問題用紙PDFと模範解答PDFの両方を読ませ、解答欄の数・順番を照合してT-DX Lab形式で出力したテキストを貼り付けます。</p></div>
-              <span class="route-badge recommend">おすすめ</span>
-            </div>
-            <div class="answer-source-box answer-source-box-v113">
-              <textarea id="answerTextInput" class="answer-text-input" placeholder="第1問|20
+</section>
+<section class="future-panel adminSection teacher-tone-build hidden" id="examManager">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM BUILDER</span><h2>試験作成・模範解答の登録</h2><p>基本情報から模範解答・採点、Googleフォーム連携までを順に設定します。</p></div><div class="admin-symbol">01</div><button class="operation-guide-btn" data-guide="exam-flow" type="button">？ 試験作成ガイド</button></div>
+<div class="builder-steps compact-builder-steps">
+<div class="builder-step active"><b>STEP 1</b><span>基本情報・選択肢</span></div>
+<div class="builder-step"><b>STEP 2</b><span>模範解答・採点</span></div>
+<div class="builder-step"><b>STEP 3</b><span>Googleフォーム連携</span></div>
+<div class="builder-step"><b>STEP 4</b><span>非公開で登録</span></div>
+</div>
+<div class="exam-builder-layout-v113">
+<div class="exam-basics-grid">
+<label class="exam-name-field">試験名<input id="examName" placeholder="例：2026年度 第1回 共通テスト模試"/></label>
+<label>教科<input id="examSubjectInput" placeholder="例：情報Ⅰ"/></label>
+<label>満点<input id="examTotalPoints" min="1" type="number" value="100"/></label>
+<input id="formUrl" type="hidden"/>
+</div>
+<div class="choice-range-box choice-range-wide">
+<div class="section-title compact-title">
+<div><span class="section-eyebrow">CHOICE RANGE</span><h3>先に選択肢の範囲を指定</h3><p class="muted small">試験全体の標準選択肢を指定します。違う設問だけ、解析後に個別変更できます。</p></div>
+</div>
+<div class="choice-range-grid">
+<label class="range-enable"><input checked="" id="useNumberChoices" type="checkbox"/> 数字を使う</label>
+<div class="range-pair"><label>最小<input id="numberChoiceStart" max="99" min="0" type="number" value="0"/></label><span>〜</span><label>最大<input id="numberChoiceEnd" max="99" min="0" type="number" value="9"/></label></div>
+<label class="range-enable"><input checked="" id="useLetterChoices" type="checkbox"/> 英字を使う</label>
+<div class="range-pair"><label>最初<select id="letterChoiceStart"></select></label><span>〜</span><label>最後<select id="letterChoiceEnd"></select></label></div>
+<label class="range-enable"><input id="useKanaChoices" type="checkbox"/> カタカナを使う</label>
+<div class="range-pair"><label>最初<select id="kanaChoiceStart"></select></label><span>〜</span><label>最後<select id="kanaChoiceEnd"></select></label></div>
+</div>
+<div class="choice-preview"><span>この試験の選択肢</span><div class="choice-chip-list" id="globalChoicePreview"></div></div>
+</div>
+<div class="answer-source-layout-v113">
+<section class="answer-route-card pdf-route-card">
+<div class="route-card-head">
+<div><span class="route-kicker">ROUTE A</span><h3>PDFから直接読み取る</h3><p class="muted small">文字として保存された模範解答PDFなら、そのまま解析できます。読み取り結果は後で修正できます。</p></div>
+<span class="route-badge alt">PDF</span>
+</div>
+<label class="route-file-label">模範解答PDF<input accept="application/pdf" id="answerPdf" type="file"/></label>
+<div class="actions route-actions"><button class="teacher-action" id="readPdfBtn">PDFを読み取り・解析</button></div>
+<details class="pdf-raw-details"><summary>PDFから取得した生テキストを見る（必要なときだけ）</summary><textarea id="pdfText" placeholder="PDF解析後の文字列が表示されます。ここをコピーして右側のテキスト版模範解答へ貼り付け、修正して再解析することもできます。"></textarea></details>
+<div class="route-note"><strong>PDFが崩れたら？</strong><span>下の「解析をリセット」を押して、右側のAIテキストルートへ切り替えればOKです。</span></div>
+</section>
+<section class="answer-route-card ai-route-card">
+<div class="route-card-head">
+<div><span class="route-kicker">ROUTE B</span><h3>AIで作ったテキストから読み取る</h3><p class="muted small">AIに問題用紙PDFと模範解答PDFの両方を読ませ、解答欄の数・順番を照合してT-DX Lab形式で出力したテキストを貼り付けます。</p></div>
+<span class="route-badge recommend">おすすめ</span>
+</div>
+<div class="answer-source-box answer-source-box-v113">
+<textarea class="answer-text-input" id="answerTextInput" placeholder="第1問|20
 ア,イ|0,3|2|完答
 ウ|3|2|通常
 エ,オ|e,4|2|完答
@@ -226,254 +213,259 @@
 第2問|30
 ア,イ|2,4|3|順不同+完答
 ..."></textarea>
-              <div class="text-format-help">
-                <div><strong>T-DX Lab用テキスト形式</strong><small>1行＝「解答記号｜正答｜配点｜採点方式」。大問は「第1問｜20」のように書きます。</small></div>
-                <div class="actions compact-actions"><button id="copyTextTemplateBtn" type="button" class="secondary glass-btn">入力フォーマットをコピー</button><button id="copyAiPromptBtn" type="button" class="secondary glass-btn">AI読取プロンプトをコピー</button></div>
-              </div>
-            </div>
-            <div class="actions route-actions"><button id="parsePastedTextBtn" class="teacher-action">貼付テキストから解析</button></div>
-          </section>
-        </div>
+<div class="text-format-help">
+<div><strong>T-DX Lab用テキスト形式</strong><small>1行＝「解答記号｜正答｜配点｜採点方式」。大問は「第1問｜20」のように書きます。</small></div>
+<div class="actions compact-actions"><button class="secondary glass-btn" id="copyTextTemplateBtn" type="button">入力フォーマットをコピー</button><button class="secondary glass-btn" id="copyAiPromptBtn" type="button">AI読取プロンプトをコピー</button></div>
+</div>
+</div>
+<div class="actions route-actions"><button class="teacher-action" id="parsePastedTextBtn">貼付テキストから解析</button></div>
+</section>
+</div>
+<div class="exam-source-footer-v113">
+<div class="source-reset-help"><strong>読み取りをやり直す</strong><span>現在の解析結果だけを消し、試験名・満点・選択肢範囲は残します。</span></div>
+<button class="secondary glass-btn reset-analysis-btn" id="resetExamParseBtn">解析をリセット</button>
+</div>
+<div class="small muted" id="examSourceMsg"></div>
+</div>
+<section class="exam-review-panel hidden" id="examReviewPanel">
+<div class="section-title">
+<div><span class="section-eyebrow">REVIEW &amp; EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">正答・配点・採点方式・選択肢を確認します。青い選択肢が現在の正答です。</p></div>
+<div class="review-actions-top"><button class="secondary glass-btn" id="addQuestionRowBtn">＋ 設問を追加</button><button class="secondary glass-btn" id="reparseTextBtn">テキストから再解析</button></div>
+</div>
+<div class="grid four analysis-kpis" id="parseSummary"></div>
+<div class="section-points-summary" id="sectionPointsSummary"></div>
+<div class="pdf-review-workspace">
+<div class="pdf-page-column">
+<div class="section-title compact-title"><div><h3>模範解答PDF</h3><p class="muted small">実際のPDFを見ながら右側の正答を確認できます。</p></div></div>
+<div class="pdf-page-preview" id="pdfPagePreview"><div class="notice small">PDFを解析すると、ここに元PDFのページが表示されます。</div></div>
+</div>
+<div class="pdf-answer-column">
+<div class="section-title compact-title"><div><h3>読み取り結果</h3><p class="muted small">生徒回答画面と同じ感覚で、読み取った正答を確認・修正します。</p></div></div>
+<div class="review-toolbar">
+<div class="review-global-options"><span>標準選択肢</span><strong id="reviewChoiceRangeText">0〜9 / a〜f</strong></div>
+<button class="secondary glass-btn" id="applyDefaultOptionsBtn">指定範囲を全設問へ再適用</button>
+<button class="secondary glass-btn" id="checkPointsBtn">配点をチェック</button>
+</div>
+<div class="exam-preview-editor" id="examEditorCards"></div>
+</div>
+</div>
+<div class="small muted" id="pointsCheckMsg"></div>
+<section class="google-form-link-panel">
+<div class="section-title google-form-link-head compact-section-head">
+<div>
+<span class="section-eyebrow">GOOGLE FORM LINK</span>
+<h3>Googleフォーム連携</h3>
+<p class="muted small">事前入力リンクを使って、氏名・4桁番号・解答欄の送信先を1回だけ登録します。</p>
+</div>
 
-        <div class="exam-source-footer-v113">
-          <div class="source-reset-help"><strong>読み取りをやり直す</strong><span>現在の解析結果だけを消し、試験名・満点・選択肢範囲は残します。</span></div>
-          <button id="resetExamParseBtn" class="secondary glass-btn reset-analysis-btn">解析をリセット</button>
-        </div>
-        <div id="examSourceMsg" class="small muted"></div>
-      </div>
-
-      <section id="examReviewPanel" class="exam-review-panel hidden">
-        <div class="section-title">
-          <div><span class="section-eyebrow">REVIEW & EDIT</span><h3>採点設定の確認・修正</h3><p class="muted small">正答・配点・採点方式・選択肢を確認します。青い選択肢が現在の正答です。</p></div>
-          <div class="review-actions-top"><button id="addQuestionRowBtn" class="secondary glass-btn">＋ 設問を追加</button><button id="reparseTextBtn" class="secondary glass-btn">テキストから再解析</button></div>
-        </div>
-
-        <div id="parseSummary" class="grid four analysis-kpis"></div>
-        <div id="sectionPointsSummary" class="section-points-summary"></div>
-        <div class="pdf-review-workspace">
-          <div class="pdf-page-column">
-            <div class="section-title compact-title"><div><h3>模範解答PDF</h3><p class="muted small">実際のPDFを見ながら右側の正答を確認できます。</p></div></div>
-            <div id="pdfPagePreview" class="pdf-page-preview"><div class="notice small">PDFを解析すると、ここに元PDFのページが表示されます。</div></div>
-          </div>
-          <div class="pdf-answer-column">
-            <div class="section-title compact-title"><div><h3>読み取り結果</h3><p class="muted small">生徒回答画面と同じ感覚で、読み取った正答を確認・修正します。</p></div></div>
-            <div class="review-toolbar">
-          <div class="review-global-options"><span>標準選択肢</span><strong id="reviewChoiceRangeText">0〜9 / a〜f</strong></div>
-          <button id="applyDefaultOptionsBtn" class="secondary glass-btn">指定範囲を全設問へ再適用</button>
-          <button id="checkPointsBtn" class="secondary glass-btn">配点をチェック</button>
-            </div>
-            <div id="examEditorCards" class="exam-preview-editor"></div>
-          </div>
-        </div>
-        <div id="pointsCheckMsg" class="small muted"></div>
-
-        <section class="google-form-link-panel">
-          <div class="section-title google-form-link-head compact-section-head">
-            <div>
-              <span class="section-eyebrow">GOOGLE FORM LINK</span>
-              <h3>Googleフォーム連携</h3>
-              <p class="muted small">事前入力リンクを使って、氏名・4桁番号・解答欄の送信先を1回だけ登録します。</p>
-            </div>
-            <span class="google-form-standard-badge">1フォームにつき1回</span>
-          </div>
-          <div class="google-form-quickflow" aria-label="Googleフォーム連携手順">
-            <span><b>1</b>全項目を事前入力</span><i>›</i><span><b>2</b>リンクを解析</span><i>›</i><span><b>3</b>テスト送信</span><i>›</i><span><b>4</b>受信確認</span>
-          </div>
-          <details class="compact-help-details">
-            <summary>Googleフォーム側の推奨設定を見る</summary>
-            <p>項目順は「氏名（必須）→ 4桁番号（必須）→ 解答欄」。事前入力リンク作成時は<strong>全項目に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
-          </details>
-          <label class="google-prefill-label">事前入力したリンク
-            <textarea id="formPrefillUrl" rows="3" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&entry...."></textarea>
-          </label>
-          <div class="actions compact-actions google-form-actions">
-            <button id="analyzeFormLinkBtn" type="button" class="teacher-action">連携情報を解析</button>
-            <button id="autoMapFormBtn" type="button" class="secondary glass-btn" disabled>解答欄を順番に自動対応</button>
-            <button id="clearFormLinkBtn" type="button" class="secondary glass-btn">連携設定をリセット</button>
-          </div>
-          <div id="formLinkMsg" class="small muted"></div>
-
-          <div id="formMappingPanel" class="google-form-mapping hidden">
-            <div id="formMappingKpis" class="grid four analysis-kpis"></div>
-            <div class="google-identity-map">
-              <label>氏名を送る項目<select id="formNameEntrySelect"></select></label>
-              <label>4桁番号を送る項目<select id="formCodeEntrySelect"></select></label>
-            </div>
-            <details class="google-answer-map-details" open>
-              <summary>解答欄の対応を確認する</summary>
-              <div class="table-shell google-map-table-shell"><table><thead><tr><th>T-DX Lab</th><th>Googleフォーム entry</th><th>事前入力値</th></tr></thead><tbody id="formAnswerMappingBody"></tbody></table></div>
-            </details>
-            <div class="google-form-test-zone">
-              <div>
-                <strong>テスト送信</strong>
-                <span>現在の対応でGoogleフォームへテスト回答を1件送ります。送信後、Googleフォームの「回答」タブで受信を確認してください。</span>
-              </div>
-              <div class="actions compact-actions">
-                <button id="testGoogleFormBtn" type="button" class="orange">テスト送信（1件追加）</button>
-                <label class="test-confirm-check"><input id="formTestConfirmed" type="checkbox"> Googleフォームで受信を確認した</label>
-              </div>
-            </div>
-            <div id="formTestMsg" class="small muted"></div>
-            <div id="formNextStepMsg" class="google-next-step hidden">✓ Googleフォーム連携の確認完了。次は下の「この内容で試験データに登録（非公開）」へ進んでください。</div>
-          </div>
-        </section>
-
-        <div class="actions">
-          <button id="registerExamBtn" class="teacher-action">この内容で試験データに登録（非公開）</button>
-          <button id="saveDraftExamBtn" class="secondary glass-btn">編集内容を下書き保存</button>
-        </div>
-        <div id="draftExamMsg" class="small muted"></div>
-      </section>
-    </section>
-
-    <section id="qrManager" class="future-panel adminSection teacher-tone-qr hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒のQRカードを1人ずつ再印刷します。</p></div><div class="admin-symbol">QR</div></div>
-      <div class="qr-safety-strip"><strong>QRを再印刷</strong><span>再印刷してもアクセスキーは変わりません。</span></div>
-      <div class="qr-general-tools">
-        <label>クラス<select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select></label>
-        <label>4桁番号で検索<input id="qrStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"></label>
-        <div id="qrCacheStatus" class="qr-cache-status"><span>CHECK</span> 再印刷準備を確認しています。</div>
-      </div>
-      <p class="master-note">クラスまたは4桁番号で生徒を探し、再印刷してください。別ファイルの読み込みは不要です。</p>
-      <div id="accessVaultSummary" class="grid three roster-summary"></div>
-      <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
-      <div id="qrMsg" class="small muted"></div>
-    </section>
-
-    <section id="analysisManager" class="future-panel adminSection teacher-tone-analysis hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームからダウンロードした回答Excel（推奨）/ CSVをそのまま読み込み、採点から個人・設問別分析まで行います。</p></div><div class="admin-symbol">02</div></div>
-      <div class="grid two admin-form-grid analysis-upload-grid">
-        <div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input id="responseFile" type="file" accept=".xlsx,.xls,.csv"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
-        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。</p><button id="publishStudentAnalysisBtn" type="button" class="teacher-action">生徒に分析を公開</button><div id="analysisPublishMsg" class="small muted" aria-live="polite">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
-      </div>
-      <div id="analysisOutput" class="hidden analysis-console">
-        <div id="analysisImportSummary" class="analysis-import-summary"></div>
-        <div id="analysisKpis" class="grid four analysis-kpis"></div>
-        <div class="analysis-grid">
-          <div class="analysis-card"><div class="section-eyebrow">SCORE DISTRIBUTION</div><h3>得点分布</h3><div id="histogram" class="chart future-chart"></div></div>
-          <div class="analysis-card"><div class="section-eyebrow">SECTION RATE</div><h3>大問別得点率</h3><div id="sectionAnalysis" class="modern-bars"></div></div>
-        </div>
-
-        <div class="analysis-card analysis-detail-card">
-          <div class="analysis-card-head"><div><div class="section-eyebrow">QUESTION RATE</div><h3>設問別分析</h3><p id="questionRateSummary" class="muted small"></p></div><div class="analysis-tools"><label>表示<select id="questionFilter"><option value="all">すべて</option><option value="review">50%未満</option><option value="middle">50〜79.9%</option><option value="must">80%以上</option></select></label><label>並べ替え<select id="questionSort"><option value="rate-asc">正答率が低い順</option><option value="rate-desc">正答率が高い順</option><option value="order">問題順</option></select></label></div></div>
-          <div class="table-shell analysis-table-shell"><table><thead><tr><th>大問</th><th>設問</th><th>正答</th><th>配点</th><th>正答率 / 完答率</th><th>達成状況</th><th>判定</th></tr></thead><tbody id="questionRates"></tbody></table></div>
-        </div>
-
-        <div class="analysis-card analysis-detail-card">
-          <div class="analysis-card-head"><div><div class="section-eyebrow">STUDENT ANALYSIS</div><h3>生徒別分析</h3><p id="studentAnalysisSummary" class="muted small"></p></div><div class="analysis-tools"><label>並べ替え<select id="studentSort"><option value="score-desc">得点が高い順</option><option value="score-asc">得点が低い順</option><option value="code">4桁番号順</option></select></label></div></div>
-          <div class="table-shell analysis-table-shell student-analysis-shell"><table><thead><tr><th>4桁番号</th><th>氏名 / 採用回答</th><th>クラス</th><th>得点</th><th>正答マーク数</th><th>大問別</th><th></th></tr></thead><tbody id="studentAnalysisBody"></tbody></table></div>
-          <div id="studentDetailPanel" class="student-detail-panel hidden"><div class="student-detail-head"><div><span class="section-eyebrow">STUDENT DETAIL</span><h4 id="studentDetailTitle">生徒詳細</h4><p id="studentDetailMeta" class="muted small"></p></div><button id="studentDetailClose" type="button" class="secondary glass-btn">閉じる</button></div><div class="table-shell"><table><thead><tr><th>設問</th><th>回答</th><th>正答</th><th>判定</th><th>得点</th></tr></thead><tbody id="studentDetailBody"></tbody></table></div></div>
-        </div>
-      </div>
-    </section>
-    <section id="publishManager" class="future-panel adminSection teacher-tone-manage hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM MANAGEMENT</span><h2>試験管理・公開</h2><p>受験対象と公開期間を設定し、公開・終了・複製・削除を管理します。</p></div><div class="admin-symbol">03</div></div>
-
-      <div class="exam-ops-toolbar">
-        <div class="exam-ops-selects">
-          <label>教科<select id="publishSubjectSelect"></select></label>
-          <label class="exam-ops-exam-select">試験<select id="publishExamSelect"></select></label>
-        </div>
-        <div id="currentPublishState" class="current-publish-state"></div>
-        <div class="exam-ops-actions">
-          <button id="cloneExamBtn" class="secondary glass-btn" type="button">複製</button>
-          <button id="togglePreviewBtn" class="secondary glass-btn" type="button">動作確認</button>
-          <button id="deleteExamBtn" class="danger-outline" type="button">完全削除</button>
-        </div>
-      </div>
-      <div id="examReadiness" class="exam-readiness"></div>
-
-      <section id="publishGoogleFormPanel" class="publish-google-form-panel">
-        <div class="publish-form-head">
-          <div><span class="section-eyebrow">GOOGLE FORM CHECK</span><h3>Googleフォーム連携確認</h3><p>公開前に、送信先・テスト送信・実際の受信をここで確認します。</p></div>
-          <span id="publishFormStatusBadge" class="publish-form-status">確認中</span>
-        </div>
-        <div class="publish-form-current">
-          <label>現在の送信先URL<input id="publishCurrentFormUrl" type="text" readonly placeholder="Googleフォーム未設定"></label>
-          <div class="actions compact-actions publish-form-current-actions">
-            <button id="openPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォームを開く</button>
-            <button id="editPublishedGoogleFormBtn" class="orange" type="button">Googleフォームを変更</button>
-          </div>
-        </div>
-        <div id="publishFormMappingSummary" class="publish-form-mapping-summary"></div>
-        <div class="publish-form-actions">
-          <button id="testPublishedGoogleFormBtn" class="secondary glass-btn" type="button">現在の設定でテスト送信</button>
-          <label class="test-confirm-check publish-confirm-check"><input id="publishFormConfirmed" type="checkbox"> Googleフォームの「回答」で受信を確認した</label>
-        </div>
-        <div id="publishFormTestMsg" class="small muted" aria-live="polite"></div>
-        <details id="publishFormChangeDetails" class="publish-form-change">
-          <summary>別のGoogleフォームへ変更する</summary>
-          <p><strong>複製元と同じGoogleフォームを使う場合は変更不要です。</strong> 別のフォームへ変更する場合は、新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けてください。差し替えると受信確認は未確認に戻ります。</p>
-          <textarea id="publishFormPrefillUrl" rows="3" placeholder="新しいGoogleフォームの事前入力URLを貼り付け"></textarea>
-          <div class="actions compact-actions"><button id="replacePublishedGoogleFormBtn" class="secondary glass-btn" type="button">このGoogleフォームへ変更</button></div>
-          <div id="publishFormReplaceMsg" class="small muted" aria-live="polite"></div>
-        </details>
-      </section>
-
-      <section id="examPreviewPanel" class="exam-preview-simulator hidden" aria-live="polite">
-        <div class="simulator-head">
-          <div><span class="section-eyebrow">PREVIEW / NO DATA CHANGE</span><h3>生徒画面の表示を確認</h3><p class="muted small">試験データや公開日時は変更せず、3つの状態をその場で確認できます。</p></div>
-          <button id="closePreviewBtn" class="secondary glass-btn" type="button">閉じる</button>
-        </div>
-        <div class="simulator-controls">
-          <button class="previewModeBtn active" data-preview-mode="before" type="button">開始前</button>
-          <button class="previewModeBtn" data-preview-mode="live" type="button">公開中</button>
-          <button class="previewModeBtn" data-preview-mode="after" type="button">終了後</button>
-        </div>
-        <div id="studentExamPreview" class="student-exam-preview"></div>
-      </section>
-
-      <div class="publish-config-grid">
-        <section class="publish-config-card">
-          <div class="compact-card-head"><div><span class="section-eyebrow">STATUS & SCHEDULE</span><h3>公開状態・期間</h3></div></div>
-          <label>公開状態
+<div class="guide-head-actions"><span class="google-form-standard-badge">1フォームにつき1回</span><button class="operation-guide-btn strong-guide" data-guide="google-form-prefill" type="button">？ 事前入力URLの取得方法</button></div></div>
+<div aria-label="Googleフォーム連携手順" class="google-form-quickflow">
+<span><b>1</b>全項目を事前入力</span><i>›</i><span><b>2</b>リンクを解析</span><i>›</i><span><b>3</b>テスト送信</span><i>›</i><span><b>4</b>受信確認</span>
+</div>
+<details class="compact-help-details">
+<summary>Googleフォーム側の推奨設定を見る</summary>
+<p>項目順は「氏名（必須）→ 4桁番号（必須）→ 解答欄」。事前入力リンク作成時は<strong>全項目に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
+</details>
+<div class="prefill-important-note"><strong>通常の「送信」URLではありません。</strong><span>右上の「︙」→「事前入力したリンクを取得」で作ったURLを貼り付けます。</span></div><label class="google-prefill-label">Googleフォームの事前入力URL <textarea id="formPrefillUrl" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&amp;entry...." rows="3"></textarea>
+</label>
+<div class="actions compact-actions google-form-actions">
+<button class="teacher-action" id="analyzeFormLinkBtn" type="button">連携情報を解析</button>
+<button class="secondary glass-btn" disabled="" id="autoMapFormBtn" type="button">解答欄を順番に自動対応</button>
+<button class="secondary glass-btn" id="clearFormLinkBtn" type="button">連携設定をリセット</button>
+</div>
+<div class="small muted" id="formLinkMsg"></div>
+<div class="google-form-mapping hidden" id="formMappingPanel">
+<div class="grid four analysis-kpis" id="formMappingKpis"></div>
+<div class="google-identity-map">
+<label>氏名を送る項目<select id="formNameEntrySelect"></select></label>
+<label>4桁番号を送る項目<select id="formCodeEntrySelect"></select></label>
+</div>
+<details class="google-answer-map-details" open="">
+<summary>解答欄の対応を確認する</summary>
+<div class="table-shell google-map-table-shell"><table><thead><tr><th>T-DX Lab</th><th>Googleフォーム entry</th><th>事前入力値</th></tr></thead><tbody id="formAnswerMappingBody"></tbody></table></div>
+</details>
+<div class="google-form-test-zone">
+<div>
+<strong>テスト送信</strong>
+<span>現在の対応でGoogleフォームへテスト回答を1件送ります。送信後、Googleフォームの「回答」タブで受信を確認してください。</span>
+</div>
+<div class="actions compact-actions">
+<button class="orange" id="testGoogleFormBtn" type="button">テスト送信（1件追加）</button>
+<label class="test-confirm-check"><input id="formTestConfirmed" type="checkbox"/> Googleフォームで受信を確認した</label>
+</div>
+</div>
+<div class="small muted" id="formTestMsg"></div>
+<div class="google-next-step hidden" id="formNextStepMsg">✓ Googleフォーム連携の確認完了。次は下の「この内容で試験データに登録（非公開）」へ進んでください。</div>
+</div>
+</section>
+<div class="actions">
+<button class="teacher-action" id="registerExamBtn">この内容で試験データに登録（非公開）</button>
+<button class="secondary glass-btn" id="saveDraftExamBtn">編集内容を下書き保存</button>
+</div>
+<div class="small muted" id="draftExamMsg"></div>
+</section>
+</section>
+<section class="future-panel adminSection teacher-tone-qr hidden" id="qrManager">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒のQRカードを1人ずつ再印刷します。</p></div><div class="admin-symbol">QR</div><button class="operation-guide-btn" data-guide="qr-reprint" type="button">？ QR再印刷ガイド</button></div><div class="screen-step-strip two-step-strip">
+<div><b>STEP 1</b><span>クラス・4桁番号で生徒を探す</span></div>
+<i>›</i><div><b>STEP 2</b><span>QRカードを再印刷</span></div>
+</div>
+<div class="qr-safety-strip"><strong>QRを再印刷</strong><span>再印刷してもアクセスキーは変わりません。</span></div>
+<div class="qr-general-tools">
+<label>クラス<select class="compact-select" id="accessVaultClassFilter"><option value="">全クラス</option></select></label>
+<label>4桁番号で検索<input id="qrStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"/></label>
+<div class="qr-cache-status" id="qrCacheStatus"><span>CHECK</span> 再印刷準備を確認しています。</div>
+</div>
+<p class="master-note">クラスまたは4桁番号で生徒を探し、再印刷してください。別ファイルの読み込みは不要です。</p>
+<div class="grid three roster-summary" id="accessVaultSummary"></div>
+<div class="annual-code-preview" id="accessVaultManager"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
+<div class="small muted" id="qrMsg"></div>
+</section>
+<section class="future-panel adminSection teacher-tone-analysis hidden" id="analysisManager">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームからダウンロードした回答Excel（推奨）/ CSVをそのまま読み込み、採点から個人・設問別分析まで行います。</p></div><div class="admin-symbol">02</div><button class="operation-guide-btn" data-guide="analysis-flow" type="button">？ 回答分析ガイド</button></div><div class="screen-step-strip analysis-step-strip">
+<div><b>STEP 1</b><span>回答Excelを用意</span></div>
+<i>›</i><div><b>STEP 2</b><span>試験・Excelを選ぶ</span></div>
+<i>›</i><div><b>STEP 3</b><span>分析する</span></div>
+<i>›</i><div><b>STEP 4</b><span>生徒に分析を公開</span></div>
+</div>
+<div class="grid two admin-form-grid analysis-upload-grid">
+<div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input accept=".xlsx,.xls,.csv" id="responseFile" type="file"/><div class="actions"><button class="teacher-action" id="analyzeBtn">分析する</button></div></div>
+<div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><button class="text-guide-btn" data-guide="analysis-publish" type="button">？ 公開するとどうなる？</button><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。</p><button class="teacher-action" id="publishStudentAnalysisBtn" type="button">生徒に分析を公開</button><div aria-live="polite" class="small muted" id="analysisPublishMsg">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
+</div>
+<div class="hidden analysis-console" id="analysisOutput">
+<div class="analysis-import-summary" id="analysisImportSummary"></div>
+<div class="grid four analysis-kpis" id="analysisKpis"></div>
+<div class="analysis-grid">
+<div class="analysis-card"><div class="section-eyebrow">SCORE DISTRIBUTION</div><h3>得点分布</h3><div class="chart future-chart" id="histogram"></div></div>
+<div class="analysis-card"><div class="section-eyebrow">SECTION RATE</div><h3>大問別得点率</h3><div class="modern-bars" id="sectionAnalysis"></div></div>
+</div>
+<div class="analysis-card analysis-detail-card">
+<div class="analysis-card-head"><div><div class="section-eyebrow">QUESTION RATE</div><h3>設問別分析</h3><p class="muted small" id="questionRateSummary"></p></div><div class="analysis-tools"><label>表示<select id="questionFilter"><option value="all">すべて</option><option value="review">50%未満</option><option value="middle">50〜79.9%</option><option value="must">80%以上</option></select></label><label>並べ替え<select id="questionSort"><option value="rate-asc">正答率が低い順</option><option value="rate-desc">正答率が高い順</option><option value="order">問題順</option></select></label></div></div>
+<div class="table-shell analysis-table-shell"><table><thead><tr><th>大問</th><th>設問</th><th>正答</th><th>配点</th><th>正答率 / 完答率</th><th>達成状況</th><th>判定</th></tr></thead><tbody id="questionRates"></tbody></table></div>
+</div>
+<div class="analysis-card analysis-detail-card">
+<div class="analysis-card-head"><div><div class="section-eyebrow">STUDENT ANALYSIS</div><h3>生徒別分析</h3><p class="muted small" id="studentAnalysisSummary"></p></div><div class="analysis-tools"><label>並べ替え<select id="studentSort"><option value="score-desc">得点が高い順</option><option value="score-asc">得点が低い順</option><option value="code">4桁番号順</option></select></label></div></div>
+<div class="table-shell analysis-table-shell student-analysis-shell"><table><thead><tr><th>4桁番号</th><th>氏名 / 採用回答</th><th>クラス</th><th>得点</th><th>正答マーク数</th><th>大問別</th><th></th></tr></thead><tbody id="studentAnalysisBody"></tbody></table></div>
+<div class="student-detail-panel hidden" id="studentDetailPanel"><div class="student-detail-head"><div><span class="section-eyebrow">STUDENT DETAIL</span><h4 id="studentDetailTitle">生徒詳細</h4><p class="muted small" id="studentDetailMeta"></p></div><button class="secondary glass-btn" id="studentDetailClose" type="button">閉じる</button></div><div class="table-shell"><table><thead><tr><th>設問</th><th>回答</th><th>正答</th><th>判定</th><th>得点</th></tr></thead><tbody id="studentDetailBody"></tbody></table></div></div>
+</div>
+</div>
+</section>
+<section class="future-panel adminSection teacher-tone-manage hidden" id="publishManager">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">EXAM MANAGEMENT</span><h2>試験管理・公開</h2><p>受験対象と公開期間を設定し、公開・終了・複製・削除を管理します。</p></div><div class="admin-symbol">03</div><button class="operation-guide-btn" data-guide="publish-flow" type="button">？ 公開設定ガイド</button></div><div class="screen-step-strip">
+<div><b>STEP 1</b><span>試験を選ぶ</span></div>
+<i>›</i><div><b>STEP 2</b><span>フォーム受信を確認</span></div>
+<i>›</i><div><b>STEP 3</b><span>対象・公開期間を設定</span></div>
+<i>›</i><div><b>STEP 4</b><span>公開設定を反映</span></div>
+</div>
+<div class="exam-ops-toolbar">
+<div class="exam-ops-selects">
+<label>教科<select id="publishSubjectSelect"></select></label>
+<label class="exam-ops-exam-select">試験<select id="publishExamSelect"></select></label>
+</div>
+<div class="current-publish-state" id="currentPublishState"></div>
+<div class="exam-ops-actions">
+<button class="secondary glass-btn" id="cloneExamBtn" type="button">複製</button>
+<button class="secondary glass-btn" id="togglePreviewBtn" type="button">動作確認</button>
+<button class="danger-outline" id="deleteExamBtn" type="button">完全削除</button>
+</div>
+</div>
+<div class="exam-readiness" id="examReadiness"></div>
+<section class="publish-google-form-panel" id="publishGoogleFormPanel">
+<div class="publish-form-head">
+<div><span class="section-eyebrow">GOOGLE FORM CHECK</span><h3>Googleフォーム連携確認</h3><p>公開前に、送信先・テスト送信・実際の受信をここで確認します。</p></div>
+<span class="publish-form-status" id="publishFormStatusBadge">確認中</span>
+<button class="operation-guide-btn mini-guide" data-guide="google-form-recheck" type="button">？ フォーム変更ガイド</button></div>
+<div class="publish-form-current">
+<label>現在の送信先URL<input id="publishCurrentFormUrl" placeholder="Googleフォーム未設定" readonly="" type="text"/></label>
+<div class="actions compact-actions publish-form-current-actions">
+<button class="secondary glass-btn" id="openPublishedGoogleFormBtn" type="button">Googleフォームを開く</button>
+<button class="orange" id="editPublishedGoogleFormBtn" type="button">Googleフォームを変更</button>
+</div>
+</div>
+<div class="publish-form-mapping-summary" id="publishFormMappingSummary"></div>
+<div class="publish-form-actions">
+<button class="secondary glass-btn" id="testPublishedGoogleFormBtn" type="button">現在の設定でテスト送信</button>
+<label class="test-confirm-check publish-confirm-check"><input id="publishFormConfirmed" type="checkbox"/> Googleフォームの「回答」で受信を確認した</label>
+</div>
+<div aria-live="polite" class="small muted" id="publishFormTestMsg"></div>
+<details class="publish-form-change" id="publishFormChangeDetails">
+<summary>別のGoogleフォームへ変更する</summary>
+<p><strong>複製元と同じGoogleフォームを使う場合は変更不要です。</strong> 別のフォームへ変更する場合は、新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けてください。差し替えると受信確認は未確認に戻ります。</p>
+<textarea id="publishFormPrefillUrl" placeholder="新しいGoogleフォームの事前入力URLを貼り付け" rows="3"></textarea>
+<div class="actions compact-actions"><button class="secondary glass-btn" id="replacePublishedGoogleFormBtn" type="button">このGoogleフォームへ変更</button></div>
+<div aria-live="polite" class="small muted" id="publishFormReplaceMsg"></div>
+</details>
+</section>
+<section aria-live="polite" class="exam-preview-simulator hidden" id="examPreviewPanel">
+<div class="simulator-head">
+<div><span class="section-eyebrow">PREVIEW / NO DATA CHANGE</span><h3>生徒画面の表示を確認</h3><p class="muted small">試験データや公開日時は変更せず、3つの状態をその場で確認できます。</p></div>
+<button class="secondary glass-btn" id="closePreviewBtn" type="button">閉じる</button>
+</div>
+<div class="simulator-controls">
+<button class="previewModeBtn active" data-preview-mode="before" type="button">開始前</button>
+<button class="previewModeBtn" data-preview-mode="live" type="button">公開中</button>
+<button class="previewModeBtn" data-preview-mode="after" type="button">終了後</button>
+</div>
+<div class="student-exam-preview" id="studentExamPreview"></div>
+</section>
+<div class="publish-config-grid">
+<section class="publish-config-card">
+<div class="compact-card-head"><div><span class="section-eyebrow">STATUS &amp; SCHEDULE</span><h3>公開状態・期間</h3></div></div>
+<label>公開状態
             <select id="publishStatusSelect">
-              <option value="unpublished">非公開（準備中）</option>
-              <option value="published">公開（日時で自動管理）</option>
-              <option value="ended">終了（手動で即終了・データは保持）</option>
-            </select>
-          </label>
-          <div id="publishSchedulePanel" class="publish-schedule-panel hidden">
-            <div class="publish-date-grid">
-              <label>公開開始<input id="publishStartAt" type="datetime-local"></label>
-              <span class="publish-date-arrow">→</span>
-              <label>公開終了<input id="publishEndAt" type="datetime-local"></label>
-            </div>
-            <div class="actions compact-actions publish-extend-actions">
-              <span class="muted small">終了を延長：</span>
-              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="10">+10分</button>
-              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="15">+15分</button>
-              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="30">+30分</button>
-              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="60">+60分</button>
-            </div>
-            <p class="inline-help">開始前＝公開予定／期間中＝公開中／終了後＝自動終了。公開中・終了後でも日時を変更できます。終了後に延長した場合は、現在時刻から延長して再公開できます。</p>
-          </div>
-        </section>
-
-        <section class="publish-config-card target-config-card">
-          <div class="compact-card-head"><div><span class="section-eyebrow">AUDIENCE</span><h3>受験対象</h3></div><div class="actions compact-actions"><button id="selectAllAudienceBtn" class="secondary glass-btn" type="button">全員選択</button><button id="clearAudienceBtn" class="secondary glass-btn" type="button">解除</button></div></div>
-          <div id="registeredRosterSummary" class="future-feature-stack compact-roster-stack"></div>
-        </section>
-      </div>
-
-      <div id="audienceBuilder" class="audience-builder compact-audience-builder"></div>
-
-      <div class="publish-actions-panel compact-publish-actions">
-        <div><span class="section-eyebrow">SAVE</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間の延長・短縮も［公開設定を反映］だけで生徒画面へ自動反映します。</p></div>
-        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button></div>
-      </div>
-      <div id="publishMsg" class="small muted"></div>
-      <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
-    </section>
-  </div>
+<option value="unpublished">非公開（準備中）</option>
+<option value="published">公開（日時で自動管理）</option>
+<option value="ended">終了（手動で即終了・データは保持）</option>
+</select>
+</label>
+<div class="publish-schedule-panel hidden" id="publishSchedulePanel">
+<div class="publish-date-grid">
+<label>公開開始<input id="publishStartAt" type="datetime-local"/></label>
+<span class="publish-date-arrow">→</span>
+<label>公開終了<input id="publishEndAt" type="datetime-local"/></label>
+</div>
+<div class="actions compact-actions publish-extend-actions">
+<span class="muted small">終了を延長：</span>
+<button class="secondary glass-btn publishExtendBtn" data-minutes="10" type="button">+10分</button>
+<button class="secondary glass-btn publishExtendBtn" data-minutes="15" type="button">+15分</button>
+<button class="secondary glass-btn publishExtendBtn" data-minutes="30" type="button">+30分</button>
+<button class="secondary glass-btn publishExtendBtn" data-minutes="60" type="button">+60分</button>
+</div>
+<p class="inline-help">開始前＝公開予定／期間中＝公開中／終了後＝自動終了。公開中・終了後でも日時を変更できます。終了後に延長した場合は、現在時刻から延長して再公開できます。</p>
+</div>
+</section>
+<section class="publish-config-card target-config-card">
+<div class="compact-card-head"><div><span class="section-eyebrow">AUDIENCE</span><h3>受験対象</h3></div><div class="actions compact-actions"><button class="secondary glass-btn" id="selectAllAudienceBtn" type="button">全員選択</button><button class="secondary glass-btn" id="clearAudienceBtn" type="button">解除</button></div></div>
+<div class="future-feature-stack compact-roster-stack" id="registeredRosterSummary"></div>
+</section>
+</div>
+<div class="audience-builder compact-audience-builder" id="audienceBuilder"></div>
+<div class="publish-actions-panel compact-publish-actions">
+<div><span class="section-eyebrow">SAVE</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間の延長・短縮も［公開設定を反映］だけで生徒画面へ自動反映します。</p></div>
+<div class="actions"><button class="teacher-action" id="applyPublishBtn">公開設定を反映</button></div>
+</div>
+<div class="small muted" id="publishMsg"></div>
+<div aria-hidden="true" class="pdf-slip-stage" id="slips"></div>
+</section>
+</div>
 </main>
-
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.25.4"></script>
-<script src="js/teacher.js?v=1.25.4"></script>
+
+<div aria-hidden="true" class="operation-guide-modal hidden" id="operationGuideModal">
+<div class="operation-guide-backdrop" data-guide-close="1"></div>
+<section aria-labelledby="operationGuideTitle" aria-modal="true" class="operation-guide-dialog" role="dialog">
+<div class="operation-guide-head">
+<div><span class="section-eyebrow">OPERATION GUIDE</span><h2 id="operationGuideTitle">操作ガイド</h2></div>
+<button class="secondary glass-btn" id="operationGuideClose" type="button">閉じる</button>
+</div>
+<div class="operation-guide-body" id="operationGuideBody"></div>
+</section>
+</div>
+<script src="js/common.js?v=1.25.5"></script>
+<script src="js/teacher.js?v=1.25.5"></script>
 <!-- Optional feature libraries load after the core UI. -->
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </body>
 </html>
