@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.24.0">
+  <link rel="stylesheet" href="css/style.css?v=1.24.1">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.24.0</span>
+        <span class="tdx-version-pill">v1.24.1</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -326,7 +326,7 @@
       <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームからダウンロードした回答Excel（推奨）/ CSVをそのまま読み込み、採点から個人・設問別分析まで行います。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid analysis-upload-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input id="responseFile" type="file" accept=".xlsx,.xls,.csv"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
-        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div></div>
+        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・4桁番号・個人回答は含めず、クラス別／全体の集計値だけを書き出します。</p><button id="exportStudentAnalysisBtn" type="button" class="teacher-action">生徒用 analysis.json を書き出す</button><small>書き出したファイルは GitHub の <code>data/analysis.json</code> に上書きしてください。</small></div></div>
       </div>
       <div id="analysisOutput" class="hidden analysis-console">
         <div id="analysisImportSummary" class="analysis-import-summary"></div>
@@ -454,8 +454,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.24.0"></script>
-<script src="js/teacher.js?v=1.24.0"></script>
+<script src="js/common.js?v=1.24.1"></script>
+<script src="js/teacher.js?v=1.24.1"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

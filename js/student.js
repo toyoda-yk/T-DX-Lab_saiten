@@ -1,7 +1,7 @@
-let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null;
+let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.0';
+const APP_VERSION='1.24.1';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -24,17 +24,17 @@ async function fetchJsonWithMeta(path){
   const data=await r.json();return {data,lastModified:r.headers.get('last-modified')||''};
 }
 async function loadData(){
-  const [er,ur]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json')]);
+  const [er,ur,ar]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json'),fetchJsonWithMeta('data/analysis.json')]);
   dataVersionMeta.examError=er.status==='rejected';dataVersionMeta.userError=ur.status==='rejected';
   if(er.status==='rejected'||ur.status==='rejected'){updateVersionStatus();throw (er.status==='rejected'?er.reason:ur.reason)}
-  const e=er.value.data,u=ur.value.data;
+  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value.data:{version:1,analyses:[]};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
   dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';updateVersionStatus();
   exams=e.exams||[];
   // v1.5以前の配布用デモ3101だけを除外。本番で再発行済みの3101は残ります。
-  users=(u.users||[]).filter(x=>x?.credential?.codeId!=='demo-annual-3101');
+  users=(u.users||[]).filter(x=>x?.credential?.codeId!=='demo-annual-3101');users.forEach(x=>{x.classKey=x.classKey||String(x.studentCode||'').slice(0,2)});
 }
 
-function show(id){['loginPanel','examListPanel','examPanel','resultPanel'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function show(id){['loginPanel','examListPanel','examPanel','resultPanel','analysisPanel'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
   if(['published','unpublished','ended'].includes(s))return s;
@@ -53,13 +53,12 @@ function formatExamDeadline(exam){
   const t=parseExamDate(exam?.publishWindow?.endAt);if(t===null)return '';
   const d=new Date(t);return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
 }
-function eligible(exam,user){
-  if(examEffectiveStatus(exam)!=='published')return false;
-  const a=exam.access;
-  if(!a||a.mode==='all')return true;
-  const classes=a.classes||[], students=a.students||[];
-  return classes.includes(user.classKey)||students.includes(user.studentCode);
+function audienceAllowed(exam,user){
+  const a=exam.access;if(!a||a.mode==='all')return true;
+  const classes=a.classes||[],students=a.students||[];return classes.includes(user.classKey)||students.includes(user.studentCode);
 }
+function eligible(exam,user){return examEffectiveStatus(exam)==='published'&&audienceAllowed(exam,user)}
+function analysisEntryFor(examId){return (analysisData.analyses||[]).find(x=>x.examId===examId)||null}
 async function login(){
   const code=$('studentCode').value.trim(),pass=$('accessCode').value.trim();
   $('loginMsg').className='small muted';$('loginMsg').textContent='最新の公開情報を確認しています…';
@@ -81,14 +80,23 @@ async function login(){
   }
   if(!verified){$('loginMsg').className='error small';$('loginMsg').textContent='4桁番号または年間アクセスキーが違います。';return;}
   currentUser=rec;
-  accessibleExams=rec.credential||rec.salt?exams.filter(e=>eligible(e,rec)):legacyMatched;
+  const loginMatched=rec.credential||rec.salt?exams.filter(e=>audienceAllowed(e,rec)):legacyMatched;
+  accessibleExams=loginMatched.filter(e=>eligible(e,rec)||analysisEntryFor(e.id));
   $('who').textContent=`ログイン中：${code}`;renderExamList();show('examListPanel');
 }
 function renderExamList(){
   const root=$('examList');root.innerHTML='';
-  accessibleExams=accessibleExams.filter(e=>eligible(e,currentUser));
-  accessibleExams.forEach(e=>{const deadline=formatExamDeadline(e),d=document.createElement('div');d.className='exam-card';d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄${deadline?` / <strong>受験期限 ${deadline}</strong>`:''}</div><div class="actions"><button data-id="${e.id}">この試験を開く</button></div>`;d.querySelector('button').onclick=()=>openExam(e.id);root.appendChild(d)});
-  if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、あなたに公開されている試験はありません。</div>';
+  accessibleExams=accessibleExams.filter(e=>audienceAllowed(e,currentUser)&&(eligible(e,currentUser)||analysisEntryFor(e.id)));
+  accessibleExams.forEach(e=>{
+    const deadline=formatExamDeadline(e),canTake=eligible(e,currentUser),hasAnalysis=!!analysisEntryFor(e.id),d=document.createElement('div');d.className='exam-card';
+    const state=canTake?'公開中':hasAnalysis?'分析公開':'終了';
+    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip ${canTake?'':'analysis-ready'}">${state}</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄${canTake&&deadline?` / <strong>受験期限 ${deadline}</strong>`:''}${hasAnalysis?` / <strong>集計 ${analysisEntryFor(e.id).overall?.participants||0}人</strong>`:''}</div><div class="actions"></div>`;
+    const actions=d.querySelector('.actions');
+    if(canTake){const b=document.createElement('button');b.textContent='この試験を開く';b.onclick=()=>openExam(e.id);actions.appendChild(b)}
+    if(hasAnalysis){const b=document.createElement('button');b.className='secondary glass-btn';b.textContent='クラス・全体分析を見る';b.onclick=()=>openStudentAnalysis(e.id);actions.appendChild(b)}
+    root.appendChild(d)
+  });
+  if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、受験できる試験または公開中の分析結果はありません。</div>';
 }
 function openExam(id){
   currentExam=accessibleExams.find(e=>e.id===id);if(!currentExam)return;
@@ -136,7 +144,7 @@ async function sendCurrentExamToGoogle(answers,name){
   return {sent:true,attemptedAt:new Date().toISOString()};
 }
 async function submitExam(){
-  if(!eligible(currentExam,currentUser)){alert('この試験の公開期間は終了しました。回答は送信できません。');accessibleExams=exams.filter(e=>eligible(e,currentUser));renderExamList();show('examListPanel');return}
+  if(!eligible(currentExam,currentUser)){alert('この試験の公開期間は終了しました。回答は送信できません。');renderExamList();show('examListPanel');return}
   const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length,linked=!!currentExam.formSubmission;
   if(linked&&missing){alert(`未回答が${missing}個あります。Googleフォームへ確実に記録するため、すべての解答欄を回答してから提出してください。`);return}
   if(!linked&&missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;
@@ -145,8 +153,8 @@ async function submitExam(){
   const btn=$('submitBtn'),old=btn.textContent;btn.disabled=true;btn.textContent=linked?'Googleフォームへ送信中…':'採点中…';
   try{
     if(linked)lastFormSendState=await sendCurrentExamToGoogle(answers,name);else lastFormSendState={sent:false,reason:'not_configured'};
-    const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0);
-  }catch(e){console.error(e);if(!confirm(`Googleフォームへの送信処理でエラーが発生しました。\n${e.message||''}\n\nGoogleフォームへの記録なしで採点結果だけ表示しますか？`))return;lastFormSendState={sent:false,error:e.message||'送信エラー'};const result=TDX.scoreExam(currentExam,answers);lastResult=result;renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}finally{btn.disabled=false;btn.textContent=old}
+    const result=TDX.scoreExam(currentExam,answers);lastResult=result;saveStudentAnswerSnapshot(answers);renderResult(result,answers);show('resultPanel');window.scrollTo(0,0);
+  }catch(e){console.error(e);if(!confirm(`Googleフォームへの送信処理でエラーが発生しました。\n${e.message||''}\n\nGoogleフォームへの記録なしで採点結果だけ表示しますか？`))return;lastFormSendState={sent:false,error:e.message||'送信エラー'};const result=TDX.scoreExam(currentExam,answers);lastResult=result;saveStudentAnswerSnapshot(answers);renderResult(result,answers);show('resultPanel');window.scrollTo(0,0)}finally{btn.disabled=false;btn.textContent=old}
 }
 function sectionStat(section,r){
   const rows=r.detail.filter(d=>d.q.section===section.id),correct=rows.filter(d=>d.correct).length,total=rows.length;
@@ -155,9 +163,55 @@ function sectionStat(section,r){
 function renderResult(r,answers){
   const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
   $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('scoreDen').textContent=` / ${totalPoints}`;$('resultCode').textContent=currentStudentName?`氏名：${currentStudentName}　｜　4桁番号：${currentUser.studentCode}`:`4桁番号：${currentUser.studentCode}`;
+  const analysisBtn=$('resultAnalysisBtn');if(analysisBtn){analysisBtn.classList.toggle('hidden',!analysisEntryFor(currentExam.id));analysisBtn.onclick=()=>openStudentAnalysis(currentExam.id)}
   const sendBox=$('formSendResult');if(currentExam.formSubmission){sendBox.classList.remove('hidden');if(lastFormSendState?.sent){sendBox.className='form-send-result success';sendBox.innerHTML='<strong>✓ Googleフォーム送信</strong><span>回答の送信処理を実行しました。速報PDFには氏名と4桁番号も記載されます。</span>'}else{sendBox.className='form-send-result error';sendBox.innerHTML=`<strong>⚠ Googleフォーム未送信</strong><span>${lastFormSendState?.error||'送信状態を確認できませんでした。'} 担当の先生に知らせてください。</span>`}}else{sendBox.classList.add('hidden');sendBox.innerHTML=''};
   const bars=$('sectionBars');bars.innerHTML='';currentExam.sections.forEach(s=>{const st=sectionStat(s,r);bars.insertAdjacentHTML('beforeend',`<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${st.rate}%"></div></div><div>${st.score}/${st.points}点<br><span class="small muted">正答率 ${st.rate}%</span></div></div>`) });
   const body=$('detailBody');body.innerHTML='';r.detail.forEach(d=>{const answer=d.answer||'未回答';let correctText=d.q.answer;if(d.q.type.includes('unordered')&&d.q.groupAnswers)correctText=d.q.groupAnswers.join('・');const earned=d.groupAward??d.earned;body.insertAdjacentHTML('beforeend',`<tr><td>${d.q.label}</td><td>${answer}</td><td>${correctText}</td><td class="${d.correct?'ok':'ng'}">${d.correct?'○':'×'}</td><td>${earned}</td></tr>`) });
+}
+function answerSnapshotKey(examId,studentCode){return `tdx:answer:${examId}:${studentCode}`}
+function saveStudentAnswerSnapshot(answers){
+  try{if(!currentExam||!currentUser)return;localStorage.setItem(answerSnapshotKey(currentExam.id,currentUser.studentCode),JSON.stringify({savedAt:new Date().toISOString(),answers}))}catch(e){console.warn('answer snapshot save failed',e)}
+}
+function loadStudentAnswerSnapshot(examId){
+  try{const raw=localStorage.getItem(answerSnapshotKey(examId,currentUser?.studentCode||''));if(!raw)return null;const x=JSON.parse(raw);return x&&x.answers?x:null}catch(e){return null}
+}
+function publicAnalysisUnits(exam){
+  const questions=exam?.questions||[],seen=new Set(),units=[];
+  questions.forEach((q,index)=>{const grouped=!!q.group&&['unordered_item','complete_item','unordered_complete_item'].includes(q.type),key=grouped?`g:${q.group}`:`q:${q.id}`;if(seen.has(key))return;seen.add(key);const members=grouped?questions.filter(x=>x.group===q.group):[q];units.push({key,type:q.type,members,index})});return units;
+}
+function ownUnitMark(answers,unit){
+  if(!answers||!unit?.members?.length)return {mark:'—',cls:'none'};const score=TDX.scoreExam(currentExam,answers),detail=q=>q?score.detail.find(d=>String(d.q.id)===String(q.id)):null;
+  if(unit.type==='normal'){return detail(unit.members[0])?.correct?{mark:'○',cls:'ok'}:{mark:'×',cls:'ng'}}
+  if(unit.type==='unordered_item'){const hits=unit.members.map(detail).filter(d=>d?.correct).length;return hits===unit.members.length?{mark:'○',cls:'ok'}:hits?{mark:'△',cls:'partial'}:{mark:'×',cls:'ng'}}
+  const full=!!detail(unit.members[0])?.correct;return full?{mark:'○',cls:'ok'}:{mark:'×',cls:'ng'};
+}
+function analysisScopeSnapshot(entry){
+  if(publicAnalysisScope==='class'){const c=entry.classes?.[currentUser?.classKey];if(c)return {snapshot:c,label:`${currentUser.classKey}組`}}
+  return {snapshot:entry.overall,label:'全体'};
+}
+function openStudentAnalysis(examId){
+  const exam=exams.find(e=>e.id===examId),entry=analysisEntryFor(examId);if(!exam||!entry){alert('この試験の分析結果はまだ公開されていません。');return}
+  currentExam=exam;publicAnalysisScope=entry.classes?.[currentUser?.classKey]?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
+}
+function renderPublicAnalysis(){
+  const entry=analysisEntryFor(currentExam?.id);if(!entry)return;const scoped=analysisScopeSnapshot(entry),snap=scoped.snapshot,sort=$('publicAnalysisSort')?.value||'rate-desc';
+  $('analysisClassBtn').classList.toggle('active',publicAnalysisScope==='class');$('analysisAllBtn').classList.toggle('active',publicAnalysisScope==='all');$('analysisClassBtn').disabled=!entry.classes?.[currentUser?.classKey];
+  $('publicAnalysisTitle').textContent=`${currentExam.title}　${scoped.label}分析`;
+  const dt=entry.generatedAt?new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt)):'';
+  $('publicAnalysisMeta').textContent=`集計 ${snap.participants||0}人${dt?` ／ 更新 ${dt}`:''} ／ 平均点 ${Number(snap.averageScore||0).toFixed(1)}点`;
+  let stats=[...(snap.questions||[])];if(sort==='rate-desc')stats.sort((a,b)=>b.pct-a.pct||a.order-b.order);else if(sort==='rate-asc')stats.sort((a,b)=>a.pct-b.pct||a.order-b.order);else stats.sort((a,b)=>a.order-b.order);
+  const units=new Map(publicAnalysisUnits(currentExam).map(u=>[u.key,u])),saved=loadStudentAnswerSnapshot(currentExam.id),answers=saved?.answers||null,chart=$('publicAnalysisChart');
+  chart.innerHTML=`<div class="public-chart-scale"><span>0%</span><span>50%</span><span>100%</span></div>`+stats.map(x=>{const own=ownUnitMark(answers,units.get(x.key)||{type:'normal',members:[]});return `<div class="public-rate-row"><div class="public-rate-label"><strong>${escapeHtmlStudent(x.label)}</strong><small>${escapeHtmlStudent(x.section||'')} ${x.metricLabel&&x.metricLabel!=='正答率'?`・${escapeHtmlStudent(x.metricLabel)}`:''}</small></div><div class="public-rate-track"><span style="width:${Math.max(0,Math.min(100,Number(x.pct||0)))}%"></span><i class="own-marker ${own.cls}" title="自分：${own.mark}">${own.mark}</i></div><div class="public-rate-value">${Number(x.pct||0).toFixed(1)}%</div></div>`}).join('');
+  renderPublicAnalysisFacts(stats,answers,units,snap);
+}
+function escapeHtmlStudent(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderPublicAnalysisFacts(stats,answers,units,snap){
+  const root=$('publicAnalysisFacts');if(!root)return;if(!stats.length){root.innerHTML='<div class="notice">集計データがありません。</div>';return}
+  const high=[...stats].sort((a,b)=>b.pct-a.pct||a.order-b.order)[0],low=[...stats].sort((a,b)=>a.pct-b.pct||a.order-b.order)[0],over80=stats.filter(x=>x.pct>=80).length,under50=stats.filter(x=>x.pct<50).length;
+  let ownMiss=null;if(answers){ownMiss=stats.filter(x=>x.pct>=80).filter(x=>{const m=ownUnitMark(answers,units.get(x.key)||{type:'normal',members:[]});return m.cls==='ng'||m.cls==='partial'}).length}
+  const cards=[['最も高い',`${high.label}　${Number(high.pct).toFixed(1)}%`],['最も低い',`${low.label}　${Number(low.pct).toFixed(1)}%`],['80%以上',`${over80}問`],['50%未満',`${under50}問`],['平均点',`${Number(snap.averageScore||0).toFixed(1)} / ${Number(currentExam.totalPoints||100)}点`]];
+  if(ownMiss!==null)cards.push(['80%以上で自分が未達',`${ownMiss}問`]);else cards.push(['自分との比較','この端末に回答履歴なし']);
+  root.innerHTML=cards.map(([k,v])=>`<div class="fact-card"><span>${escapeHtmlStudent(k)}</span><strong>${escapeHtmlStudent(v)}</strong></div>`).join('');
 }
 function buildQuickPdfSheet(r){
   const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
@@ -261,7 +315,8 @@ async function closeQrScanner(){
   if(qrScanner){try{await qrScanner.stop()}catch(e){} try{await qrScanner.clear()}catch(e){} qrScanner=null}
   $('qrModal').classList.add('hidden');
 }
-$('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;currentExam=null;currentStudentName='';lastFormSendState=null;accessibleExams=[];$('studentName').value='';show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
+$('loginBtn').onclick=login;$('logoutBtn').onclick=()=>{currentUser=null;currentExam=null;currentStudentName='';lastFormSendState=null;accessibleExams=[];$('studentName').value='';show('loginPanel')};$('backBtn').onclick=()=>show('examListPanel');$('resultBackBtn').onclick=()=>show('examListPanel');$('analysisBackBtn').onclick=()=>show('examListPanel');$('submitBtn').onclick=submitExam;$('pdfBtn').onclick=pdf;
+$('analysisClassBtn').onclick=()=>{publicAnalysisScope='class';renderPublicAnalysis()};$('analysisAllBtn').onclick=()=>{publicAnalysisScope='all';renderPublicAnalysis()};$('publicAnalysisSort').onchange=renderPublicAnalysis;
 $('qrLoginBtn').onclick=openQrScanner;$('qrCloseBtn').onclick=closeQrScanner;
 bindVersionStatus();
 loadData().catch(e=>{$('loginMsg').className='error small';$('loginMsg').textContent='データ読み込みに失敗しました。GitHub PagesまたはローカルWebサーバーで開いてください。'});

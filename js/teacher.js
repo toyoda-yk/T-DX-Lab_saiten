@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
 const SYSTEM_ADMIN_HASH='888df25ae35772424a560c7152a1de794440e0ea5cfee62828333a456a506e05'; // 9999
-let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]},allExamData=null;
+let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]},allExamData=null,allAnalysisData={version:1,systemName:'T-DX Lab☆問題演習システム',updatedAt:null,analyses:[]};
 let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
 let editorSectionTargets={};
@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.24.0';
+const APP_VERSION='1.24.1';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -130,10 +130,13 @@ async function init(){
   bindVersionStatus();
   const examPromise=fetchJsonWithMeta('data/exams.json');
   const userPromise=fetchJsonWithMeta('data/users.json');
-  const [examResult,userResult]=await Promise.allSettled([examPromise,userPromise]);
+  const analysisPromise=fetchJsonWithMeta('data/analysis.json');
+  const [examResult,userResult,analysisResult]=await Promise.allSettled([examPromise,userPromise,analysisPromise]);
 
   allExamData=examResult.status==='fulfilled'?examResult.value.data:{version:5,systemName:'T-DX Lab☆問題演習システム',exams:[]};
   usersData=userResult.status==='fulfilled'?userResult.value.data:{version:5,users:[],issuedCodeIds:[]};
+  allAnalysisData=analysisResult.status==='fulfilled'?analysisResult.value.data:{version:1,systemName:'T-DX Lab☆問題演習システム',updatedAt:null,analyses:[]};
+  allAnalysisData.analyses=Array.isArray(allAnalysisData.analyses)?allAnalysisData.analyses:[];
   dataVersionMeta.examError=examResult.status==='rejected';
   dataVersionMeta.userError=userResult.status==='rejected';
   dataVersionMeta.exams=examResult.status==='fulfilled'?(allExamData.updatedAt||examResult.value.lastModified||''):'';
@@ -141,6 +144,7 @@ async function init(){
   updateVersionStatus();
   if(examResult.status==='rejected')console.error('exams.json load failed:',examResult.reason);
   if(userResult.status==='rejected')console.error('users.json load failed:',userResult.reason);
+  if(analysisResult.status==='rejected')console.info('analysis.json is optional and was not loaded:',analysisResult.reason);
 
   exams=allExamData.exams||[];
   exams.forEach(e=>{
@@ -237,6 +241,7 @@ function bind(){
   $('formTestConfirmed').onchange=renderGoogleFormStatus;
 
   $('analyzeBtn').onclick=analyzeFile;
+  $('exportStudentAnalysisBtn').onclick=exportStudentAnalysisData;
   $('classFilter').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
   $('questionSort').onchange=renderAnalysis;
   $('questionFilter').onchange=renderAnalysis;
@@ -1702,6 +1707,46 @@ function questionStats(rows){
     let level='middle',levelLabel='要確認';if(pct<50){level='review';levelLabel='重点復習'}else if(pct>=80){level='must';levelLabel='できてほしい'}
     return {unit,index:unit.index,label:combineQuestionLabels(unit.members),answerLabel:unitAnswerLabel(unit),pointLabel:unitPointLabel(unit),typeLabel:unitTypeLabel(unit),pct,ok,total:rows.length,section:sectionNames.get(unit.section)||unit.section||'',level,levelLabel,metricLabel,statusMain,statusSub,subMetric};
   });
+}
+function publicAnalysisSnapshot(rows){
+  const scores=rows.map(r=>Number(r.score.total||0)),participants=rows.length;
+  const sectionRates=(analysisExam.sections||[]).map(sec=>{
+    const points=Number(sec.points||0),sum=rows.reduce((a,r)=>a+Number(r.score.sectionScores[sec.id]||0),0);
+    return {id:sec.id,name:sec.name,rate:participants&&points?Number((sum/(participants*points)*100).toFixed(1)):0};
+  });
+  const questions=questionStats(rows).map(x=>({
+    key:x.unit.key,order:x.index,label:x.label,section:x.section,type:x.unit.type,typeLabel:x.typeLabel||'',metricLabel:x.metricLabel,pct:Number(x.pct.toFixed(1))
+  }));
+  return {
+    participants,
+    averageScore:participants?Number((scores.reduce((a,b)=>a+b,0)/participants).toFixed(1)):0,
+    maxScore:participants?Math.max(...scores):0,
+    minScore:participants?Math.min(...scores):0,
+    sectionRates,
+    questions
+  };
+}
+function exportStudentAnalysisData(){
+  if(!analysisExam||!analysisRows.length){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
+  const byClass={};
+  [...new Set(analysisRows.map(r=>r.classKey).filter(Boolean))].sort().forEach(classKey=>{
+    const rows=analysisRows.filter(r=>r.classKey===classKey);byClass[classKey]=publicAnalysisSnapshot(rows);
+  });
+  const entry={
+    examId:analysisExam.id,
+    title:analysisExam.title,
+    subject:analysisExam.subject||'',
+    totalPoints:Number(analysisExam.totalPoints||100),
+    generatedAt:new Date().toISOString(),
+    source:{fileName:analysisMeta.fileName||'',rawResponses:analysisMeta.raw,participants:analysisRows.length},
+    overall:publicAnalysisSnapshot(analysisRows),
+    classes:byClass
+  };
+  const analyses=(allAnalysisData.analyses||[]).filter(x=>x.examId!==analysisExam.id);analyses.push(entry);
+  analyses.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ja'));
+  allAnalysisData={version:1,systemName:'T-DX Lab☆問題演習システム',updatedAt:new Date().toISOString(),analyses};
+  TDX.download('analysis.json',JSON.stringify(allAnalysisData,null,2));
+  alert('生徒用 analysis.json を書き出しました。\n\n氏名・4桁番号・個人回答は含まれていません。\nGitHub の data/analysis.json に上書きすると、生徒画面でクラス分析・全体分析が表示されます。');
 }
 function renderAnalysisInsights(rows){
   const root=$('analysisInsights');if(!root)return;const stats=questionStats(rows),review=stats.filter(x=>x.pct<50).sort((a,b)=>a.pct-b.pct),must=stats.filter(x=>x.pct>=80).sort((a,b)=>b.pct-a.pct),lowest=[...stats].sort((a,b)=>a.pct-b.pct)[0];
