@@ -3,8 +3,8 @@
   "systemName": "T-DX Lab☆問題演習システム",
   "note": "生徒認証用の公開データ。平文アクセスキー・氏名・個人回答は含みません。",
   "schoolYear": "2026",
-  "resetEpoch": "d35fba51-aaaf-4a35-8b91-d98c2ab4a2a0",
-  "updatedAt": "2026-10-12T15:13:03.868Z",
+  "resetEpoch": "2058d759-4c99-49e9-953d-58bb491adf60",
+  "updatedAt": "2026-10-12T15:14:52.411Z",
   "issuedCodeIds": [],
   "users": []
 }
