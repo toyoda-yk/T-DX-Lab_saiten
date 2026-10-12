@@ -4,7 +4,7 @@
   "note": "生徒認証用の公開データ。credential はsalt+hashのみ。平文アクセスキー・氏名・個人回答・QR復号情報は含みません。",
   "schoolYear": "2026",
   "resetEpoch": "2058d759-4c99-49e9-953d-58bb491adf60",
-  "updatedAt": "2026-10-12T15:22:46.969Z",
+  "updatedAt": "2026-10-12T15:22:47.367Z",
   "issuedCodeIds": [],
   "users": [
     {
