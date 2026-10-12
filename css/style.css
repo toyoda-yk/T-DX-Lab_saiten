@@ -1036,7 +1036,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .migration-result.notice{background:#fff7e8;border-color:#f2d29a;color:#87561b}
 .migration-result.error{background:#fff0f0;border-color:#efb9b9;color:#a63d3d}
 
-/* v1.23.7 - Google Form verification inside exam management */
+/* v1.23.8 - Google Form verification inside exam management */
 .publish-google-form-panel{margin:10px 0 12px;padding:14px 15px;border:1px solid #d9e6f4;border-radius:18px;background:linear-gradient(180deg,#fbfdff,#f7faff)}
 .publish-form-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.publish-form-head h3{margin:2px 0 3px}.publish-form-head p{margin:0;color:#6b7d91;font-size:11px;line-height:1.5}
 .publish-form-status{display:inline-flex;align-items:center;min-height:30px;padding:5px 10px;border-radius:999px;border:1px solid #d7e0e8;background:#f2f5f8;color:#667789;font-size:10px;font-weight:900;white-space:nowrap}.publish-form-status.ok{background:#edf9f2;border-color:#c4e6d1;color:#176e47}.publish-form-status.mid{background:#fff8e8;border-color:#eed89e;color:#855f18}.publish-form-status.warn{background:#fff1f1;border-color:#efc8c8;color:#9b3737}

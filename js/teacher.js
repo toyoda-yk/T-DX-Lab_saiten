@@ -145,7 +145,7 @@ async function init(){
   exams=allExamData.exams||[];
   exams.forEach(e=>{
     e.status=examStoredStatus(e);e.published=e.status==='published';
-    // v1.23.7: old clones inherited the source exam's testConfirmed flag even though the clone itself was never verified.
+    // v1.23.8: old clones inherited the source exam's testConfirmed flag even though the clone itself was never verified.
     if(e.clonedFrom&&e.formSubmission&&!e.formSubmission.verificationSource){
       e.formSubmission.testConfirmed=false;
       e.formSubmission.verifiedAt=null;
@@ -246,6 +246,7 @@ function bind(){
   $('togglePreviewBtn').onclick=toggleExamPreview;
   $('testPublishedGoogleFormBtn').onclick=testSelectedExamGoogleForm;
   $('openPublishedGoogleFormBtn').onclick=openSelectedExamGoogleForm;
+  $('editPublishedGoogleFormBtn').onclick=openSelectedExamGoogleFormEditor;
   $('replacePublishedGoogleFormBtn').onclick=replaceSelectedExamGoogleForm;
   $('publishFormConfirmed').onchange=confirmSelectedExamGoogleFormReceipt;
   $('closePreviewBtn').onclick=()=>{$('examPreviewPanel')?.classList.add('hidden')};
@@ -1420,6 +1421,23 @@ function openSelectedExamGoogleForm(){
   if(!url){alert('この試験にはGoogleフォームURLが設定されていません。');return}
   window.open(url,'_blank','noopener,noreferrer');
 }
+
+function openSelectedExamGoogleFormEditor(){
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);
+  if(!exam){alert('試験を選択してください。');return}
+  const details=$('publishFormChangeDetails');
+  if(details)details.open=true;
+  const input=$('publishFormPrefillUrl');
+  if(input){input.focus();input.scrollIntoView({behavior:'smooth',block:'center'})}
+  const msg=$('publishFormReplaceMsg');
+  if(msg){
+    msg.className='notice small';
+    msg.innerHTML=exam.clonedFrom
+      ? '<strong>複製試験です。</strong> 元試験と同じGoogleフォームを使うなら変更不要です。別フォームを使う場合だけ、新しいフォームの<strong>事前入力URL</strong>を貼り付けてください。'
+      : '別のGoogleフォームへ変更する場合は、新しいフォームの<strong>事前入力URL</strong>を貼り付けてください。';
+  }
+}
+
 function parsePrefilledGoogleFormForExam(raw,exam){
   const ep=googleFormEndpoints(raw),u=new URL(cleanGoogleFormUrlInput(raw)),entries=[];
   for(const [key,value] of u.searchParams.entries())if(/^entry\.\d+$/.test(key))entries.push({key,value});
@@ -1632,7 +1650,7 @@ function cloneCurrentExam(){
   refreshPublishSelectors(clone.id);if($('publishExamSelect'))$('publishExamSelect').value=clone.id;
   loadPublishExam();renderExamExportSummary();
   $('publishMsg').className='success small';
-  $('publishMsg').innerHTML=`<strong>✓ 「${esc(exam.title)}」を複製しました。</strong> 正答・配点・設問ごとの選択肢${exam.formSubmission?'・Googleフォーム設定':''}を引き継ぎました。<strong>Googleフォームは「引継ぎ・未確認」へ戻し、非公開・受験対象未設定</strong>で作成しています。受信確認後に公開設定へ進んでください。`;
+  $('publishMsg').innerHTML=`<strong>✓ 「${esc(exam.title)}」を複製しました。</strong> 正答・配点・設問ごとの選択肢${exam.formSubmission?'・Googleフォーム設定':''}を引き継ぎました。<strong>Googleフォームは「引継ぎ・未確認」へ戻し、非公開・受験対象未設定</strong>で作成しています。元試験と同じフォームを使う場合はそのままテスト送信、別フォームを使う場合は <strong>［Googleフォームを変更］</strong> から差し替えてください。`;
 }
 function toggleExamPreview(){
   const panel=$('examPreviewPanel');if(!panel)return;

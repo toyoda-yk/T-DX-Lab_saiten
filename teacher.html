@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.23.7</span>
+        <span class="tdx-version-pill">v1.23.8</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -362,7 +362,10 @@
         </div>
         <div class="publish-form-current">
           <label>現在の送信先URL<input id="publishCurrentFormUrl" type="text" readonly placeholder="Googleフォーム未設定"></label>
-          <button id="openPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォームを開く</button>
+          <div class="actions compact-actions publish-form-current-actions">
+            <button id="openPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォームを開く</button>
+            <button id="editPublishedGoogleFormBtn" class="orange" type="button">Googleフォームを変更</button>
+          </div>
         </div>
         <div id="publishFormMappingSummary" class="publish-form-mapping-summary"></div>
         <div class="publish-form-actions">
@@ -370,11 +373,11 @@
           <label class="test-confirm-check publish-confirm-check"><input id="publishFormConfirmed" type="checkbox"> Googleフォームの「回答」で受信を確認した</label>
         </div>
         <div id="publishFormTestMsg" class="small muted" aria-live="polite"></div>
-        <details class="publish-form-change">
-          <summary>Googleフォームを変更・再設定する</summary>
-          <p>新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けます。差し替えると受信確認は未確認に戻ります。</p>
-          <textarea id="publishFormPrefillUrl" rows="3" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&entry...."></textarea>
-          <div class="actions compact-actions"><button id="replacePublishedGoogleFormBtn" class="secondary glass-btn" type="button">事前入力URLを解析して差し替え</button></div>
+        <details id="publishFormChangeDetails" class="publish-form-change">
+          <summary>別のGoogleフォームへ変更する</summary>
+          <p><strong>複製元と同じGoogleフォームを使う場合は変更不要です。</strong> 別のフォームへ変更する場合は、新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けてください。差し替えると受信確認は未確認に戻ります。</p>
+          <textarea id="publishFormPrefillUrl" rows="3" placeholder="新しいGoogleフォームの事前入力URLを貼り付け"></textarea>
+          <div class="actions compact-actions"><button id="replacePublishedGoogleFormBtn" class="secondary glass-btn" type="button">このGoogleフォームへ変更</button></div>
           <div id="publishFormReplaceMsg" class="small muted" aria-live="polite"></div>
         </details>
       </section>
