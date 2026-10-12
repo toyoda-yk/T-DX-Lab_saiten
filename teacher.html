@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.25.2">
+  <link rel="stylesheet" href="css/style.css?v=1.25.4">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,9 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.25.2</span>
-        <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
-        <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
+        <span class="tdx-version-pill">v1.25.4</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
       </div>
       <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -34,7 +32,7 @@
       <p class="portal-overline teacher-overline">T-DX Lab☆ MANAGEMENT CONSOLE</p>
       <h1><span>教員用</span>管理コンソール</h1>
       <p class="portal-catch">学びを、<strong>データで次の一問へ。</strong></p>
-      <p class="portal-sub">試験作成・ログインコード発行・回答分析・公開管理を、ひとつの画面から。</p>
+      <p class="portal-sub">試験の作成・公開・回答分析・QR再印刷を、ひとつの画面から。</p>
     </div>
 
     <div class="portal-login-card teacher-portal-card">
@@ -45,42 +43,38 @@
       <p class="small portal-login-message">学校のOENアカウントで本人確認します。教員共通パスワードは使用しません。</p>
       <button id="adminLoginBtn" class="portal-login-btn teacher-login-btn">OEN認証で管理コンソールを開く <span>›</span></button>
       <div id="adminMsg" class="small portal-admin-message"></div>
-      <div class="portal-security teacher-security"><span>✓</span><p><strong>教員管理画面</strong><br>成績データはGitHub上へ常時保存せず、分析時はブラウザ内で処理します。</p></div>
+      <div class="portal-security teacher-security"><span>✓</span><p><strong>教員管理画面</strong><br>生徒の個人回答は公開せず、回答分析は教員のブラウザ内で処理します。</p></div>
     </div>
   </section>
 
   <div id="adminApp" class="hidden">
     <section class="future-panel admin-dashboard-card">
       <div class="section-title app-section-head teacher-dashboard-head">
-        <div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">通常は「試験作成・模範解答の登録」から開始します。年度設定はシステム管理者だけが操作します。</p></div>
+        <div><span class="section-eyebrow">TEACHER CONTROL CENTER</span><h2>教員管理ダッシュボード</h2><p class="muted small">一般教員は、試験作成 → 公開 → 回答分析の順に利用します。年度設定はシステム管理者だけが操作します。</p></div>
         <button id="adminLogoutBtn" class="secondary glass-btn">画面をロック</button>
       </div>
 
       <div class="teacher-workflow-nav">
-        <button class="admin-menu-card menuBtn tone-build active-look" data-target="examManager"><span class="menu-index">CREATE</span><strong>試験作成・模範解答</strong><small>正答・配点・選択肢・Googleフォーム</small></button>
-        <button class="admin-menu-card menuBtn tone-manage" data-target="publishManager"><span class="menu-index">MANAGE</span><strong>試験管理・公開</strong><small>対象者・公開期間・複製・削除</small></button>
-        <button class="admin-menu-card menuBtn tone-analysis" data-target="analysisManager"><span class="menu-index">ANALYZE</span><strong>回答分析</strong><small>得点分布・大問別・設問別正答率</small></button>
-        <button class="admin-menu-card menuBtn tone-qr" data-target="qrManager"><span class="menu-index">QR</span><strong>QRカード再印刷</strong><small>紛失・汚損時に同じQRを再印刷</small></button>
+        <button class="admin-menu-card menuBtn tone-build active-look" data-target="examManager"><span class="menu-index">1</span><strong>試験を作る</strong><small>問題・正答・配点・Googleフォームを設定</small></button>
+        <button class="admin-menu-card menuBtn tone-manage" data-target="publishManager"><span class="menu-index">2</span><strong>公開を設定する</strong><small>対象クラス・公開期間・時間延長</small></button>
+        <button class="admin-menu-card menuBtn tone-analysis" data-target="analysisManager"><span class="menu-index">3</span><strong>回答を分析する</strong><small>Excelを読み込み、集計結果を確認</small></button>
+        <button class="admin-menu-card menuBtn tone-qr" data-target="qrManager"><span class="menu-index">4</span><strong>QRを再印刷する</strong><small>紛失・汚損した生徒のカードを再印刷</small></button>
       </div>
 
       <div class="system-admin-entry">
-        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度名簿・年間アクセスキー・年度更新はシステム管理者向けです。</small></div></div>
+        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度初めの生徒設定・アクセスキー発行・年度更新</small></div></div>
         <button id="systemAdminBtn" class="secondary glass-btn" type="button">システム管理者</button>
       </div>
       <div id="systemAdminGate" class="system-admin-gate hidden">
-        <div><strong>システム管理者認証</strong><small>OENアカウントと共有スプレッドシートの所有者／管理者設定で確認します。</small></div>
+        <div><strong>システム管理者認証</strong><small>OENアカウントと管理者権限を確認します。</small></div>
         <div class="system-admin-login-row"><button id="systemAdminLoginBtn" class="teacher-action" type="button">OEN権限を確認して開く</button><button id="systemAdminCancelBtn" class="secondary glass-btn" type="button">閉じる</button></div>
         <div id="systemAdminMsg" class="small muted"></div>
       </div>
     </section>
 
     <section id="studentManager" class="future-panel adminSection teacher-tone-admin hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度設定・年間アクセス管理</h2><p>年度初めの名簿登録とアクセスキー発行を行います。通常の試験作成では操作しません。</p></div><div class="admin-symbol">SYS</div></div>
-      <div class="admin-lock-note"><strong>管理者専用</strong><span>アクセスキーの「発行・再発行」と名簿変更はシステム管理者だけが行います。一般教員は「QRカード再印刷」で、現在有効なQRをそのまま再印刷します。</span></div>
-      <div class="qr-role-split">
-        <div class="qr-role-card teacher-role"><span class="section-eyebrow">GENERAL TEACHER</span><strong>一般教員：QR再印刷</strong><small>紛失・汚損時に同じQRを再印刷。アクセスキーは変更しません。</small></div>
-        <div class="qr-role-card admin-role"><span class="section-eyebrow">SYSTEM ADMIN</span><strong>システム管理者：発行・再発行</strong><small>年度名簿、新規発行、漏えい時の再発行、年度更新を管理します。</small></div>
-      </div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">SYSTEM ADMIN / ANNUAL SETUP</span><h2>年度初め・システム管理</h2><p>年度初めの生徒登録・QR発行と、年度更新を行います。</p></div><div class="admin-symbol">SYS</div></div>
+      <div class="admin-lock-note"><strong>管理者専用</strong><span>年度初めは「名簿登録 → アクセスキー発行 → QRカードPDF」の順に進めます。</span></div>
       <input id="classDigits" type="hidden" value="2">
 
       <div class="roster-setup-grid">
@@ -116,28 +110,29 @@
           <span id="individualStudentCount" class="student-count-badge"></span>
         </div>
         <div id="individualStudentTable"></div>
-        <div class="student-admin-note"><strong>変更後の反映</strong><span>追加・編集・削除はGAS経由で <code>users.json</code> へ自動反映します。個別受験対象に設定されている4桁番号を変更した場合は <code>exams.json</code> も自動更新します。</span></div>
+        <div class="student-admin-note"><strong>変更後は自動反映</strong><span>生徒の追加・編集・削除は保存後、自動で生徒画面と試験設定に反映されます。</span></div>
       </section>
 
       <div class="annual-access-panel roster-annual-wide">
         <div class="annual-access-head-v122">
-          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー発行</h3><p class="muted small">未発行者だけに新しい年間アクセスキーを発行します。</p></div>
+          <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>年間アクセスキー・QRカード</h3><p class="muted small">名簿登録後は、①アクセスキー発行 → ②QRカードPDF の2操作で完了です。</p></div>
           <div class="actions compact-actions annual-primary-actions">
-            <button id="generateAnnualCodesBtn" class="orange">未発行者にアクセスキーを発行</button>
-            <button id="printAnnualCardsBtn" class="secondary glass-btn" disabled>今回発行分QRカード</button>
-            <button id="printAllAnnualCardsBtn" class="secondary glass-btn" disabled>全員分QRカード</button>
-            <button id="exportAnnualSecretsBtn" class="secondary glass-btn">年間マスターCSV</button>
-            <button id="syncRosterUsersBtn" class="teacher-action">生徒データを再反映</button>
-            <button id="exportRosterUsersBtn" class="secondary glass-btn">非常時用 users.json</button>
+            <button id="generateAnnualCodesBtn" class="orange">① アクセスキーを発行</button>
+            <button id="printAnnualCardsBtn" class="teacher-action" disabled>② QRカードPDFを作成</button>
           </div>
         </div>
         <div class="annual-secondary-row">
-          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターの準備状況を確認しています。</div>
+          <div id="annualMasterStatus" class="info-strip teacher-strip"><span>QR</span> 名簿登録後、未発行者のアクセスキーを発行してください。</div>
         </div>
-        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
+        <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">初回は登録した生徒全員のQRカードが作成されます。PDFを印刷して配布すれば完了です。紛失時は「QRを再印刷する」から1人ずつ再印刷できます。</div></div>
         <details class="danger-admin-details">
-          <summary>緊急時の再発行</summary>
-          <div class="danger-admin-inner"><p>漏えいなどで現在のQRを無効化する必要がある場合だけ使用します。通常の紛失・汚損では使いません。</p><button id="regenerateAnnualCodesBtn" class="danger-soft">全員のアクセスキーを再発行</button></div>
+          <summary>セキュリティ対応（漏えい時のみ）</summary>
+          <div class="danger-admin-inner">
+            <p>アクセスキーの漏えいが疑われる場合だけ使用します。通常は操作しません。</p>
+            <div class="actions compact-actions">
+              <button id="regenerateAnnualCodesBtn" class="danger-soft">全員のアクセスキーを再発行</button>
+            </div>
+          </div>
         </details>
       </div>
 
@@ -332,14 +327,14 @@
     </section>
 
     <section id="qrManager" class="future-panel adminSection teacher-tone-qr hidden">
-      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT / GENERAL TEACHER</span><h2>QRカード再印刷</h2><p>一般教員が、紛失・汚損した生徒の「現在有効なQR」をそのまま再印刷する画面です。</p></div><div class="admin-symbol">QR</div></div>
-      <div class="qr-safety-strip"><strong>一般教員は「再印刷」だけ</strong><span>アクセスキーは変わりません。新規発行・再発行はシステム管理者だけが行います。</span></div>
+      <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒のQRカードを1人ずつ再印刷します。</p></div><div class="admin-symbol">QR</div></div>
+      <div class="qr-safety-strip"><strong>QRを再印刷</strong><span>再印刷してもアクセスキーは変わりません。</span></div>
       <div class="qr-general-tools">
         <label>クラス<select id="accessVaultClassFilter" class="compact-select"><option value="">全クラス</option></select></label>
         <label>4桁番号で検索<input id="qrStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"></label>
         <div id="qrCacheStatus" class="qr-cache-status"><span>CHECK</span> 再印刷準備を確認しています。</div>
       </div>
-      <p class="master-note">別ファイルの読み込みは不要です。システム管理者が年度初めに設定した <code>users.json</code> から、教員ログイン中だけQR再印刷に必要な情報を復号します。</p>
+      <p class="master-note">クラスまたは4桁番号で生徒を探し、再印刷してください。別ファイルの読み込みは不要です。</p>
       <div id="accessVaultSummary" class="grid three roster-summary"></div>
       <div id="accessVaultManager" class="annual-code-preview"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
       <div id="qrMsg" class="small muted"></div>
@@ -349,7 +344,7 @@
       <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームからダウンロードした回答Excel（推奨）/ CSVをそのまま読み込み、採点から個人・設問別分析まで行います。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid analysis-upload-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input id="responseFile" type="file" accept=".xlsx,.xls,.csv"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
-        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・4桁番号・個人回答は公開せず、クラス別／全体の集計値だけを生徒用公開データへ自動反映します。生徒はGoogleログイン不要です。</p><button id="publishStudentAnalysisBtn" type="button" class="teacher-action">生徒に分析を公開</button><div id="analysisPublishMsg" class="small muted" aria-live="polite">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div><details class="analysis-backup-details"><summary>非常時用：JSONを書き出す</summary><p class="small muted">通常運用では不要です。共通GASが利用できない場合の予備としてだけ使用します。</p><button id="exportStudentAnalysisBtn" type="button" class="secondary glass-btn">analysis.json を書き出す</button></details></div></div>
+        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。</p><button id="publishStudentAnalysisBtn" type="button" class="teacher-action">生徒に分析を公開</button><div id="analysisPublishMsg" class="small muted" aria-live="polite">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
       </div>
       <div id="analysisOutput" class="hidden analysis-console">
         <div id="analysisImportSummary" class="analysis-import-summary"></div>
@@ -360,12 +355,7 @@
         </div>
 
         <div class="analysis-card analysis-detail-card">
-          <div class="analysis-card-head"><div><div class="section-eyebrow">AUTO INSIGHT</div><h3>指導につなげる自動抽出</h3></div><small>基準：重点復習 50%未満 ／ できてほしい 80%以上</small></div>
-          <div id="analysisInsights" class="analysis-insights"></div>
-        </div>
-
-        <div class="analysis-card analysis-detail-card">
-          <div class="analysis-card-head"><div><div class="section-eyebrow">QUESTION RATE</div><h3>設問別分析</h3><p id="questionRateSummary" class="muted small"></p></div><div class="analysis-tools"><label>表示<select id="questionFilter"><option value="all">すべて</option><option value="review">重点復習（50%未満）</option><option value="middle">要確認（50〜79.9%）</option><option value="must">できてほしい（80%以上）</option></select></label><label>並べ替え<select id="questionSort"><option value="rate-asc">正答率が低い順</option><option value="rate-desc">正答率が高い順</option><option value="order">問題順</option></select></label></div></div>
+          <div class="analysis-card-head"><div><div class="section-eyebrow">QUESTION RATE</div><h3>設問別分析</h3><p id="questionRateSummary" class="muted small"></p></div><div class="analysis-tools"><label>表示<select id="questionFilter"><option value="all">すべて</option><option value="review">50%未満</option><option value="middle">50〜79.9%</option><option value="must">80%以上</option></select></label><label>並べ替え<select id="questionSort"><option value="rate-asc">正答率が低い順</option><option value="rate-desc">正答率が高い順</option><option value="order">問題順</option></select></label></div></div>
           <div class="table-shell analysis-table-shell"><table><thead><tr><th>大問</th><th>設問</th><th>正答</th><th>配点</th><th>正答率 / 完答率</th><th>達成状況</th><th>判定</th></tr></thead><tbody id="questionRates"></tbody></table></div>
         </div>
 
@@ -469,30 +459,21 @@
       <div id="audienceBuilder" class="audience-builder compact-audience-builder"></div>
 
       <div class="publish-actions-panel compact-publish-actions">
-        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間の延長・短縮も［公開設定を反映］だけで生徒画面へ自動反映します。</p></div>
-        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="secondary glass-btn">非常時用 exams.jsonを書き出す</button></div>
+        <div><span class="section-eyebrow">SAVE</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間の延長・短縮も［公開設定を反映］だけで生徒画面へ自動反映します。</p></div>
+        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
-
-      <details class="export-summary-details">
-        <summary>書き出し対象の試験一覧を確認</summary>
-        <div id="examExportSummary" class="exam-export-summary"></div>
-      </details>
       <div id="slips" class="pdf-slip-stage" aria-hidden="true"></div>
     </section>
   </div>
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.25.2"></script>
-<script src="js/teacher.js?v=1.25.2"></script>
+<script src="js/common.js?v=1.25.4"></script>
+<script src="js/teacher.js?v=1.25.4"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
 </body>
 </html>

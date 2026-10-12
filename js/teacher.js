@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.2';
+const APP_VERSION='1.25.3';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -202,10 +202,8 @@ function bind(){
   $('individualStudentSearch').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);renderIndividualStudents()});
   $('generateAnnualCodesBtn').onclick=()=>generateAnnualCodes(false);
   $('regenerateAnnualCodesBtn').onclick=()=>generateAnnualCodes(true);
-  $('exportAnnualSecretsBtn').onclick=exportAnnualSecrets;
   $('printAnnualCardsBtn').onclick=printAnnualCards;
-  $('printAllAnnualCardsBtn').onclick=printAllAnnualCards;
-  $('exportRosterUsersBtn').onclick=exportUserData;
+  if($('exportRosterUsersBtn'))$('exportRosterUsersBtn').onclick=exportUserData;
   if($('syncRosterUsersBtn'))$('syncRosterUsersBtn').onclick=manualSyncUsers;
   if($('annualBackupBtn'))$('annualBackupBtn').onclick=downloadAnnualBackup;
   if($('currentYearResetBtn'))$('currentYearResetBtn').onclick=currentYearReset;
@@ -234,7 +232,7 @@ function bind(){
 
   $('analyzeBtn').onclick=analyzeFile;
   $('publishStudentAnalysisBtn').onclick=publishStudentAnalysisToGas;
-  $('exportStudentAnalysisBtn').onclick=exportStudentAnalysisData;
+  if($('exportStudentAnalysisBtn'))$('exportStudentAnalysisBtn').onclick=exportStudentAnalysisData;
   $('classFilter').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
   $('questionSort').onchange=renderAnalysis;
   $('questionFilter').onchange=renderAnalysis;
@@ -259,7 +257,7 @@ function bind(){
   $('clearAudienceBtn').onclick=()=>setAllAudience(false);
   $('applyPublishBtn').onclick=applyPublish;
   document.querySelectorAll('.publishExtendBtn').forEach(b=>b.onclick=()=>extendPublishEnd(Number(b.dataset.minutes||0)));
-  $('exportExamDataBtn').onclick=exportExamData;
+  if($('exportExamDataBtn'))$('exportExamDataBtn').onclick=exportExamData;
 }
 async function adminLogin(){
   const btn=$('adminLoginBtn'),old=btn?.textContent||'OEN認証で管理コンソールを開く';
@@ -294,7 +292,7 @@ async function systemAdminLogin(){
   try{
     await ensureSystemAdminAccess();
     systemAdminUnlocked=true;
-    try{await loadPrivateAccessVault()}catch(qrErr){console.warn(qrErr);accessVault=[]}
+    accessVault=[]; // QRキー全件は読み込まない。再印刷時に必要な1人分だけGASから取得する。
     $('systemAdminMsg').className='success small';$('systemAdminMsg').textContent='OENのシステム管理者権限を確認しました。';
     $('systemAdminGate').classList.add('hidden');
     updateSystemAdminUi();showSection('studentManager');
@@ -358,7 +356,6 @@ function codesFromRosterRanges(){
 async function saveRoster(){
   try{
     await ensureSystemAdminAccess();
-    if(legacyQrPendingCount()>0)throw new Error('旧QR暗号の移行が未完了です。先に「旧QR暗号をGASへ移行」または年間マスターCSVの移行を行ってください。');
     const codes=codesFromRosterRanges(),old=new Map(usersData.users.map(u=>[u.studentCode,u]));
     usersData.users=codes.map(code=>{const u=old.get(code)||{studentCode:code,classKey:code.slice(0,2),credential:null,examCredentials:{},qrStored:false};u.classKey=code.slice(0,2);u.examCredentials=u.examCredentials||{};u.credential=u.credential||null;return u});
     localStorage.setItem('tdxRosterRanges',JSON.stringify(rosterRanges));
@@ -535,7 +532,7 @@ async function generateAnnualCodes(regenerateAll=false){
       $('rosterMsg').className='success small';
       $('rosterMsg').textContent=`✓ ${annualSecrets.length}人分の年間アクセスキーを発行し、生徒認証データへ自動反映しました。平文キーはGAS側だけに保管しています。QRカードを印刷してください。`;
     }else{
-      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。QR再印刷欄に管理者設定待ちがある場合は、完全初期化またはアクセスキー再発行で整合を取り直してください。';
+      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。QRをなくした生徒は「QRカード再印刷」から再印刷できます。';
     }
   }catch(e){
     $('rosterMsg').className='error small';$('rosterMsg').textContent=`アクセスキーを発行できませんでした：${e.message||e}`;
@@ -544,50 +541,28 @@ async function generateAnnualCodes(regenerateAll=false){
 function renderAnnualSecrets(){
   const root=$('annualCodePreview');if(!root)return;
   if(!annualSecrets.length){root.innerHTML='<div class="notice small">アクセスキーを新規発行すると、ここに今回発行分だけ表示されます。平文アクセスキーはGAS側のQR保管庫だけに保存され、GitHubの users.json には保存されません。</div>';return}
-  root.innerHTML=`<h3>今回発行したアクセスキー（${annualSecrets.length}人）</h3><div class="table-shell"><table><thead><tr><th>4桁番号</th><th>年間アクセスキー</th><th>クラス</th></tr></thead><tbody>${annualSecrets.slice(0,20).map(x=>`<tr><td>${x.studentCode}</td><td><code>${x.accessCode}</code></td><td>${x.classKey}</td></tr>`).join('')}</tbody></table></div>${annualSecrets.length>20?`<p class="small muted">ほか ${annualSecrets.length-20}人</p>`:''}`;
+  root.innerHTML=`<div class="success small"><strong>✓ ${annualSecrets.length}人分のアクセスキーを発行しました。</strong><br>平文キーはGAS側のQR保管庫へ保存済みです。次に「② 今回発行分QRカードPDF」を押して印刷してください。</div>`;
 }
 function annualMasterState(){
-  const m=accessSecretMap();
   const total=usersData.users.length;
   const issued=usersData.users.filter(u=>!!u.credential).length;
-  const available=usersData.users.filter(u=>u.credential&&(m.has(u.studentCode)||u.qrStored)).length;
-  const loaded=usersData.users.filter(u=>u.credential&&m.has(u.studentCode)).length;
-  const missing=usersData.users.filter(u=>u.credential&&!m.has(u.studentCode)&&!u.qrStored).length;
+  const ready=usersData.users.filter(u=>!!u.credential&&!!u.qrStored).length;
   const unissued=usersData.users.filter(u=>!u.credential).length;
-  return {total,issued,known:available,loaded,missing,unissued,complete:total>0&&loaded===total&&missing===0&&unissued===0};
+  const repair=usersData.users.filter(u=>!!u.credential&&!u.qrStored).length;
+  return {total,issued,known:ready,missing:repair,unissued,complete:total>0&&ready===total&&unissued===0&&repair===0};
 }
 function updateAnnualMasterButtons(){
   const st=annualMasterState();
-  if($('exportAnnualSecretsBtn'))$('exportAnnualSecretsBtn').disabled=st.total===0;
-  if($('printAllAnnualCardsBtn'))$('printAllAnnualCardsBtn').disabled=!st.complete;
   renderAnnualMasterStatus(st);
 }
 function renderAnnualMasterStatus(st=annualMasterState()){
   const el=$('annualMasterStatus');if(!el)return;
-  if(!st.total){el.className='info-strip teacher-strip';el.innerHTML='<span>MASTER</span> 生徒名簿を登録すると、年間マスターCSVの準備状況がここに表示されます。';return}
-  if(st.complete){el.className='info-strip teacher-strip success-strip';el.innerHTML=`<span>READY</span> 年間マスターCSV・QR再印刷：<strong>${st.known}/${st.total}人</strong> 準備済み。一般教員もファイル読込なしで再印刷できます。`;return}
-  const parts=[];
-  if(st.known)parts.push(`確認済み ${st.known}人`);
-  if(st.missing)parts.push(`発行済・移行必要 ${st.missing}人`);
-  if(st.unissued)parts.push(`未発行 ${st.unissued}人`);
+  if(!st.total){el.className='info-strip teacher-strip';el.innerHTML='<span>QR</span> まず生徒名簿を登録してください。年間CSVの作成・読込は不要です。';return}
+  if(st.complete){el.className='info-strip teacher-strip success-strip';el.innerHTML=`<span>READY</span> 登録 <strong>${st.total}人</strong> ／ アクセスキー発行済 <strong>${st.issued}人</strong>。QR再印刷は一般教員画面からいつでも行えます。`;return}
+  const parts=[`登録 ${st.total}人`,`発行済 ${st.issued}人`,`未発行 ${st.unissued}人`];
+  if(st.missing)parts.push(`QR保管確認 ${st.missing}人`);
   el.className='info-strip teacher-strip warning-strip';
-  el.innerHTML=`<span>CHECK</span> 年間アクセス設定はまだ完了していません（${parts.join(' / ')}）。本番前に完全初期化する場合は、その後あらためてアクセスキーを発行してください。`;
-}
-function exportAnnualSecrets(){
-  const st=annualMasterState();
-  if(!usersData.users.length){alert('生徒名簿が登録されていません。');return}
-  if(st.unissued){
-    alert(`年間マスターCSVは「登録生徒全員分」がそろった時だけ書き出します。\n\n未発行：${st.unissued}人\n\n先に「未発行者にアクセスキーを発行」を押してください。`);
-    $('generateAnnualCodesBtn')?.focus();return
-  }
-  if(st.missing){
-    alert(`年間マスターCSVは全員分がそろった時だけ書き出します。\n\nQR保管庫との整合が取れていない生徒：${st.missing}人\n\n本番前のやり直しであれば「完全初期化（年度維持）」後にアクセスキーを新規発行してください。`);
-    return
-  }
-  const m=accessSecretMap();
-  const rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
-  const csv='4桁番号,年間アクセスキー,クラス\n'+rows.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
-  TDX.download('T-DX_Lab_年間アクセスキー_年間マスター.csv','\ufeff'+csv,'text/csv;charset=utf-8');
+  el.innerHTML=`<span>NEXT</span> ${parts.join(' / ')}。未発行者がいれば「① 未発行者にアクセスキーを発行」を押してください。`;
 }
 
 function refreshAccessVaultClassFilter(){
@@ -616,7 +591,7 @@ function renderAccessVaultManager(){
   if(!usersData.users.length){root.innerHTML='<div class="notice small">生徒名簿がまだ登録されていません。システム管理者へ確認してください。</div>';return}
   root.innerHTML=`<div class="table-shell"><table><thead><tr><th>4桁番号</th><th>クラス</th><th>状態</th><th>操作</th></tr></thead><tbody>${rows.map(u=>{
     const secret=m.get(u.studentCode),issued=!!u.credential;
-    const available=!!secret||!!u.qrStored;
+    const available=issued&&!!u.qrStored;
     const state=!issued?'<span class="master-status unissued">○ 未発行</span>':available?'<span class="master-status ready">✓ 再印刷可能</span>':'<span class="master-status missing">△ 管理者設定待ち</span>';
     return `<tr><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td><button type="button" class="teacher-action qr-one-reprint" data-qr-reprint="${esc(u.studentCode)}" ${available?'':'disabled'}>QRを再印刷</button></td></tr>`
   }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。一般教員が行うのは「同じQRの再印刷」だけです。アクセスキーを変更する必要がある場合はシステム管理者へ連絡してください。</p>`;
@@ -653,11 +628,6 @@ async function reissueOneStudent(code){
   }catch(e){
     setIndividualStudentMessage(`再発行できませんでした：${e.message||e}`,'error');
   }
-}
-async function printAllAnnualCards(){
-  const st=annualMasterState();if(!st.complete){alert('全員分のQR再印刷情報が揃っていません。既存データの場合は管理者画面で年間マスターCSVを1回読み込んで移行してください。');return}
-  const m=accessSecretMap(),rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
-  await generateAccessCardsPdf(rows,'T-DX_Lab_年間アクセスカード_全員分.pdf');
 }
 function renderAnnualCards(secrets){
   const pages=[];
@@ -789,11 +759,11 @@ async function generateAccessCardsPdf(secrets,filename='T-DX_Lab_年間アクセ
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-  }catch(e){console.error(e);alert('年間アクセスカードPDFの生成に失敗しました。教員保管CSVを確認し、ページを再読み込みしてもう一度お試しください。')}
+  }catch(e){console.error(e);alert('年間アクセスカードPDFの生成に失敗しました。ページを再読み込みして、もう一度お試しください。')}
   finally{if(btn){btn.disabled=false;btn.textContent=oldText}}
 }
 async function printAnnualCards(){
-  if(!annualSecrets.length){alert('今回新しく発行したアクセスキーがありません。既存カードの再印刷は「教員保管CSVを読み込む」から行ってください。');return}
+  if(!annualSecrets.length){alert('今回新しく発行したアクセスキーがありません。既存カードの再印刷は「QRカード再印刷」から行ってください。');return}
   await generateAccessCardsPdf(annualSecrets,'T-DX_Lab_年間アクセスカード.pdf');
 }
 
