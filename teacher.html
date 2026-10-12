@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.25.0">
+  <link rel="stylesheet" href="css/style.css?v=1.25.1">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.25.0</span>
+        <span class="tdx-version-pill">v1.25.1</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -134,15 +134,6 @@
         <div class="annual-secondary-row">
           <div id="annualMasterStatus" class="info-strip teacher-strip"><span>MASTER</span> 年間マスターの準備状況を確認しています。</div>
         </div>
-        <div id="qrMigrationPanel" class="qr-migration-panel hidden">
-          <div><span class="section-eyebrow">ONE-TIME SECURITY MIGRATION</span><strong>旧QR情報を公開GitHubからGAS側の保管庫へ移行</strong><small>v1.24.x以前の <code>users.json</code> に含まれていた復号可能なQR暗号を、学校OEN側へ移します。移行後の公開 <code>users.json</code> にはsalt+hashだけが残ります。</small></div>
-          <div class="actions compact-actions">
-            <button id="migrateLegacyQrSecretsBtn" class="teacher-action" type="button">旧QR暗号をGASへ移行</button>
-            <input id="importAnnualSecretsInput" type="file" accept=".json,.csv,application/json,text/csv" class="hidden">
-            <button id="importAnnualSecretsBtn" class="secondary glass-btn" type="button">年間マスターCSVから移行</button>
-          </div>
-          <div id="qrMigrationResult" class="migration-result small muted" aria-live="polite">旧データがある場合だけ、一度移行してください。</div>
-        </div>
         <div id="annualCodePreview" class="annual-code-preview"><div class="notice small">名簿登録後、未発行者へのアクセスキー発行を実行してください。</div></div>
         <details class="danger-admin-details">
           <summary>緊急時の再発行</summary>
@@ -152,17 +143,30 @@
 
       <section class="annual-reset-panel">
         <div class="compact-card-head">
-          <div><span class="section-eyebrow">YEAR CHANGE / SECURITY</span><h3>年度更新</h3><p class="muted small">年度末に、現在の公開データ・GAS分析・QR保管庫をまとめて初期化します。</p></div>
-          <span class="one-time-badge">年1回</span>
+          <div><span class="section-eyebrow">RESET / YEAR CHANGE</span><h3>データ初期化・年度更新</h3><p class="muted small">本番運用前のやり直しと、年度末の切り替えを分けて実行できます。</p></div>
+          <span class="one-time-badge">管理者専用</span>
         </div>
+
         <div class="annual-reset-grid">
-          <label>更新先年度<input id="nextSchoolYear" type="number" min="2026" max="2100" value="2027"></label>
+          <div>
+            <strong>完全初期化（年度はそのまま）</strong>
+            <p class="muted small">現在の年度 <strong id="currentSchoolYearLabel">----</strong> を維持したまま、生徒・試験・分析・QR保管庫を空にして最初からやり直します。</p>
+          </div>
           <div class="actions compact-actions">
-            <button id="annualBackupBtn" class="secondary glass-btn" type="button">年度バックアップ</button>
-            <button id="annualResetBtn" class="danger-soft" type="button">年度更新（全初期化）</button>
+            <button id="annualBackupBtn" class="secondary glass-btn" type="button">現在データをバックアップ</button>
+            <button id="currentYearResetBtn" class="danger-soft" type="button">完全初期化（年度維持）</button>
           </div>
         </div>
-        <div class="notice small"><strong>初期化対象：</strong>生徒認証、試験・模範解答、公開分析、GASのQR再印刷用キー、GASに保存した分析。<br><strong>対象外：</strong>Googleフォーム回答、先生PCに保存したExcel/PDF、GitHubの過去コミット履歴。トークンを年度ごとに交換する場合は、初期化後にGitHubで旧トークンを削除し、新しいFine-grained tokenをGASへ登録します。</div>
+
+        <div class="notice small"><strong>完全初期化で消えるもの：</strong>生徒認証、試験・模範解答、公開分析、GASのQR再印刷用キー、GASに保存した分析、教員ブラウザの名簿範囲・試験下書き。<br><strong>残るもの：</strong>年度、GAS本体、OEN権限、GitHub連携設定・トークン、Googleフォーム回答、先生PCのExcel/PDF、GitHubの過去コミット履歴。</div>
+
+        <div class="annual-reset-grid">
+          <label>年度末の更新先年度<input id="nextSchoolYear" type="number" min="2026" max="2100" value="2027"></label>
+          <div class="actions compact-actions">
+            <button id="annualResetBtn" class="danger-soft" type="button">年度更新（次年度へ全初期化）</button>
+          </div>
+        </div>
+        <div class="notice small"><strong>年度更新：</strong>完全初期化と同じデータを消したうえで、システム年度も更新先年度へ変更します。トークンを年度ごとに交換する場合は、年度更新後にGitHubで旧トークンを削除し、Apps Scriptの <code>setupGitHubConnection</code> から新トークンを登録してください。</div>
         <div id="annualResetMsg" class="small muted"></div>
       </section>
     </section>
@@ -480,8 +484,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.25.0"></script>
-<script src="js/teacher.js?v=1.25.0"></script>
+<script src="js/common.js?v=1.25.1"></script>
+<script src="js/teacher.js?v=1.25.1"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

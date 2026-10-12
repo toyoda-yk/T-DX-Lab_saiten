@@ -238,6 +238,7 @@ function doGet(e) {
  * - publishAnalysis : 集計結果を保存し、GitHub data/analysis.json へ自動反映
  * - publishExams    : 最新の試験データを GitHub data/exams.json へ自動反映
  * - publishUsers    : 生徒認証用の公開データを data/users.json へ反映し、QR用の平文キーはGAS側だけに保管
+ * - currentYearReset: 現年度のまま公開データ・分析保管・QR保管庫を完全初期化
  * - annualReset     : 年度更新。公開データ・分析保管・QR保管庫を初期化
  */
 function doPost(e) {
@@ -344,6 +345,73 @@ function doPost(e) {
       if (token) writeSyncStatus_(token, result);
       return output_(result);
 
+    } else if (action === 'currentYearReset') {
+      if (!isSystemAdmin_(email)) throw new Error('完全初期化はシステム管理者だけが実行できます。');
+      const raw = String(p.payload || '');
+      if (!raw) throw new Error('完全初期化データがありません。');
+      const input = JSON.parse(raw);
+      const configuredYear = currentSchoolYear_();
+      const schoolYear = text_(input.schoolYear || configuredYear, 20);
+      if (!/^20\d{2}$/.test(schoolYear)) throw new Error('現在年度を4桁で指定してください。');
+      if (String(configuredYear) !== schoolYear) throw new Error('GASに設定されている年度と一致しません。画面を再読み込みしてから実行してください。');
+      const required = 'RESET-' + schoolYear;
+      if (String(input.confirm || '') !== required) throw new Error('完全初期化の確認文字列が一致しません。');
+
+      const resetEpoch = Utilities.getUuid();
+      const now = new Date().toISOString();
+      const usersPayload = {
+        version: 7,
+        systemName: 'T-DX Lab☆問題演習システム',
+        note: '生徒認証用の公開データ。平文アクセスキー・氏名・個人回答は含みません。',
+        schoolYear: schoolYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        issuedCodeIds: [],
+        users: []
+      };
+      const examsPayload = {
+        version: 10,
+        systemName: 'T-DX Lab☆問題演習システム',
+        schoolYear: schoolYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        exams: []
+      };
+      const analysisPayload = {
+        version: 3,
+        systemName: 'T-DX Lab☆問題演習システム',
+        schoolYear: schoolYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        analyses: []
+      };
+
+      const ghUsers = githubPutJson_(TDX_CONFIG.USERS_PATH, usersPayload, 'T-DX Lab: full reset users ' + schoolYear + ' (' + email + ')');
+      const ghExams = githubPutJson_(TDX_CONFIG.EXAMS_PATH, examsPayload, 'T-DX Lab: full reset exams ' + schoolYear + ' (' + email + ')');
+      const ghAnalysis = githubPutJson_(TDX_CONFIG.ANALYSIS_PATH, analysisPayload, 'T-DX Lab: full reset analysis ' + schoolYear + ' (' + email + ')');
+
+      clearAnalysisStorage_();
+      clearQrVault_();
+
+      const props = PropertiesService.getScriptProperties();
+      props.setProperty(TDX_CONFIG.PROP_RESET_EPOCH, resetEpoch);
+      // schoolYear / Spreadsheet ID / GitHub repository / branch / token / system-admin settings are intentionally preserved.
+
+      logSync_('完全初期化', schoolYear, email, '成功', '現年度を維持して公開データ・分析・QR保管庫を初期化');
+
+      const result = {
+        ok: true,
+        done: true,
+        action: action,
+        message: schoolYear + '年度のまま完全初期化しました。GitHub連携設定とトークンは維持しています。',
+        publishedBy: email,
+        schoolYear: schoolYear,
+        resetEpoch: resetEpoch,
+        github: { users: ghUsers, exams: ghExams, analysis: ghAnalysis }
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
     } else if (action === 'annualReset') {
       if (!isSystemAdmin_(email)) throw new Error('年度更新はシステム管理者だけが実行できます。');
       const raw = String(p.payload || '');
@@ -420,7 +488,7 @@ function doPost(e) {
       ok: false, done: true, action: action, message: msg
     });
     try {
-      const kind = action === 'publishExams' ? '試験' : action === 'publishUsers' ? '生徒' : action === 'annualReset' ? '年度更新' : '分析';
+      const kind = action === 'publishExams' ? '試験' : action === 'publishUsers' ? '生徒' : action === 'currentYearReset' ? '完全初期化' : action === 'annualReset' ? '年度更新' : '分析';
       logSync_(kind, '', activeEmail_(), '失敗', msg);
     } catch (ignore) {}
     return output_({ ok: false, done: true, message: msg });

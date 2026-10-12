@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.0';
+const APP_VERSION='1.25.1';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -50,27 +50,6 @@ function scheduleSummary(exam){
   return '期間指定なし（旧データ）';
 }
 
-function b64ToBytes(text){const bin=atob(text);return Uint8Array.from(bin,c=>c.charCodeAt(0))}
-async function decryptLegacyQrSecrets(password){
-  const meta=usersData?.qrVault;
-  if(!meta?.salt)throw new Error('旧QR暗号のメタ情報がありません。年間マスターCSVから移行してください。');
-  if(!password)throw new Error('旧教員画面のパスワードを入力してください。');
-  const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
-  const key=await crypto.subtle.deriveKey(
-    {name:'PBKDF2',salt:b64ToBytes(meta.salt),iterations:Number(meta.iterations||100000),hash:'SHA-256'},
-    material,{name:'AES-GCM',length:256},false,['decrypt']
-  );
-  const rows=[];
-  for(const u of usersData.users||[]){
-    if(!u?.credential||!u?.qrSecret?.iv||!u?.qrSecret?.ciphertext)continue;
-    try{
-      const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToBytes(u.qrSecret.iv)},key,b64ToBytes(u.qrSecret.ciphertext));
-      const accessCode=new TextDecoder().decode(plain).toUpperCase();
-      if(accessCode&&await TDX.verify(accessCode,u.credential))rows.push({studentCode:u.studentCode,accessCode,classKey:u.classKey||String(u.studentCode).slice(0,2)});
-    }catch(err){throw new Error(`${u.studentCode} の旧QR暗号を復号できません。旧教員画面のパスワードを確認してください。`)}
-  }
-  return rows;
-}
 function persistAccessVault(){/* 平文アクセスキーはブラウザの永続領域へ保存しない */}
 function accessSecretMap(){return new Map(accessVault.map(x=>[x.studentCode,x]))}
 function mergeIntoAccessVault(rows){
@@ -177,6 +156,7 @@ async function init(){
   rosterRanges=compressRosterRanges(usersData.users.map(u=>u.studentCode));
   if(!rosterRanges.length) rosterRanges=[{start:'3101',end:'3130'}];
   const yearBase=Number(usersData.schoolYear||allExamData.schoolYear||new Date().getFullYear());
+  if($('currentSchoolYearLabel'))$('currentSchoolYearLabel').textContent=`${Number.isFinite(yearBase)?yearBase:new Date().getFullYear()}年度`;
   if($('nextSchoolYear'))$('nextSchoolYear').value=String(Number.isFinite(yearBase)?yearBase+1:new Date().getFullYear()+1);
   refreshExamSelects();
   renderRosterRanges();
@@ -226,11 +206,9 @@ function bind(){
   $('printAnnualCardsBtn').onclick=printAnnualCards;
   $('printAllAnnualCardsBtn').onclick=printAllAnnualCards;
   $('exportRosterUsersBtn').onclick=exportUserData;
-  $('importAnnualSecretsBtn').onclick=()=>$('importAnnualSecretsInput').click();
-  $('importAnnualSecretsInput').onchange=importAnnualSecretsCsv;
-  if($('migrateLegacyQrSecretsBtn'))$('migrateLegacyQrSecretsBtn').onclick=migrateLegacyQrSecretsToGas;
   if($('syncRosterUsersBtn'))$('syncRosterUsersBtn').onclick=manualSyncUsers;
   if($('annualBackupBtn'))$('annualBackupBtn').onclick=downloadAnnualBackup;
+  if($('currentYearResetBtn'))$('currentYearResetBtn').onclick=currentYearReset;
   if($('annualResetBtn'))$('annualResetBtn').onclick=annualReset;
   $('accessVaultClassFilter').onchange=renderAccessVaultManager;
   $('qrStudentSearch').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);renderAccessVaultManager()});
@@ -535,7 +513,7 @@ async function generateAnnualCodes(regenerateAll=false){
   if(regenerateAll&&!confirm('全生徒の年間アクセスキーを再発行します。以前のQRカードはすべて無効になります。\n\n旧バージョンの公開履歴にQR暗号が残っている場合のセキュリティ更新にも使えます。\n\nよろしいですか？'))return;
   try{
     await ensureSystemAdminAccess();
-    if(!regenerateAll&&legacyQrPendingCount()>0)throw new Error('旧QR暗号の移行が未完了です。先にGAS保管庫へ移行するか、「全員のアクセスキーを再発行」で旧キーを無効化してください。');
+    if(!regenerateAll&&legacyQrPendingCount()>0)throw new Error('旧バージョンのQR情報が残っています。本番前にやり直す場合は「完全初期化（年度維持）」を実行してください。引き継ぐ場合は「全員のアクセスキーを再発行」で旧キーを無効化してください。');
     annualSecrets=[];
     if(regenerateAll){
       accessVault=[];
@@ -557,7 +535,7 @@ async function generateAnnualCodes(regenerateAll=false){
       $('rosterMsg').className='success small';
       $('rosterMsg').textContent=`✓ ${annualSecrets.length}人分の年間アクセスキーを発行し、生徒認証データへ自動反映しました。平文キーはGAS側だけに保管しています。QRカードを印刷してください。`;
     }else{
-      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。QR再印刷欄が「移行必要」の場合は、旧QR暗号または年間マスターCSVをGAS保管庫へ移行してください。';
+      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。QR再印刷欄に管理者設定待ちがある場合は、完全初期化またはアクセスキー再発行で整合を取り直してください。';
     }
   }catch(e){
     $('rosterMsg').className='error small';$('rosterMsg').textContent=`アクセスキーを発行できませんでした：${e.message||e}`;
@@ -582,7 +560,6 @@ function updateAnnualMasterButtons(){
   const st=annualMasterState();
   if($('exportAnnualSecretsBtn'))$('exportAnnualSecretsBtn').disabled=st.total===0;
   if($('printAllAnnualCardsBtn'))$('printAllAnnualCardsBtn').disabled=!st.complete;
-  const migration=$('qrMigrationPanel');if(migration)migration.classList.toggle('hidden',!(st.missing>0));
   renderAnnualMasterStatus(st);
 }
 function renderAnnualMasterStatus(st=annualMasterState()){
@@ -594,7 +571,7 @@ function renderAnnualMasterStatus(st=annualMasterState()){
   if(st.missing)parts.push(`発行済・移行必要 ${st.missing}人`);
   if(st.unissued)parts.push(`未発行 ${st.unissued}人`);
   el.className='info-strip teacher-strip warning-strip';
-  el.innerHTML=`<span>CHECK</span> 年間アクセス設定はまだ完了していません（${parts.join(' / ')}）。「発行済・移行必要」がある場合は、年間マスターCSVを1回読み込んで移行してください。`;
+  el.innerHTML=`<span>CHECK</span> 年間アクセス設定はまだ完了していません（${parts.join(' / ')}）。本番前に完全初期化する場合は、その後あらためてアクセスキーを発行してください。`;
 }
 function exportAnnualSecrets(){
   const st=annualMasterState();
@@ -604,77 +581,13 @@ function exportAnnualSecrets(){
     $('generateAnnualCodesBtn')?.focus();return
   }
   if(st.missing){
-    alert(`年間マスターCSVは全員分がそろった時だけ書き出します。\n\n発行済みだがQR再印刷対応へ未移行：${st.missing}人\n\n管理者画面の「年間マスターCSVを読み込んで移行」を1回実行してください。`);
+    alert(`年間マスターCSVは全員分がそろった時だけ書き出します。\n\nQR保管庫との整合が取れていない生徒：${st.missing}人\n\n本番前のやり直しであれば「完全初期化（年度維持）」後にアクセスキーを新規発行してください。`);
     return
   }
   const m=accessSecretMap();
   const rows=usersData.users.slice().sort((a,b)=>a.studentCode.localeCompare(b.studentCode)).map(u=>m.get(u.studentCode));
   const csv='4桁番号,年間アクセスキー,クラス\n'+rows.map(x=>`${x.studentCode},${x.accessCode},${x.classKey}`).join('\n');
   TDX.download('T-DX_Lab_年間アクセスキー_年間マスター.csv','\ufeff'+csv,'text/csv;charset=utf-8');
-}
-
-function setMigrationMessage(text,type='muted'){
-  const el=$('qrMigrationResult');if(!el)return;
-  el.className=`migration-result small ${type}`;
-  el.textContent=text;
-}
-
-function refreshAccessVaultClassFilter(){
-  const sel=$('accessVaultClassFilter');if(!sel)return;
-  const current=sel.value;
-  const classes=[...new Set(usersData.users.map(x=>x.classKey||x.studentCode.slice(0,2)))].sort();
-  sel.innerHTML='<option value="">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}組</option>`).join('');
-  if(classes.includes(current))sel.value=current;
-}
-async function importAnnualSecretsCsv(e){
-  const f=e.target.files?.[0];if(!f)return;
-  setMigrationMessage(`「${f.name}」を読み込み中です…`,'notice');
-  const btn=$('importAnnualSecretsBtn');
-  const oldLabel=btn?.textContent||'';
-  if(btn){btn.disabled=true;btn.textContent='移行処理中…'}
-  try{
-    const text=(await f.text()).replace(/^\uFEFF/,'');
-    let rows=[];
-    if(f.name.toLowerCase().endsWith('.json')||text.trim().startsWith('{')||text.trim().startsWith('[')){
-      const obj=JSON.parse(text);const src=Array.isArray(obj)?obj:(obj.users||obj.rows||[]);
-      rows=src.map(x=>({studentCode:String(x.studentCode||x['4桁番号']||''),accessCode:String(x.accessCode||x['年間アクセスキー']||'').toUpperCase(),classKey:String(x.classKey||x['クラス']||'')})).filter(x=>/^\d{4}$/.test(x.studentCode)&&x.accessCode);
-    }else{
-      const table=TDX.csvParse(text);
-      const header=(table.shift()||[]).map(x=>String(x).trim());
-      const idxCode=Math.max(0,header.findIndex(x=>/4桁番号|student/i.test(x)));
-      const idxKey=header.findIndex(x=>/アクセスキー|access/i.test(x));
-      const idxClass=header.findIndex(x=>/クラス|class/i.test(x));
-      rows=table.map(parts=>({studentCode:String(parts[idxCode]||'').trim(),accessCode:String(parts[idxKey>=0?idxKey:1]||'').trim().toUpperCase(),classKey:String(parts[idxClass>=0?idxClass:2]||'').trim()})).filter(x=>/^\d{4}$/.test(x.studentCode)&&x.accessCode);
-    }
-    if(!rows.length)throw new Error('有効な年間アクセスキーが見つかりませんでした。CSVの「4桁番号」「年間アクセスキー」列を確認してください。');
-    const migrated=[],stale=[],unknown=[];
-    for(const row of rows){
-      const u=usersData.users.find(x=>x.studentCode===row.studentCode);
-      if(!u){unknown.push(row.studentCode);continue}
-      if(!u.credential||!(await TDX.verify(row.accessCode,u.credential))){stale.push(row.studentCode);continue}
-      migrated.push({studentCode:row.studentCode,accessCode:row.accessCode,classKey:u.classKey||row.classKey||row.studentCode.slice(0,2)});
-    }
-    mergeIntoAccessVault(migrated);if(migrated.length)await syncUsersToPublicData(migrated);renderAccessVaultManager();renderIndividualStudents();updateAnnualMasterButtons();
-    const st=annualMasterState();
-    let detail=`${rows.length}件読込 → ${migrated.length}人をGAS保管庫へ移行しました。`;
-    if(stale.length)detail+=` キー不一致 ${stale.length}人（${stale.slice(0,8).join('、')}${stale.length>8?'ほか':''}）。`;
-    if(unknown.length)detail+=` 名簿外 ${unknown.length}人（${unknown.slice(0,8).join('、')}${unknown.length>8?'ほか':''}）。`;
-    if(migrated.length===0&&stale.length){
-      detail+=' 年間マスターCSVと現在の users.json が同じ発行データではない可能性があります。組み合わせを確認してください。';
-    }else if(st.complete){
-      detail+=' 全員「再印刷可」になりました。GAS保管庫と生徒認証データへ自動反映済みです。';
-    }else if(migrated.length){
-      detail+=` 残り「移行必要」${st.missing}人です。全員分のキーが入った年間マスターCSVか確認してください。`;
-    }
-    setMigrationMessage(detail,stale.length||unknown.length||!migrated.length?'notice':'success');
-    setIndividualStudentMessage(detail,stale.length||unknown.length||!migrated.length?'notice':'success');
-  }catch(err){
-    const msg='移行できませんでした：'+err.message;
-    setMigrationMessage(msg,'error');setIndividualStudentMessage(msg,'error');
-  } finally {
-    if(btn){btn.disabled=false;btn.textContent=oldLabel||'年間マスターCSVを読み込んで移行'}
-    e.target.value='';
-  }
 }
 
 function currentManagedUsers(){
@@ -1893,7 +1806,7 @@ async function syncUsersToPublicData(vaultEntries=[]){
   if(!who.githubConfigured)throw new Error('GitHub自動連携が未設定です。システム管理者がApps Scriptで setupGitHubConnection を実行してください。');
   const missingLegacy=legacyQrPendingCount();
   if(missingLegacy>0){
-    throw new Error(`旧users.jsonのQR暗号が ${missingLegacy}人分残っています。先に「旧QR暗号をGASへ移行」または年間マスターCSVの移行を行ってください。`);
+    throw new Error(`旧バージョンのQR情報が ${missingLegacy}人分残っています。本番前にやり直す場合は「完全初期化（年度維持）」を実行してください。`);
   }
   const payload={bundle:currentUsersBundleForSync(),vaultEntries:vaultEntries||[]};
   const result=await postGasSync('publishUsers',payload);
@@ -1917,28 +1830,10 @@ async function manualSyncUsers(){
     alert(`生徒データの反映に失敗しました。\n\n${e.message||e}`);
   }finally{if(btn){btn.disabled=false;btn.textContent=old}}
 }
-async function migrateLegacyQrSecretsToGas(){
-  const pending=(usersData.users||[]).filter(u=>u?.qrSecret);
-  if(!pending.length){setMigrationMessage('旧users.jsonのQR暗号は残っていません。すでにGAS保管方式です。','success');return}
-  try{
-    await ensureSystemAdminAccess();
-    const password=prompt('v1.24.x以前のQR暗号をGAS保管庫へ移行します。\n\n旧教員管理画面で使用していた共通パスワードを入力してください。\n※この入力値は保存しません。');
-    if(password===null)return;
-    setMigrationMessage('旧QR暗号を復号し、GAS保管庫へ移行しています…','notice');
-    const rows=await decryptLegacyQrSecrets(password);
-    if(!rows.length)throw new Error('移行できるQR情報がありませんでした。');
-    mergeIntoAccessVault(rows);
-    await syncUsersToPublicData(rows);
-    setMigrationMessage(`✓ ${rows.length}人分をGAS側へ移行しました。GitHubの最新 users.json から復号可能なQR暗号を除去しました。`,'success');
-    renderAccessVaultManager();renderIndividualStudents();renderRosterSummary();
-  }catch(e){
-    setMigrationMessage(`移行できませんでした：${e.message||e}`,'error');
-  }
-}
 function annualBackupPayload(){
   return {
     exportedAt:new Date().toISOString(),
-    note:'T-DX Lab年度更新前バックアップ。Googleフォーム回答・ダウンロード済みExcel/PDF・GAS内の平文アクセスキーは含みません。',
+    note:'T-DX Lab初期化／年度更新前バックアップ。Googleフォーム回答・ダウンロード済みExcel/PDF・GAS内の平文アクセスキーは含みません。',
     schoolYear:String(usersData.schoolYear||allExamData?.schoolYear||new Date().getFullYear()),
     users:currentUsersBundleForSync(),
     exams:JSON.parse(JSON.stringify(currentExamBundleForSync())),
@@ -1947,20 +1842,61 @@ function annualBackupPayload(){
 }
 function downloadAnnualBackup(){
   const year=String(usersData.schoolYear||allExamData?.schoolYear||new Date().getFullYear());
-  TDX.download(`T-DX_Lab_${year}年度_公開データバックアップ.json`,JSON.stringify(annualBackupPayload(),null,2));
-  const el=$('annualResetMsg');if(el){el.className='success small';el.textContent='年度更新前バックアップを書き出しました。Googleフォーム回答やExcel/PDFは別管理です。'}
+  TDX.download(`T-DX_Lab_${year}年度_初期化前バックアップ.json`,JSON.stringify(annualBackupPayload(),null,2));
+  const el=$('annualResetMsg');if(el){el.className='success small';el.textContent='初期化前バックアップを書き出しました。Googleフォーム回答やExcel/PDFは別管理です。'}
 }
-function clearTeacherLocalDataForNewYear(){
+function clearTeacherLocalOperationalData(schoolYear,resetEpoch){
   try{
     localStorage.removeItem('tdxRosterRanges');
     localStorage.removeItem('tdxDraftExam');
   }catch(_){}
+  const year=String(schoolYear||new Date().getFullYear());
+  const epoch=String(resetEpoch||'');
   exams=[];
-  usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:'',resetEpoch:'',users:[],issuedCodeIds:[]};
-  allExamData={version:10,systemName:'T-DX Lab☆問題演習システム',schoolYear:'',resetEpoch:'',updatedAt:new Date().toISOString(),exams:[]};
-  allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',schoolYear:'',resetEpoch:'',updatedAt:new Date().toISOString(),analyses:[]};
-  analysisRows=[];analysisExam=null;annualSecrets=[];accessVault=[];
+  usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,users:[],issuedCodeIds:[]};
+  allExamData={version:10,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,updatedAt:new Date().toISOString(),exams:[]};
+  allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,updatedAt:new Date().toISOString(),analyses:[]};
+  analysisRows=[];analysisExam=null;analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]};annualSecrets=[];accessVault=[];
+  publishRoster=[];editorRows=[];editorSectionTargets={};
   rosterRanges=[{start:'',end:''}];
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};previewMode='before';
+}
+async function currentYearReset(){
+  const currentYear=String(usersData.schoolYear||allExamData?.schoolYear||new Date().getFullYear());
+  const msgEl=$('annualResetMsg');
+  try{
+    await ensureSystemAdminAccess();
+    const ok=confirm(
+      `${currentYear}年度のまま、T-DX Labの運用データを完全初期化します。\n\n`+
+      '消えるもの：\n'+
+      '・生徒認証情報\n・試験情報／模範解答\n・公開済み分析\n・GASのQR再印刷用アクセスキー\n・GASに保存した分析データ\n・このブラウザの名簿範囲／試験下書き\n\n'+
+      '残るもの：\n'+
+      '・年度\n・GAS本体／OEN権限\n・GitHub連携設定とトークン\n・Googleフォームの回答\n・先生PCのExcel/PDF\n・GitHubの過去コミット履歴\n\n'+
+      '実行前に公開データのバックアップを自動ダウンロードします。続けますか？'
+    );
+    if(!ok)return;
+    downloadAnnualBackup();
+    const required=`RESET-${currentYear}`;
+    const typed=prompt(`最終確認です。\n\n${required}\n\nと正確に入力してください。`);
+    if(typed!==required){if(msgEl){msgEl.className='notice small';msgEl.textContent='確認文字列が一致しなかったため、完全初期化を中止しました。'}return}
+    const btn=$('currentYearResetBtn'),old=btn?.textContent||'完全初期化（年度維持）';
+    if(btn){btn.disabled=true;btn.textContent='完全初期化中…'}
+    if(msgEl){msgEl.className='notice small';msgEl.textContent='GitHub公開データ・GAS分析・QR保管庫を初期化しています…'}
+    try{
+      const result=await postGasSync('currentYearReset',{schoolYear:currentYear,confirm:required});
+      clearTeacherLocalOperationalData(currentYear,result.resetEpoch||'');
+      if($('currentSchoolYearLabel'))$('currentSchoolYearLabel').textContent=`${currentYear}年度`;
+      if($('nextSchoolYear'))$('nextSchoolYear').value=String(Number(currentYear)+1);
+      renderRosterRanges();renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();refreshExamSelects();renderExamExportSummary();renderAnnualSecrets();updateAnnualMasterButtons();
+      if(msgEl){
+        msgEl.className='success small';
+        msgEl.innerHTML=`<strong>✓ ${esc(currentYear)}年度のまま完全初期化しました。</strong><br>GitHub連携設定とトークンは維持されています。次は生徒名簿を登録し、年間アクセスキーを新規発行してください。`;
+      }
+    }finally{if(btn){btn.disabled=false;btn.textContent=old}}
+  }catch(e){
+    if(msgEl){msgEl.className='error small';msgEl.textContent=`完全初期化に失敗しました：${e.message||e}`}
+    alert(`完全初期化に失敗しました。\n\n${e.message||e}`);
+  }
 }
 async function annualReset(){
   const input=$('nextSchoolYear');
@@ -1986,11 +1922,9 @@ async function annualReset(){
     if(msgEl){msgEl.className='notice small';msgEl.textContent='GitHub公開データ・GAS分析・QR保管庫を初期化しています…'}
     try{
       const result=await postGasSync('annualReset',{targetYear,confirm:required});
-      clearTeacherLocalDataForNewYear();
-      usersData.schoolYear=targetYear;usersData.resetEpoch=result.resetEpoch||'';
-      allExamData.schoolYear=targetYear;allExamData.resetEpoch=result.resetEpoch||'';
-      allAnalysisData.schoolYear=targetYear;allAnalysisData.resetEpoch=result.resetEpoch||'';
-      renderRosterRanges();renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();refreshExamSelects();renderExamExportSummary();
+      clearTeacherLocalOperationalData(targetYear,result.resetEpoch||'');
+      renderRosterRanges();renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();refreshExamSelects();renderExamExportSummary();renderAnnualSecrets();updateAnnualMasterButtons();
+      if($('currentSchoolYearLabel'))$('currentSchoolYearLabel').textContent=`${targetYear}年度`;
       if(input)input.value=String(Number(targetYear)+1);
       if(msgEl){
         msgEl.className='success small';
