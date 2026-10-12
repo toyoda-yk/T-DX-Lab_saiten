@@ -1763,27 +1763,74 @@ function postAnalysisGasForm(fields){
     frame.onload=()=>setTimeout(done,150);HTMLFormElement.prototype.submit.call(form);setTimeout(done,2500);
   });
 }
+
+function newGasSyncToken(){
+  return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+async function waitForGasSync(token,tries=18){
+  let last=null;
+  for(let i=0;i<tries;i++){
+    await new Promise(r=>setTimeout(r,i?650:300));
+    try{
+      const x=await TDX.gasJson({action:'getSyncStatus',token},12000);
+      last=x;
+      if(x?.done){
+        if(!x.ok)throw new Error(x.message||'公開同期に失敗しました。');
+        return x;
+      }
+    }catch(e){
+      if(i===tries-1)throw e;
+    }
+  }
+  throw new Error(last?.message||'公開完了を確認できませんでした。少し待ってからもう一度お試しください。');
+}
+async function ensureTeacherPublishAccess(){
+  const who=await TDX.gasJson({action:'whoami'},12000);
+  if(!who?.ok)throw new Error(who?.message||'公開サーバーの確認に失敗しました。');
+  if(!who.teacher)throw new Error(`このOENアカウント（${who.user||'不明'}）は公開権限がありません。共有スプレッドシートを「編集者」で共有してください。`);
+  if(!who.githubConfigured)throw new Error('GitHub自動連携が未設定です。システム管理者がApps Scriptで setupGitHubConnection を1回実行してください。');
+  return who;
+}
+async function postGasSync(action,payload,token=newGasSyncToken()){
+  await postAnalysisGasForm({action,payload:JSON.stringify(payload),syncToken:token});
+  return await waitForGasSync(token);
+}
+function currentExamBundleForSync(){
+  allExamData.version=Math.max(Number(allExamData.version||0),9);
+  allExamData.systemName=allExamData.systemName||'T-DX Lab☆問題演習システム';
+  allExamData.exams=exams;
+  allExamData.updatedAt=new Date().toISOString();
+  return allExamData;
+}
+async function syncExamsToPublicData(){
+  await ensureTeacherPublishAccess();
+  return await postGasSync('publishExams',currentExamBundleForSync());
+}
+
 function setAnalysisPublishMessage(text,type='muted'){
   const el=$('analysisPublishMsg');if(!el)return;el.className=`small ${type}`;el.textContent=text;
 }
 async function publishStudentAnalysisToGas(){
   if(!analysisExam||!analysisRows.length){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
-  const btn=$('publishStudentAnalysisBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='公開処理中…';setAnalysisPublishMessage('OEN共通の分析共有先へ接続しています…');
+  const btn=$('publishStudentAnalysisBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='公開処理中…';
+  setAnalysisPublishMessage('生徒用の公開データへ反映しています…');
   try{
-    const who=await TDX.gasJson({action:'whoami'});
-    if(!who?.ok)throw new Error(who?.message||'分析共有サーバーの確認に失敗しました。');
-    if(!who.teacher)throw new Error(`このOENアカウント（${who.user||'不明'}）は公開権限がありません。分析共有スプレッドシートを「編集者」で共有してください。`);
-    const token=(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`),entry=buildStudentAnalysisEntry(token);
+    const who=await ensureTeacherPublishAccess();
+    const token=newGasSyncToken(),entry=buildStudentAnalysisEntry(token);
     setAnalysisPublishMessage(`公開中：${entry.title}（集計 ${entry.overall.participants}人）`);
-    await postAnalysisGasForm({action:'publishAnalysis',payload:JSON.stringify(entry)});
-    let confirmed=null;
-    for(let i=0;i<8;i++){
-      await new Promise(r=>setTimeout(r,i?700:350));
-      try{const check=await TDX.gasJson({action:'getAnalysisMeta',examId:entry.examId});if(check?.ok&&check.analysis?.publishToken===token){confirmed=check.analysis;break}}catch(e){if(i===7)throw e}
-    }
-    if(!confirmed)throw new Error('保存完了を確認できませんでした。少し待ってからもう一度「生徒に分析を公開」を押してください。');
-    setAnalysisPublishMessage(`✓ 公開しました　${confirmed.publishedBy||who.user||''} ／ ${new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(confirmed.generatedAt||Date.now()))}`,'success');
-  }catch(e){console.error(e);setAnalysisPublishMessage(`公開できませんでした：${e.message||e}`,'error');alert(`分析の公開に失敗しました。\n\n${e.message||e}`)}finally{btn.disabled=false;btn.textContent=old}
+    const result=await postGasSync('publishAnalysis',entry,token);
+
+    const analyses=(allAnalysisData.analyses||[]).filter(x=>x.examId!==entry.examId);
+    analyses.push(entry);
+    allAnalysisData={version:2,systemName:'T-DX Lab☆問題演習システム',updatedAt:new Date().toISOString(),analyses};
+
+    const stamp=new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt||Date.now()));
+    setAnalysisPublishMessage(`✓ 生徒へ公開しました　${result.publishedBy||who.user||''} ／ ${stamp}　※生徒はGoogleログイン不要`,'success');
+  }catch(e){
+    console.error(e);
+    setAnalysisPublishMessage(`公開できませんでした：${e.message||e}`,'error');
+    alert(`分析の公開に失敗しました。\n\n${e.message||e}\n\n非常時は「analysis.jsonを書き出す」を利用できます。`);
+  }finally{btn.disabled=false;btn.textContent=old}
 }
 function renderAnalysisInsights(rows){
   const root=$('analysisInsights');if(!root)return;const stats=questionStats(rows),review=stats.filter(x=>x.pct<50).sort((a,b)=>a.pct-b.pct),must=stats.filter(x=>x.pct>=80).sort((a,b)=>b.pct-a.pct),lowest=[...stats].sort((a,b)=>a.pct-b.pct)[0];
@@ -1985,10 +2032,10 @@ function extendPublishEnd(minutes){
   const next=new Date(base+minutes*60000);
   if(input)input.value=toDatetimeLocal(next.toISOString());
   if($('publishStartAt')&&!$('publishStartAt').value){$('publishStartAt').value=toDatetimeLocal(new Date(now-60000).toISOString())}
-  const msg=$('publishMsg');if(msg){msg.className='notice small';msg.innerHTML=`終了時刻を <strong>${minutes}分</strong> 延長しました。まだ保存されていません。［公開設定を反映］→［exams.jsonを書き出す］→GitHubの <code>data/exams.json</code> を上書きしてください。`;}
+  const msg=$('publishMsg');if(msg){msg.className='notice small';msg.innerHTML=`終了時刻を <strong>${minutes}分</strong> 延長しました。まだ保存されていません。［公開設定を反映］を押すと、生徒画面へ自動反映します。`;}
 }
 
-function applyPublish(){
+async function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
   const status=$('publishStatusSelect')?.value||'unpublished';
   const selected=selectedAudienceCodes();
@@ -2007,6 +2054,7 @@ function applyPublish(){
     if(start.getTime()>=end.getTime()){alert('公開終了日時は、公開開始日時より後に設定してください。');return}
     publishWindow={startAt:start.toISOString(),endAt:end.toISOString(),mode:'auto'};
   }
+
   const a=collectAudience();
   exam.status=status;exam.published=status==='published';
   exam.publishWindow=publishWindow;
@@ -2014,18 +2062,34 @@ function applyPublish(){
   exam.access={mode:'restricted',classes:a.classes,students:a.students};
   exam.updatedAt=new Date().toISOString();
   allExamData.exams=exams;
-  const effective=examStatusLabel(exam),windowText=scheduleSummary(exam);
-  $('publishMsg').className='success small';
-  $('publishMsg').innerHTML=`<strong>✓ 公開設定を反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>この変更を生徒画面へ反映するには、最新の <code>exams.json</code> を書き出してGitHubの <code>data/exams.json</code> を上書きしてください。公開期間の延長・短縮も同じ手順です。自動終了だけなら再アップロードは不要です。</span>`;
+
+  const effective=examStatusLabel(exam),windowText=scheduleSummary(exam),btn=$('applyPublishBtn'),old=btn?.textContent||'公開設定を反映';
+  if(btn){btn.disabled=true;btn.textContent='生徒画面へ反映中…'}
+  $('publishMsg').className='notice small';
+  $('publishMsg').innerHTML=`<strong>公開設定を保存しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>生徒用の公開データを更新しています…</span>`;
+
+  try{
+    const result=await syncExamsToPublicData();
+    $('publishMsg').className='success small';
+    $('publishMsg').innerHTML=`<strong>✓ 生徒画面へ反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>公開期間の延長・短縮も、このボタンだけで反映されます。GitHub担当者への依頼は不要です。</span>`;
+  }catch(e){
+    console.error(e);
+    $('publishMsg').className='error small';
+    $('publishMsg').innerHTML=`<strong>設定はこの画面内では保存しましたが、生徒画面への自動反映に失敗しました。</strong><br><span>${esc(e.message||e)}　もう一度［公開設定を反映］を押してください。非常時のみ exams.json の書き出しを使用してください。</span>`;
+    alert(`生徒画面への反映に失敗しました。\n\n${e.message||e}`);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old}
+  }
+
   refreshPublishSelectors(exam.id);$('publishExamSelect').value=exam.id;
   renderCurrentPublishState(exam);renderExamReadiness(exam);renderExamExportSummary();if(!$('examPreviewPanel')?.classList.contains('hidden'))renderExamPreview(previewMode);
 }
 
-function deleteCurrentExam(){
+async function deleteCurrentExam(){
   const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);if(!exam)return;
   const first=confirm(`「${exam.title}」をT-DX Labから完全に削除しますか？
 
-終了とは違い、試験設定・模範解答・配点・Googleフォーム連携・公開設定が exams.json から削除されます。
+終了とは違い、試験設定・模範解答・配点・Googleフォーム連携・公開設定が生徒用試験データから削除されます。
 Googleフォーム側に保存済みの回答は削除されません。`);
   if(!first)return;
   const typed=prompt('誤操作防止のため「削除」と入力してください。');
@@ -2037,7 +2101,16 @@ Googleフォーム側に保存済みの回答は削除されません。`);
   if($('publishSubjectSelect')&&[...$('publishSubjectSelect').options].some(o=>o.value===subject))$('publishSubjectSelect').value=subject;
   refreshPublishSelectors();loadPublishExam();renderExamExportSummary();
   $('publishMsg').className='notice small';
-  $('publishMsg').innerHTML=`<strong>「${esc(exam.title)}」をこの試験データから削除しました。</strong><br>GitHub上にも存在する試験の場合は、削除後の <code>exams.json</code> を書き出して担当者へ送付すると完全削除が反映されます。`;
+  $('publishMsg').innerHTML=`<strong>「${esc(exam.title)}」を削除しました。</strong><br>生徒用試験データへ反映しています…`;
+  try{
+    await syncExamsToPublicData();
+    $('publishMsg').className='success small';
+    $('publishMsg').innerHTML=`<strong>✓ 「${esc(exam.title)}」を生徒用試験データから削除しました。</strong><br>※すでに公開済みの集計分析は別データのため残ります。必要な場合は分析公開管理から扱います。`;
+  }catch(e){
+    console.error(e);
+    $('publishMsg').className='error small';
+    $('publishMsg').innerHTML=`<strong>削除はこの画面内で行いましたが、生徒画面への反映に失敗しました。</strong><br>${esc(e.message||e)}`;
+  }
 }
 
 function selectedAudienceCodes(){return [...document.querySelectorAll('.student-check:checked')].map(x=>x.value)}
@@ -2054,7 +2127,7 @@ function renderExamExportSummary(){
     const windowText=scheduleSummary(e);
     return `<div class="exam-export-row"><span class="exam-export-index">${i+1}</span><div><strong>${esc(e.title||'(無題)')}</strong><small>${esc(e.subject||'')} / ${examStatusLabel(e)}${windowText?` / ${esc(windowText)}`:''} / ${esc(target)} / ${formText}</small></div><span class="exam-export-state ${examStatusClass(e)}">${examStatusLabel(e)}</span></div>`;
   }).join('');
-  root.innerHTML=`<div class="exam-export-head"><div><span class="section-eyebrow">EXPORT CONTENTS</span><h3>書き出す試験：${list.length}件</h3></div><small>exams.json は差分ではなく、登録済み試験をすべて含む累積ファイルです。</small></div>${rows||'<div class="notice small">登録済み試験はありません。</div>'}<div class="github-upload-note"><strong>GitHub反映先：<code>data/exams.json</code></strong><span>ダウンロード名が <code>exams(1).json</code> などになった場合は、GitHubへ上げる前に <code>exams.json</code> に戻して上書きしてください。</span></div>`;
+  root.innerHTML=`<div class="exam-export-head"><div><span class="section-eyebrow">EMERGENCY BACKUP</span><h3>非常時用バックアップ：${list.length}件</h3></div><small>通常運用では自動反映されるため書き出し不要です。</small></div>${rows||'<div class="notice small">登録済み試験はありません。</div>'}<div class="github-upload-note"><strong>非常時のみ：<code>data/exams.json</code></strong><span>自動反映が利用できない場合だけ、この累積JSONをシステム管理者が手動で上書きします。</span></div>`;
 }
 function exportExamData(){
   allExamData.version=Math.max(Number(allExamData.version||0),9);

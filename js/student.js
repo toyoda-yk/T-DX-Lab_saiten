@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.4';
+const APP_VERSION='1.24.5';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -25,12 +25,12 @@ async function fetchJsonWithMeta(path){
 }
 async function loadAnalysisIndex(){
   try{
-    const data=await TDX.gasJson({action:'listAnalysis'});
-    if(!data?.ok)throw new Error(data?.message||'分析一覧を取得できませんでした。');
-    return {version:2,analyses:Array.isArray(data.analyses)?data.analyses:[]};
-  }catch(gasError){
-    console.warn('GAS analysis index load failed. Trying legacy analysis.json.',gasError);
-    try{return (await fetchJsonWithMeta('data/analysis.json')).data}catch(e){return {version:2,analyses:[]}}
+    const r=await fetchJsonWithMeta('data/analysis.json');
+    const data=r.data||{version:2,analyses:[]};
+    return {version:Number(data.version||2),updatedAt:data.updatedAt||r.lastModified||'',analyses:Array.isArray(data.analyses)?data.analyses:[]};
+  }catch(e){
+    console.warn('analysis.json load failed',e);
+    return {version:2,analyses:[]};
   }
 }
 async function loadData(){
@@ -70,12 +70,7 @@ function audienceAllowed(exam,user){
 function eligible(exam,user){return examEffectiveStatus(exam)==='published'&&audienceAllowed(exam,user)}
 function analysisEntryFor(examId){return (analysisData.analyses||[]).find(x=>x.examId===examId)||null}
 async function ensureAnalysisEntry(examId){
-  const cached=analysisEntryFor(examId);if(cached?.overall?.questions&&cached?.classes)return cached;
-  try{
-    const data=await TDX.gasJson({action:'getAnalysis',examId});
-    if(!data?.ok||!data.analysis)return null;
-    const rest=(analysisData.analyses||[]).filter(x=>x.examId!==examId);rest.push(data.analysis);analysisData={version:2,analyses:rest};return data.analysis;
-  }catch(e){console.warn('analysis detail load failed',e);return cached?.overall?.questions?cached:null}
+  return analysisEntryFor(examId);
 }
 async function login(){
   const code=$('studentCode').value.trim(),pass=$('accessCode').value.trim();
@@ -245,7 +240,7 @@ function analysisScopeSnapshot(entry){
   return {snapshot:entry.overall,label:'全体'};
 }
 async function openStudentAnalysis(examId){
-  const entry=await ensureAnalysisEntry(examId);if(!entry?.overall?.questions){alert('この試験の分析結果はまだ公開されていないか、OEN分析共有サーバーへ接続できませんでした。');return}
+  const entry=await ensureAnalysisEntry(examId);if(!entry?.overall?.questions){alert('この試験の分析結果はまだ公開されていないか、公開データの更新がまだ反映されていません。少し待ってから最新状態を再読込してください。');return}
   if(!analysisVisibleToCurrentUser(entry)){alert('この分析結果はあなたのクラスには公開されていません。');return}
   currentExam=analysisExamShell(entry);publicAnalysisScope=analysisClassEntry(entry).snapshot?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
 }
@@ -257,7 +252,7 @@ function renderPublicAnalysis(){
   $('publicAnalysisMeta').textContent=`集計 ${snap.participants||0}人${dt?` ／ 更新 ${dt}`:''} ／ 平均点 ${Number(snap.averageScore||0).toFixed(1)}点`;
   let stats=[...(snap.questions||[])];if(sort==='rate-desc')stats.sort((a,b)=>b.pct-a.pct||a.order-b.order);else if(sort==='rate-asc')stats.sort((a,b)=>a.pct-b.pct||a.order-b.order);else stats.sort((a,b)=>a.order-b.order);
   const units=new Map(publicAnalysisUnits(currentExam).map(u=>[u.key,u])),saved=loadStudentAnswerSnapshot(currentExam.id),answers=saved?.answers||null,chart=$('publicAnalysisChart');
-  chart.innerHTML=`<div class="public-chart-scale"><span>0%</span><span>50%</span><span>100%</span></div>`+stats.map(x=>{const own=ownUnitMark(answers,units.get(x.key)||{type:'normal',members:[]});return `<div class="public-rate-row"><div class="public-rate-label"><strong>${escapeHtmlStudent(x.label)}</strong><small>${escapeHtmlStudent(x.section||'')} ${x.metricLabel&&x.metricLabel!=='正答率'?`・${escapeHtmlStudent(x.metricLabel)}`:''}</small></div><div class="public-rate-track"><span style="width:${Math.max(0,Math.min(100,Number(x.pct||0)))}%"></span><i class="own-marker ${own.cls}" title="自分：${own.mark}">${own.mark}</i></div><div class="public-rate-value">${Number(x.pct||0).toFixed(1)}%</div></div>`}).join('');
+  chart.innerHTML=`<div class="public-chart-scale"><div></div><div class="public-scale-track"><span>0%</span><span>50%</span><span>100%</span></div><div></div><div></div></div>`+stats.map(x=>{const own=ownUnitMark(answers,units.get(x.key)||{type:'normal',members:[]});return `<div class="public-rate-row"><div class="public-rate-label"><strong>${escapeHtmlStudent(x.label)}</strong><small>${escapeHtmlStudent(x.section||'')} ${x.metricLabel&&x.metricLabel!=='正答率'?`・${escapeHtmlStudent(x.metricLabel)}`:''}</small></div><div class="public-rate-track"><span style="width:${Math.max(0,Math.min(100,Number(x.pct||0)))}%"></span></div><div class="public-own-cell"><i class="own-marker ${own.cls}" title="自分：${own.mark}">${own.mark}</i></div><div class="public-rate-value">${Number(x.pct||0).toFixed(1)}%</div></div>`}).join('');
   renderPublicAnalysisFacts(stats,answers,units,snap);
 }
 function escapeHtmlStudent(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}

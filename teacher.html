@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.24.4">
+  <link rel="stylesheet" href="css/style.css?v=1.24.5">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.24.4</span>
+        <span class="tdx-version-pill">v1.24.5</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -65,7 +65,7 @@
       </div>
 
       <div class="system-admin-entry">
-        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度名簿・年間アクセスキー・users.json はGitHub担当者向けです。</small></div></div>
+        <div><span class="system-admin-icon">⚙</span><div><strong>システム管理</strong><small>年度名簿・年間アクセスキー・users.json はシステム管理者向けです。</small></div></div>
         <button id="systemAdminBtn" class="secondary glass-btn" type="button">システム管理者</button>
       </div>
       <div id="systemAdminGate" class="system-admin-gate hidden">
@@ -326,7 +326,7 @@
       <div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">ANSWER ANALYTICS</span><h2>回答分析</h2><p>Googleフォームからダウンロードした回答Excel（推奨）/ CSVをそのまま読み込み、採点から個人・設問別分析まで行います。</p></div><div class="admin-symbol">02</div></div>
       <div class="grid two admin-form-grid analysis-upload-grid">
         <div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input id="responseFile" type="file" accept=".xlsx,.xls,.csv"><div class="actions"><button id="analyzeBtn" class="teacher-action">分析する</button></div></div>
-        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・4桁番号・個人回答は送信せず、クラス別／全体の集計値だけをOEN内の共通分析データへ保存します。</p><button id="publishStudentAnalysisBtn" type="button" class="teacher-action">生徒に分析を公開</button><div id="analysisPublishMsg" class="small muted" aria-live="polite">回答Excelを分析したあと、このボタンを1回押すだけで公開できます。</div><details class="analysis-backup-details"><summary>非常時用：JSONを書き出す</summary><p class="small muted">通常運用では不要です。共通GASが利用できない場合の予備としてだけ使用します。</p><button id="exportStudentAnalysisBtn" type="button" class="secondary glass-btn">analysis.json を書き出す</button></details></div></div>
+        <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><p>氏名・4桁番号・個人回答は公開せず、クラス別／全体の集計値だけを生徒用公開データへ自動反映します。生徒はGoogleログイン不要です。</p><button id="publishStudentAnalysisBtn" type="button" class="teacher-action">生徒に分析を公開</button><div id="analysisPublishMsg" class="small muted" aria-live="polite">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div><details class="analysis-backup-details"><summary>非常時用：JSONを書き出す</summary><p class="small muted">通常運用では不要です。共通GASが利用できない場合の予備としてだけ使用します。</p><button id="exportStudentAnalysisBtn" type="button" class="secondary glass-btn">analysis.json を書き出す</button></details></div></div>
       </div>
       <div id="analysisOutput" class="hidden analysis-console">
         <div id="analysisImportSummary" class="analysis-import-summary"></div>
@@ -446,8 +446,8 @@
       <div id="audienceBuilder" class="audience-builder compact-audience-builder"></div>
 
       <div class="publish-actions-panel compact-publish-actions">
-        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間を変更した場合も、現在は最新の exams.json をGitHubへ上書きすると生徒画面へ反映されます。</p></div>
-        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
+        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間の延長・短縮も［公開設定を反映］だけで生徒画面へ自動反映します。</p></div>
+        <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="secondary glass-btn">非常時用 exams.jsonを書き出す</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
 
@@ -461,8 +461,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.24.4"></script>
-<script src="js/teacher.js?v=1.24.4"></script>
+<script src="js/common.js?v=1.24.5"></script>
+<script src="js/teacher.js?v=1.24.5"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

@@ -1,9 +1,16 @@
 const TDX_CONFIG = {
   PROP_SS_ID: 'TDX_SPREADSHEET_ID',
+  PROP_GH_OWNER: 'TDX_GITHUB_OWNER',
+  PROP_GH_REPO: 'TDX_GITHUB_REPO',
+  PROP_GH_BRANCH: 'TDX_GITHUB_BRANCH',
+  PROP_GH_TOKEN: 'TDX_GITHUB_TOKEN',
   TEST_SHEET: '接続テスト',
   INDEX_SHEET: '分析一覧',
   DATA_SHEET: '分析データ',
-  CHUNK_SIZE: 40000
+  SYNC_SHEET: '公開同期ログ',
+  CHUNK_SIZE: 40000,
+  ANALYSIS_PATH: 'data/analysis.json',
+  EXAMS_PATH: 'data/exams.json'
 };
 
 /**
@@ -22,13 +29,91 @@ function setupTDXLab() {
   ensureSheet_(ss, TDX_CONFIG.DATA_SHEET, [
     '試験ID', 'チャンク番号', 'JSONデータ', '更新日時', '公開者'
   ]);
+  ensureSheet_(ss, TDX_CONFIG.SYNC_SHEET, [
+    '日時', '種類', '対象', '実行ユーザー', '結果', 'メッセージ'
+  ]);
 
   SpreadsheetApp.flush();
-  console.log('T-DX Lab 分析共有 初期設定完了');
+  console.log('T-DX Lab 初期設定完了');
 }
 
 /**
- * GET: ping / whoami / writeTest / readTest / listAnalysis / getAnalysis / getAnalysisMeta
+ * GitHub連携の初回設定。システム管理者が1回だけ実行します。
+ */
+function setupGitHubConnection() {
+  const ui = SpreadsheetApp.getUi();
+
+  const repoPrompt = ui.prompt(
+    'T-DX Lab GitHub連携',
+    'T-DX Labを公開しているGitHubリポジトリURLを入力してください。\n例：https://github.com/OWNER/REPOSITORY',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (repoPrompt.getSelectedButton() !== ui.Button.OK) return;
+
+  const repoInfo = parseGitHubRepo_(repoPrompt.getResponseText());
+  if (!repoInfo) {
+    ui.alert('リポジトリURLを確認してください。');
+    return;
+  }
+
+  const tokenPrompt = ui.prompt(
+    'GitHubトークン',
+    'Fine-grained personal access token を入力してください。\n対象リポジトリだけを選び、Repository permissions → Contents を Read and write にしてください。\n※トークンはScript Propertiesに保存し、スプレッドシートには保存しません。',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (tokenPrompt.getSelectedButton() !== ui.Button.OK) return;
+
+  const token = String(tokenPrompt.getResponseText() || '').trim();
+  if (!token) {
+    ui.alert('トークンが空です。');
+    return;
+  }
+
+  const meta = githubApi_(
+    'get',
+    'https://api.github.com/repos/' + encodeURIComponent(repoInfo.owner) + '/' + encodeURIComponent(repoInfo.repo),
+    null,
+    token
+  );
+  const branch = String(meta.default_branch || 'main');
+
+  PropertiesService.getScriptProperties().setProperties({
+    [TDX_CONFIG.PROP_GH_OWNER]: repoInfo.owner,
+    [TDX_CONFIG.PROP_GH_REPO]: repoInfo.repo,
+    [TDX_CONFIG.PROP_GH_BRANCH]: branch,
+    [TDX_CONFIG.PROP_GH_TOKEN]: token
+  }, false);
+
+  githubGetFile_(TDX_CONFIG.EXAMS_PATH, true);
+
+  ui.alert(
+    'GitHub連携を設定しました。\n\n' +
+    repoInfo.owner + '/' + repoInfo.repo + '\n' +
+    'ブランチ：' + branch + '\n\n' +
+    '今後、一般の先生はGitHubを触る必要はありません。'
+  );
+}
+
+function checkGitHubConnection() {
+  const c = githubConfig_();
+  const meta = githubApi_(
+    'get',
+    'https://api.github.com/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo),
+    null,
+    c.token
+  );
+  SpreadsheetApp.getUi().alert(
+    'GitHub接続OK\n' +
+    c.owner + '/' + c.repo + '\n' +
+    'ブランチ：' + c.branch + '\n' +
+    'リポジトリ：' + String(meta.full_name || '')
+  );
+}
+
+/**
+ * GET:
+ * 生徒画面はこのGASを使用しません。
+ * 生徒はGitHub Pages上の data/exams.json / data/analysis.json のみ読み取ります。
  */
 function doGet(e) {
   try {
@@ -50,6 +135,7 @@ function doGet(e) {
         ok: true,
         user: email,
         teacher: isAuthorizedTeacher_(email),
+        githubConfigured: githubConfigured_(),
         message: isAuthorizedTeacher_(email) ? '公開権限あり' : '閲覧のみ'
       };
     } else if (action === 'writeTest') {
@@ -84,48 +170,113 @@ function doGet(e) {
       if (!examId) throw new Error('examId がありません。');
       const analysis = loadAnalysis_(examId);
       result = analysis ? { ok: true, analysis: analysis } : { ok: false, message: '分析結果がありません。' };
+    } else if (action === 'getSyncStatus') {
+      result = readSyncStatus_(String(p.token || '').trim());
+    } else if (action === 'githubStatus') {
+      const email = activeEmail_();
+      if (!isAuthorizedTeacher_(email)) throw new Error('確認権限がありません。');
+      result = {
+        ok: true,
+        configured: githubConfigured_(),
+        repository: githubConfigured_() ? githubPublicInfo_() : null
+      };
     } else {
       result = { ok: false, message: '不明なactionです。' };
     }
 
     return output_(result, p.callback);
   } catch (error) {
-    return output_({ ok: false, message: String(error && error.message ? error.message : error) }, e && e.parameter && e.parameter.callback);
+    return output_(
+      { ok: false, message: String(error && error.message ? error.message : error) },
+      e && e.parameter && e.parameter.callback
+    );
   }
 }
 
 /**
- * POST: publishAnalysis
- * 共有スプレッドシートの「編集者」だけ公開できます。
+ * POST:
+ * - publishAnalysis : 集計結果を保存し、GitHub data/analysis.json へ自動反映
+ * - publishExams    : 最新の試験データを GitHub data/exams.json へ自動反映
  */
 function doPost(e) {
-  try {
-    const p = (e && e.parameter) || {};
-    const action = p.action || '';
-    if (action !== 'publishAnalysis') throw new Error('不明なPOST actionです。');
+  const p = (e && e.parameter) || {};
+  const action = String(p.action || '');
+  const token = String(p.syncToken || p.publishToken || '').trim();
 
+  try {
     const email = activeEmail_();
     if (!email) throw new Error('OENアカウントを確認できません。');
     if (!isAuthorizedTeacher_(email)) {
-      throw new Error('公開権限がありません。分析共有スプレッドシートを編集者として共有してください。');
+      throw new Error('公開権限がありません。共有スプレッドシートを編集者として共有してください。');
+    }
+    if (!githubConfigured_()) {
+      throw new Error('GitHub自動連携が未設定です。システム管理者が setupGitHubConnection を1回実行してください。');
     }
 
-    const raw = String(p.payload || '');
-    if (!raw) throw new Error('分析データがありません。');
-    const parsed = JSON.parse(raw);
-    const clean = sanitizeAnalysis_(parsed);
-    saveAnalysis_(clean, email);
-
-    return output_({
-      ok: true,
-      message: '分析結果を公開しました。',
-      examId: clean.examId,
-      generatedAt: clean.generatedAt,
-      publishToken: clean.publishToken,
-      publishedBy: email
+    if (token) writeSyncStatus_(token, {
+      ok: true, done: false, action: action, message: '公開処理中です。'
     });
+
+    if (action === 'publishAnalysis') {
+      const raw = String(p.payload || '');
+      if (!raw) throw new Error('分析データがありません。');
+
+      const clean = sanitizeAnalysis_(JSON.parse(raw));
+      saveAnalysis_(clean, email);
+      const gh = syncAnalysisToGitHub_(clean, email);
+      logSync_('分析', clean.examId, email, '成功', gh.message);
+
+      const result = {
+        ok: true,
+        done: true,
+        action: action,
+        message: '分析結果を生徒用公開データへ反映しました。',
+        examId: clean.examId,
+        generatedAt: clean.generatedAt,
+        publishToken: clean.publishToken,
+        publishedBy: email,
+        github: gh
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
+    } else if (action === 'publishExams') {
+      const raw = String(p.payload || '');
+      if (!raw) throw new Error('試験データがありません。');
+
+      const clean = sanitizeExamsBundle_(JSON.parse(raw));
+      const gh = githubPutJson_(
+        TDX_CONFIG.EXAMS_PATH,
+        clean,
+        'T-DX Lab: update exams (' + email + ')'
+      );
+      logSync_('試験', String(clean.exams.length) + '件', email, '成功', gh.message);
+
+      const result = {
+        ok: true,
+        done: true,
+        action: action,
+        message: '試験データを生徒画面へ反映しました。',
+        publishedBy: email,
+        updatedAt: clean.updatedAt,
+        github: gh
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
+    } else {
+      throw new Error('不明なPOST actionです。');
+    }
+
   } catch (error) {
-    return output_({ ok: false, message: String(error && error.message ? error.message : error) });
+    const msg = String(error && error.message ? error.message : error);
+    if (token) writeSyncStatus_(token, {
+      ok: false, done: true, action: action, message: msg
+    });
+    try {
+      logSync_(action === 'publishExams' ? '試験' : '分析', '', activeEmail_(), '失敗', msg);
+    } catch (ignore) {}
+    return output_({ ok: false, done: true, message: msg });
   }
 }
 
@@ -318,6 +469,231 @@ function indexRowToMeta_(r) {
     classes: classes,
     publishToken: String(r[8] || '')
   };
+}
+
+
+function sanitizeExamsBundle_(x) {
+  if (!x || typeof x !== 'object' || !Array.isArray(x.exams)) {
+    throw new Error('exams.json の形式が不正です。');
+  }
+  const clean = JSON.parse(JSON.stringify(x));
+  clean.version = Math.max(9, Math.round(number_(clean.version)));
+  clean.systemName = text_(clean.systemName || 'T-DX Lab☆問題演習システム', 200);
+  clean.updatedAt = new Date().toISOString();
+  if (clean.exams.length > 1000) throw new Error('試験件数が多すぎます。');
+  return clean;
+}
+
+function syncAnalysisToGitHub_(analysis, email) {
+  const current = githubReadJson_(TDX_CONFIG.ANALYSIS_PATH, {
+    version: 2,
+    systemName: 'T-DX Lab☆問題演習システム',
+    updatedAt: null,
+    analyses: []
+  });
+
+  const list = Array.isArray(current.analyses) ? current.analyses : [];
+  const next = list.filter(function(x) {
+    return String(x && x.examId || '') !== String(analysis.examId);
+  });
+  next.push(analysis);
+  next.sort(function(a, b) {
+    return String(a.title || '').localeCompare(String(b.title || ''), 'ja');
+  });
+
+  const payload = {
+    version: 2,
+    systemName: 'T-DX Lab☆問題演習システム',
+    updatedAt: new Date().toISOString(),
+    analyses: next
+  };
+
+  return githubPutJson_(
+    TDX_CONFIG.ANALYSIS_PATH,
+    payload,
+    'T-DX Lab: publish analysis ' + analysis.examId + ' (' + email + ')'
+  );
+}
+
+function githubConfigured_() {
+  const p = PropertiesService.getScriptProperties();
+  return !!(
+    p.getProperty(TDX_CONFIG.PROP_GH_OWNER) &&
+    p.getProperty(TDX_CONFIG.PROP_GH_REPO) &&
+    p.getProperty(TDX_CONFIG.PROP_GH_BRANCH) &&
+    p.getProperty(TDX_CONFIG.PROP_GH_TOKEN)
+  );
+}
+
+function githubPublicInfo_() {
+  const p = PropertiesService.getScriptProperties();
+  return {
+    owner: p.getProperty(TDX_CONFIG.PROP_GH_OWNER) || '',
+    repo: p.getProperty(TDX_CONFIG.PROP_GH_REPO) || '',
+    branch: p.getProperty(TDX_CONFIG.PROP_GH_BRANCH) || ''
+  };
+}
+
+function githubConfig_() {
+  if (!githubConfigured_()) {
+    throw new Error('GitHub連携が未設定です。setupGitHubConnection を実行してください。');
+  }
+  const p = PropertiesService.getScriptProperties();
+  return {
+    owner: p.getProperty(TDX_CONFIG.PROP_GH_OWNER),
+    repo: p.getProperty(TDX_CONFIG.PROP_GH_REPO),
+    branch: p.getProperty(TDX_CONFIG.PROP_GH_BRANCH),
+    token: p.getProperty(TDX_CONFIG.PROP_GH_TOKEN)
+  };
+}
+
+function parseGitHubRepo_(value) {
+  let s = String(value || '').trim().replace(/\/+$/, '').replace(/\.git$/i, '');
+  if (!s) return null;
+
+  const urlMatch = s.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/i);
+  if (urlMatch) return { owner: urlMatch[1], repo: urlMatch[2] };
+
+  const pairMatch = s.match(/^([^\/\s]+)\/([^\/\s]+)$/);
+  if (pairMatch) return { owner: pairMatch[1], repo: pairMatch[2] };
+
+  return null;
+}
+
+function githubApi_(method, url, body, token) {
+  const options = {
+    method: String(method || 'get').toLowerCase(),
+    muteHttpExceptions: true,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'T-DX-Lab-GAS'
+    }
+  };
+  if (body != null) {
+    options.contentType = 'application/json';
+    options.payload = JSON.stringify(body);
+  }
+
+  const res = UrlFetchApp.fetch(url, options);
+  const code = res.getResponseCode();
+  const text = res.getContentText('UTF-8');
+  let data = {};
+  if (text) {
+    try { data = JSON.parse(text); } catch (err) { data = { raw: text }; }
+  }
+  if (code < 200 || code >= 300) {
+    const detail = data && data.message ? data.message : text;
+    throw new Error('GitHub API エラー (' + code + '): ' + detail);
+  }
+  return data;
+}
+
+function githubGetFile_(path, allowMissing) {
+  const c = githubConfig_();
+  const url =
+    'https://api.github.com/repos/' +
+    encodeURIComponent(c.owner) + '/' +
+    encodeURIComponent(c.repo) +
+    '/contents/' + path.split('/').map(encodeURIComponent).join('/') +
+    '?ref=' + encodeURIComponent(c.branch);
+
+  const options = {
+    method: 'get',
+    muteHttpExceptions: true,
+    headers: {
+      'Authorization': 'Bearer ' + c.token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'T-DX-Lab-GAS'
+    }
+  };
+  const res = UrlFetchApp.fetch(url, options);
+  const code = res.getResponseCode();
+  const text = res.getContentText('UTF-8');
+
+  if (code === 404 && allowMissing) return null;
+  if (code < 200 || code >= 300) {
+    let detail = text;
+    try { detail = JSON.parse(text).message || text; } catch (err) {}
+    throw new Error('GitHubファイル取得エラー (' + code + '): ' + detail);
+  }
+  return JSON.parse(text);
+}
+
+function githubReadJson_(path, fallback) {
+  const file = githubGetFile_(path, true);
+  if (!file) return JSON.parse(JSON.stringify(fallback));
+  const encoded = String(file.content || '').replace(/\s/g, '');
+  const bytes = Utilities.base64Decode(encoded);
+  const text = Utilities.newBlob(bytes).getDataAsString('UTF-8');
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(path + ' のJSONを読み取れません。');
+  }
+}
+
+function githubPutJson_(path, obj, message) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const c = githubConfig_();
+    const existing = githubGetFile_(path, true);
+    const json = JSON.stringify(obj, null, 2) + '\n';
+    const url =
+      'https://api.github.com/repos/' +
+      encodeURIComponent(c.owner) + '/' +
+      encodeURIComponent(c.repo) +
+      '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+
+    const body = {
+      message: message || ('T-DX Lab: update ' + path),
+      content: Utilities.base64Encode(json, Utilities.Charset.UTF_8),
+      branch: c.branch
+    };
+    if (existing && existing.sha) body.sha = existing.sha;
+
+    const result = githubApi_('put', url, body, c.token);
+    return {
+      ok: true,
+      path: path,
+      sha: result && result.content ? String(result.content.sha || '') : '',
+      message: path + ' をGitHubへ反映しました。'
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function writeSyncStatus_(token, value) {
+  token = String(token || '').trim();
+  if (!token) return;
+  CacheService.getScriptCache().put(
+    'tdx-sync:' + token,
+    JSON.stringify(value || {}),
+    600
+  );
+}
+
+function readSyncStatus_(token) {
+  token = String(token || '').trim();
+  if (!token) return { ok: false, done: true, message: '同期トークンがありません。' };
+  const raw = CacheService.getScriptCache().get('tdx-sync:' + token);
+  if (!raw) return { ok: true, done: false, pending: true, message: '処理待ちです。' };
+  try { return JSON.parse(raw); }
+  catch (err) { return { ok: false, done: true, message: '同期状態を読み取れません。' }; }
+}
+
+function logSync_(kind, target, email, result, message) {
+  const ss = getTDXSpreadsheet_();
+  const sheet = ensureSheet_(
+    ss,
+    TDX_CONFIG.SYNC_SHEET,
+    ['日時', '種類', '対象', '実行ユーザー', '結果', 'メッセージ']
+  );
+  sheet.appendRow([new Date(), kind, target, email, result, message]);
 }
 
 function output_(obj, callback) {
