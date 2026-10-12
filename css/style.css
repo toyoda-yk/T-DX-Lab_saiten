@@ -1035,3 +1035,14 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .migration-result.success{background:#edf9f2;border-color:#bfe5cd;color:#247148}
 .migration-result.notice{background:#fff7e8;border-color:#f2d29a;color:#87561b}
 .migration-result.error{background:#fff0f0;border-color:#efb9b9;color:#a63d3d}
+
+/* v1.23.7 - Google Form verification inside exam management */
+.publish-google-form-panel{margin:10px 0 12px;padding:14px 15px;border:1px solid #d9e6f4;border-radius:18px;background:linear-gradient(180deg,#fbfdff,#f7faff)}
+.publish-form-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.publish-form-head h3{margin:2px 0 3px}.publish-form-head p{margin:0;color:#6b7d91;font-size:11px;line-height:1.5}
+.publish-form-status{display:inline-flex;align-items:center;min-height:30px;padding:5px 10px;border-radius:999px;border:1px solid #d7e0e8;background:#f2f5f8;color:#667789;font-size:10px;font-weight:900;white-space:nowrap}.publish-form-status.ok{background:#edf9f2;border-color:#c4e6d1;color:#176e47}.publish-form-status.mid{background:#fff8e8;border-color:#eed89e;color:#855f18}.publish-form-status.warn{background:#fff1f1;border-color:#efc8c8;color:#9b3737}
+.publish-form-current{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:end}.publish-form-current label{margin:0;font-size:11px;color:#60758b}.publish-form-current input{margin-top:5px;background:#f8fafc;font-size:12px}.publish-form-current button{white-space:nowrap}
+.publish-form-mapping-summary{margin:8px 0 0;padding:8px 10px;border-radius:11px;background:#f2f7fc;border:1px solid #e0e9f2;color:#526d88;font-size:10.5px;line-height:1.5}.publish-form-mapping-summary .warn-text{color:#9b4b35}
+.publish-form-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.publish-form-actions .publish-confirm-check{margin-left:auto!important}.publish-form-actions .publish-confirm-check input:disabled+*{opacity:.6}
+.publish-form-change{margin-top:10px;border:1px solid #e1e8f0;border-radius:12px;background:#fff;overflow:hidden}.publish-form-change>summary{padding:9px 11px;cursor:pointer;font-size:11px;font-weight:850;color:#48627e}.publish-form-change[open]>summary{border-bottom:1px solid #e8edf3}.publish-form-change>p{margin:10px 11px 7px;font-size:10.5px;line-height:1.55;color:#66788b}.publish-form-change textarea{margin:0 11px;width:calc(100% - 22px);min-height:68px;font-size:12px}.publish-form-change .actions{margin:8px 11px}.publish-form-change #publishFormReplaceMsg{margin:0 11px 10px}
+#publishFormTestMsg{margin-top:8px}
+@media(max-width:760px){.publish-form-head,.publish-form-actions{align-items:stretch;flex-direction:column}.publish-form-current{grid-template-columns:1fr}.publish-form-current button{width:100%}.publish-form-actions .publish-confirm-check{margin-left:0!important}}

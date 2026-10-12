@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.23.3">
+  <link rel="stylesheet" href="css/style.css?v=1.23.7">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.23.6</span>
+        <span class="tdx-version-pill">v1.23.7</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -350,12 +350,34 @@
         <div class="exam-ops-actions">
           <button id="cloneExamBtn" class="secondary glass-btn" type="button">複製</button>
           <button id="togglePreviewBtn" class="secondary glass-btn" type="button">動作確認</button>
-          <button id="testPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォーム テスト送信</button>
           <button id="deleteExamBtn" class="danger-outline" type="button">完全削除</button>
         </div>
       </div>
       <div id="examReadiness" class="exam-readiness"></div>
-      <div id="publishFormTestMsg" class="small muted" aria-live="polite"></div>
+
+      <section id="publishGoogleFormPanel" class="publish-google-form-panel">
+        <div class="publish-form-head">
+          <div><span class="section-eyebrow">GOOGLE FORM CHECK</span><h3>Googleフォーム連携確認</h3><p>公開前に、送信先・テスト送信・実際の受信をここで確認します。</p></div>
+          <span id="publishFormStatusBadge" class="publish-form-status">確認中</span>
+        </div>
+        <div class="publish-form-current">
+          <label>現在の送信先URL<input id="publishCurrentFormUrl" type="text" readonly placeholder="Googleフォーム未設定"></label>
+          <button id="openPublishedGoogleFormBtn" class="secondary glass-btn" type="button">Googleフォームを開く</button>
+        </div>
+        <div id="publishFormMappingSummary" class="publish-form-mapping-summary"></div>
+        <div class="publish-form-actions">
+          <button id="testPublishedGoogleFormBtn" class="secondary glass-btn" type="button">現在の設定でテスト送信</button>
+          <label class="test-confirm-check publish-confirm-check"><input id="publishFormConfirmed" type="checkbox"> Googleフォームの「回答」で受信を確認した</label>
+        </div>
+        <div id="publishFormTestMsg" class="small muted" aria-live="polite"></div>
+        <details class="publish-form-change">
+          <summary>Googleフォームを変更・再設定する</summary>
+          <p>新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けます。差し替えると受信確認は未確認に戻ります。</p>
+          <textarea id="publishFormPrefillUrl" rows="3" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&entry...."></textarea>
+          <div class="actions compact-actions"><button id="replacePublishedGoogleFormBtn" class="secondary glass-btn" type="button">事前入力URLを解析して差し替え</button></div>
+          <div id="publishFormReplaceMsg" class="small muted" aria-live="polite"></div>
+        </details>
+      </section>
 
       <section id="examPreviewPanel" class="exam-preview-simulator hidden" aria-live="polite">
         <div class="simulator-head">
@@ -414,8 +436,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.23.3"></script>
-<script src="js/teacher.js?v=1.23.6"></script>
+<script src="js/common.js?v=1.23.7"></script>
+<script src="js/teacher.js?v=1.23.7"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

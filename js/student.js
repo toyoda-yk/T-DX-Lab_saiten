@@ -1,7 +1,7 @@
 let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null;
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.23.6';
+const APP_VERSION='1.23.7';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -119,7 +119,7 @@ function postGoogleForm(actionUrl,fields){
       const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
       Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
-      [['fvv','1'],['pageHistory','0']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
       frame.onload=()=>finish();HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
