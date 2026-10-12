@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.23.9">
+  <link rel="stylesheet" href="css/style.css?v=1.24.0">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.23.9</span>
+        <span class="tdx-version-pill">v1.24.0</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -343,12 +343,12 @@
 
         <div class="analysis-card analysis-detail-card">
           <div class="analysis-card-head"><div><div class="section-eyebrow">QUESTION RATE</div><h3>設問別分析</h3><p id="questionRateSummary" class="muted small"></p></div><div class="analysis-tools"><label>表示<select id="questionFilter"><option value="all">すべて</option><option value="review">重点復習（50%未満）</option><option value="middle">要確認（50〜79.9%）</option><option value="must">できてほしい（80%以上）</option></select></label><label>並べ替え<select id="questionSort"><option value="rate-asc">正答率が低い順</option><option value="rate-desc">正答率が高い順</option><option value="order">問題順</option></select></label></div></div>
-          <div class="table-shell analysis-table-shell"><table><thead><tr><th>大問</th><th>設問</th><th>正答</th><th>配点</th><th>正答率</th><th>正答者 / 受験者</th><th>判定</th></tr></thead><tbody id="questionRates"></tbody></table></div>
+          <div class="table-shell analysis-table-shell"><table><thead><tr><th>大問</th><th>設問</th><th>正答</th><th>配点</th><th>正答率 / 完答率</th><th>達成状況</th><th>判定</th></tr></thead><tbody id="questionRates"></tbody></table></div>
         </div>
 
         <div class="analysis-card analysis-detail-card">
           <div class="analysis-card-head"><div><div class="section-eyebrow">STUDENT ANALYSIS</div><h3>生徒別分析</h3><p id="studentAnalysisSummary" class="muted small"></p></div><div class="analysis-tools"><label>並べ替え<select id="studentSort"><option value="score-desc">得点が高い順</option><option value="score-asc">得点が低い順</option><option value="code">4桁番号順</option></select></label></div></div>
-          <div class="table-shell analysis-table-shell student-analysis-shell"><table><thead><tr><th>4桁番号</th><th>氏名 / 採用回答</th><th>クラス</th><th>得点</th><th>正答数</th><th>大問別</th><th></th></tr></thead><tbody id="studentAnalysisBody"></tbody></table></div>
+          <div class="table-shell analysis-table-shell student-analysis-shell"><table><thead><tr><th>4桁番号</th><th>氏名 / 採用回答</th><th>クラス</th><th>得点</th><th>正答マーク数</th><th>大問別</th><th></th></tr></thead><tbody id="studentAnalysisBody"></tbody></table></div>
           <div id="studentDetailPanel" class="student-detail-panel hidden"><div class="student-detail-head"><div><span class="section-eyebrow">STUDENT DETAIL</span><h4 id="studentDetailTitle">生徒詳細</h4><p id="studentDetailMeta" class="muted small"></p></div><button id="studentDetailClose" type="button" class="secondary glass-btn">閉じる</button></div><div class="table-shell"><table><thead><tr><th>設問</th><th>回答</th><th>正答</th><th>判定</th><th>得点</th></tr></thead><tbody id="studentDetailBody"></tbody></table></div></div>
         </div>
       </div>
@@ -454,8 +454,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.23.9"></script>
-<script src="js/teacher.js?v=1.23.9"></script>
+<script src="js/common.js?v=1.24.0"></script>
+<script src="js/teacher.js?v=1.24.0"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
