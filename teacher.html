@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>教員管理 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.24.2">
+  <link rel="stylesheet" href="css/style.css?v=1.24.3">
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.24.2</span>
+        <span class="tdx-version-pill">v1.24.3</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -426,7 +426,14 @@
               <span class="publish-date-arrow">→</span>
               <label>公開終了<input id="publishEndAt" type="datetime-local"></label>
             </div>
-            <p class="inline-help">開始前＝公開予定／期間中＝公開中／終了後＝自動終了</p>
+            <div class="actions compact-actions publish-extend-actions">
+              <span class="muted small">終了を延長：</span>
+              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="10">+10分</button>
+              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="15">+15分</button>
+              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="30">+30分</button>
+              <button type="button" class="secondary glass-btn publishExtendBtn" data-minutes="60">+60分</button>
+            </div>
+            <p class="inline-help">開始前＝公開予定／期間中＝公開中／終了後＝自動終了。公開中・終了後でも日時を変更できます。終了後に延長した場合は、現在時刻から延長して再公開できます。</p>
           </div>
         </section>
 
@@ -439,7 +446,7 @@
       <div id="audienceBuilder" class="audience-builder compact-audience-builder"></div>
 
       <div class="publish-actions-panel compact-publish-actions">
-        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映し、GitHubへ渡すときだけ最新JSONを書き出します。</p></div>
+        <div><span class="section-eyebrow">SAVE & EXPORT</span><h3>設定を確定</h3><p class="muted small">作成・変更後に公開設定を反映します。公開期間を変更した場合も、現在は最新の exams.json をGitHubへ上書きすると生徒画面へ反映されます。</p></div>
         <div class="actions"><button id="applyPublishBtn" class="teacher-action">公開設定を反映</button><button id="exportExamDataBtn" class="orange">exams.jsonを書き出す</button></div>
       </div>
       <div id="publishMsg" class="small muted"></div>
@@ -454,8 +461,8 @@
 </main>
 
 <!-- Core UI first: menu/login must never wait for optional PDF/QR/Excel libraries. -->
-<script src="js/common.js?v=1.24.2"></script>
-<script src="js/teacher.js?v=1.24.2"></script>
+<script src="js/common.js?v=1.24.3"></script>
+<script src="js/teacher.js?v=1.24.3"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

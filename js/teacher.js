@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.24.2';
+const APP_VERSION='1.24.3';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -266,6 +266,7 @@ function bind(){
   $('selectAllAudienceBtn').onclick=()=>setAllAudience(true);
   $('clearAudienceBtn').onclick=()=>setAllAudience(false);
   $('applyPublishBtn').onclick=applyPublish;
+  document.querySelectorAll('.publishExtendBtn').forEach(b=>b.onclick=()=>extendPublishEnd(Number(b.dataset.minutes||0)));
   $('exportExamDataBtn').onclick=exportExamData;
 }
 async function adminLogin(){
@@ -1974,6 +1975,19 @@ function collectAudience(){
   document.querySelectorAll('.audience-class').forEach(box=>{const cc=box.querySelector('.class-check'),ss=[...box.querySelectorAll('.student-check')];if(cc.checked)classes.push(cc.dataset.class);else ss.filter(x=>x.checked).forEach(x=>students.push(x.value))});
   return {classes,students}
 }
+function extendPublishEnd(minutes){
+  if(!minutes||minutes<1)return;
+  const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);if(!exam)return;
+  if($('publishStatusSelect'))$('publishStatusSelect').value='published';
+  updatePublishScheduleVisibility();
+  const now=Date.now(),input=$('publishEndAt'),current=input?.value?new Date(input.value).getTime():parseExamDate(exam?.publishWindow?.endAt);
+  const base=Number.isFinite(current)&&current>now?current:now;
+  const next=new Date(base+minutes*60000);
+  if(input)input.value=toDatetimeLocal(next.toISOString());
+  if($('publishStartAt')&&!$('publishStartAt').value){$('publishStartAt').value=toDatetimeLocal(new Date(now-60000).toISOString())}
+  const msg=$('publishMsg');if(msg){msg.className='notice small';msg.innerHTML=`終了時刻を <strong>${minutes}分</strong> 延長しました。まだ保存されていません。［公開設定を反映］→［exams.jsonを書き出す］→GitHubの <code>data/exams.json</code> を上書きしてください。`;}
+}
+
 function applyPublish(){
   const exam=exams.find(e=>e.id===$('publishExamSelect').value);if(!exam)return;
   const status=$('publishStatusSelect')?.value||'unpublished';
@@ -2002,7 +2016,7 @@ function applyPublish(){
   allExamData.exams=exams;
   const effective=examStatusLabel(exam),windowText=scheduleSummary(exam);
   $('publishMsg').className='success small';
-  $('publishMsg').innerHTML=`<strong>✓ 公開設定を反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>この変更をGitHubへ反映するには、最後に <code>exams.json</code> を書き出して担当者へ送付してください。自動終了後は再送付不要です。</span>`;
+  $('publishMsg').innerHTML=`<strong>✓ 公開設定を反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>この変更を生徒画面へ反映するには、最新の <code>exams.json</code> を書き出してGitHubの <code>data/exams.json</code> を上書きしてください。公開期間の延長・短縮も同じ手順です。自動終了だけなら再アップロードは不要です。</span>`;
   refreshPublishSelectors(exam.id);$('publishExamSelect').value=exam.id;
   renderCurrentPublishState(exam);renderExamReadiness(exam);renderExamExportSummary();if(!$('examPreviewPanel')?.classList.contains('hidden'))renderExamPreview(previewMode);
 }

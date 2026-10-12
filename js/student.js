@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.2';
+const APP_VERSION='1.24.3';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -99,22 +99,37 @@ async function login(){
   if(!verified){$('loginMsg').className='error small';$('loginMsg').textContent='4桁番号または年間アクセスキーが違います。';return;}
   currentUser=rec;
   const loginMatched=rec.credential||rec.salt?exams.filter(e=>audienceAllowed(e,rec)):legacyMatched;
-  accessibleExams=loginMatched.filter(e=>eligible(e,rec)||analysisEntryFor(e.id));
+  accessibleExams=loginMatched.filter(e=>eligible(e,rec));
   $('who').textContent=`ログイン中：${code}`;renderExamList();show('examListPanel');
 }
+function analysisVisibleToCurrentUser(entry){
+  if(!entry||!currentUser)return false;
+  const classKeys=Object.keys(entry.classes||{});
+  return !classKeys.length||!!entry.classes?.[currentUser.classKey];
+}
+function analysisExamShell(entry){
+  const real=exams.find(e=>e.id===entry.examId);
+  if(real)return real;
+  return {id:entry.examId,title:entry.title||'分析結果',subject:entry.subject||'',totalPoints:Number(entry.totalPoints||100),questions:[],sections:[],analysisOnly:true};
+}
 function renderExamList(){
-  const root=$('examList');root.innerHTML='';
-  accessibleExams=accessibleExams.filter(e=>audienceAllowed(e,currentUser)&&(eligible(e,currentUser)||analysisEntryFor(e.id)));
+  const root=$('examList'),analysisRoot=$('analysisList');root.innerHTML='';if(analysisRoot)analysisRoot.innerHTML='';
+  accessibleExams=accessibleExams.filter(e=>audienceAllowed(e,currentUser)&&eligible(e,currentUser));
   accessibleExams.forEach(e=>{
-    const deadline=formatExamDeadline(e),canTake=eligible(e,currentUser),hasAnalysis=!!analysisEntryFor(e.id),d=document.createElement('div');d.className='exam-card';
-    const state=canTake?'公開中':hasAnalysis?'分析公開':'終了';
-    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip ${canTake?'':'analysis-ready'}">${state}</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${e.questions.length}解答欄${canTake&&deadline?` / <strong>受験期限 ${deadline}</strong>`:''}${hasAnalysis?` / <strong>集計 ${analysisEntryFor(e.id).overall?.participants||0}人</strong>`:''}</div><div class="actions"></div>`;
-    const actions=d.querySelector('.actions');
-    if(canTake){const b=document.createElement('button');b.textContent='この試験を開く';b.onclick=()=>openExam(e.id);actions.appendChild(b)}
-    if(hasAnalysis){const b=document.createElement('button');b.className='secondary glass-btn';b.textContent='クラス・全体分析を見る';b.onclick=()=>openStudentAnalysis(e.id);actions.appendChild(b)}
-    root.appendChild(d)
+    const deadline=formatExamDeadline(e),d=document.createElement('div');d.className='exam-card';
+    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${e.subject||'未設定'}</strong></span><span class="exam-public-chip">公開中</span></div><h3>${e.title}</h3><div class="muted small">${e.totalPoints}点満点 / ${(e.questions||[]).length}解答欄${deadline?` / <strong>受験期限 ${deadline}</strong>`:''}</div><div class="actions"></div>`;
+    const b=document.createElement('button');b.textContent='この試験を開く';b.onclick=()=>openExam(e.id);d.querySelector('.actions').appendChild(b);root.appendChild(d);
   });
-  if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、受験できる試験または公開中の分析結果はありません。</div>';
+  if(!accessibleExams.length)root.innerHTML='<div class="notice">現在、受験できる試験はありません。</div>';
+
+  const published=(analysisData.analyses||[]).filter(analysisVisibleToCurrentUser).sort((a,b)=>String(b.generatedAt||'').localeCompare(String(a.generatedAt||'')));
+  published.forEach(entry=>{
+    const exam=analysisExamShell(entry),classSnap=entry.classes?.[currentUser?.classKey],d=document.createElement('div');d.className='exam-card analysis-card';
+    const updated=entry.generatedAt?new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt)):'';
+    d.innerHTML=`<div class="exam-card-topline"><span class="exam-subject-chip"><small>教科</small><strong>${escapeHtmlStudent(exam.subject||'未設定')}</strong></span><span class="exam-public-chip analysis-ready">分析公開</span></div><h3>${escapeHtmlStudent(exam.title)}</h3><div class="muted small">全体 ${Number(entry.overall?.participants||0)}人${classSnap?` / ${escapeHtmlStudent(currentUser.classKey)}組 ${Number(classSnap.participants||0)}人`:''}${updated?` / 更新 ${escapeHtmlStudent(updated)}`:''}</div><div class="actions"></div>`;
+    const b=document.createElement('button');b.className='secondary glass-btn';b.textContent='クラス・全体分析を見る';b.onclick=()=>openStudentAnalysis(entry.examId);d.querySelector('.actions').appendChild(b);analysisRoot?.appendChild(d);
+  });
+  if(analysisRoot&&!published.length)analysisRoot.innerHTML='<div class="notice">現在、公開中の分析結果はありません。</div>';
 }
 function openExam(id){
   currentExam=accessibleExams.find(e=>e.id===id);if(!currentExam)return;
@@ -208,9 +223,9 @@ function analysisScopeSnapshot(entry){
   return {snapshot:entry.overall,label:'全体'};
 }
 async function openStudentAnalysis(examId){
-  const exam=exams.find(e=>e.id===examId);if(!exam){alert('試験データを確認できません。');return}
   const entry=await ensureAnalysisEntry(examId);if(!entry?.overall?.questions){alert('この試験の分析結果はまだ公開されていないか、OEN分析共有サーバーへ接続できませんでした。');return}
-  currentExam=exam;publicAnalysisScope=entry.classes?.[currentUser?.classKey]?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
+  if(!analysisVisibleToCurrentUser(entry)){alert('この分析結果はあなたのクラスには公開されていません。');return}
+  currentExam=analysisExamShell(entry);publicAnalysisScope=entry.classes?.[currentUser?.classKey]?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
 }
 function renderPublicAnalysis(){
   const entry=analysisEntryFor(currentExam?.id);if(!entry)return;const scoped=analysisScopeSnapshot(entry),snap=scoped.snapshot,sort=$('publicAnalysisSort')?.value||'rate-desc';

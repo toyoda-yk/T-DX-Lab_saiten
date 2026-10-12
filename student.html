@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>生徒用 | T-DX Lab☆問題演習システム</title>
-  <link rel="stylesheet" href="css/style.css?v=1.24.2">
+  <link rel="stylesheet" href="css/style.css?v=1.24.3">
 </head>
 <body class="future-app student-app tdx-v09-student">
 <header class="future-app-header portal-header">
@@ -18,7 +18,7 @@
     </a>
     <div class="app-header-tools">
       <div class="tdx-version-status" aria-label="システム更新状況">
-        <span class="tdx-version-pill">v1.24.2</span>
+        <span class="tdx-version-pill">v1.24.3</span>
         <span class="tdx-data-pill" id="tdxExamsVersion">exams：読込中</span>
         <span class="tdx-data-pill" id="tdxUsersVersion">users：読込中</span>
         <button id="tdxReloadBtn" class="tdx-reload-btn" type="button">最新状態を再読込</button>
@@ -66,8 +66,15 @@
       </div>
       <button id="logoutBtn" class="secondary glass-btn">ログアウト</button>
     </div>
-    <div class="info-strip"><span>●</span> 公開中かつ、あなたが受験対象に指定されている試験だけが表示されます。</div>
-    <div id="examList" class="grid two future-exam-grid"></div>
+    <div class="info-strip"><span>●</span> 受験できる試験と、先生が公開した分析結果を分けて表示します。試験の公開期間が終了しても、分析結果は公開中のまま確認できます。</div>
+    <div class="student-list-block">
+      <div class="student-list-heading"><span class="section-eyebrow">TAKE EXAM</span><h3>受験できる試験</h3></div>
+      <div id="examList" class="grid two future-exam-grid"></div>
+    </div>
+    <div class="student-list-block analysis-list-block">
+      <div class="student-list-heading"><span class="section-eyebrow">PUBLISHED ANALYSIS</span><h3>公開中の分析結果</h3><p class="muted small">公開期間が終了した試験も、先生が分析を公開していればここから確認できます。</p></div>
+      <div id="analysisList" class="grid two future-exam-grid"></div>
+    </div>
   </section>
 
   <section id="examPanel" class="future-panel hidden">
@@ -160,7 +167,7 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="js/common.js?v=1.24.2"></script>
-<script src="js/student.js?v=1.24.2"></script>
+<script src="js/common.js?v=1.24.3"></script>
+<script src="js/student.js?v=1.24.3"></script>
 </body>
 </html>
