@@ -1,6 +1,8 @@
 {
-  "version": 9,
+  "version": 10,
   "systemName": "T-DX Lab☆問題演習システム",
-  "exams": [],
-  "updatedAt": null
+  "schoolYear": "",
+  "resetEpoch": "",
+  "updatedAt": null,
+  "exams": []
 }

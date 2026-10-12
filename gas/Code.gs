@@ -4,13 +4,18 @@ const TDX_CONFIG = {
   PROP_GH_REPO: 'TDX_GITHUB_REPO',
   PROP_GH_BRANCH: 'TDX_GITHUB_BRANCH',
   PROP_GH_TOKEN: 'TDX_GITHUB_TOKEN',
+  PROP_SCHOOL_YEAR: 'TDX_SCHOOL_YEAR',
+  PROP_RESET_EPOCH: 'TDX_RESET_EPOCH',
+  PROP_SYS_ADMINS: 'TDX_SYSTEM_ADMINS',
+  QR_PROP_PREFIX: 'TDX_QR_',
   TEST_SHEET: '接続テスト',
   INDEX_SHEET: '分析一覧',
   DATA_SHEET: '分析データ',
   SYNC_SHEET: '公開同期ログ',
   CHUNK_SIZE: 40000,
   ANALYSIS_PATH: 'data/analysis.json',
-  EXAMS_PATH: 'data/exams.json'
+  EXAMS_PATH: 'data/exams.json',
+  USERS_PATH: 'data/users.json'
 };
 
 /**
@@ -20,7 +25,10 @@ function setupTDXLab() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('スプレッドシートからApps Scriptを開いて実行してください。');
 
-  PropertiesService.getScriptProperties().setProperty(TDX_CONFIG.PROP_SS_ID, ss.getId());
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(TDX_CONFIG.PROP_SS_ID, ss.getId());
+  if (!props.getProperty(TDX_CONFIG.PROP_SCHOOL_YEAR)) props.setProperty(TDX_CONFIG.PROP_SCHOOL_YEAR, String(new Date().getFullYear()));
+  if (!props.getProperty(TDX_CONFIG.PROP_RESET_EPOCH)) props.setProperty(TDX_CONFIG.PROP_RESET_EPOCH, Utilities.getUuid());
 
   ensureSheet_(ss, TDX_CONFIG.TEST_SHEET, ['日時', '実行ユーザー', '内容']);
   ensureSheet_(ss, TDX_CONFIG.INDEX_SHEET, [
@@ -135,7 +143,10 @@ function doGet(e) {
         ok: true,
         user: email,
         teacher: isAuthorizedTeacher_(email),
+        admin: isSystemAdmin_(email),
         githubConfigured: githubConfigured_(),
+        schoolYear: currentSchoolYear_(),
+        resetEpoch: currentResetEpoch_(),
         message: isAuthorizedTeacher_(email) ? '公開権限あり' : '閲覧のみ'
       };
     } else if (action === 'writeTest') {
@@ -170,6 +181,35 @@ function doGet(e) {
       if (!examId) throw new Error('examId がありません。');
       const analysis = loadAnalysis_(examId);
       result = analysis ? { ok: true, analysis: analysis } : { ok: false, message: '分析結果がありません。' };
+    } else if (action === 'getQrAccess') {
+      const email = activeEmail_();
+      if (!isAuthorizedTeacher_(email)) throw new Error('QR再印刷の権限がありません。');
+      const studentCode = String(p.studentCode || '').trim();
+      if (!/^\d{4}$/.test(studentCode)) throw new Error('4桁番号を確認してください。');
+      const rec = getQrVaultEntry_(studentCode);
+      if (rec) logSync_('QR再印刷', studentCode, email, '取得', 'QR再印刷用キーを教員画面へ一時返却');
+      result = rec ? { ok: true, entry: rec } : { ok: false, message: 'QR再印刷用のアクセスキーが保管されていません。' };
+    } else if (action === 'getQrVault') {
+      const email = activeEmail_();
+      if (!isSystemAdmin_(email)) throw new Error('QR保管庫全体の取得はシステム管理者だけが実行できます。');
+      const entries = listQrVault_();
+      result = {
+        ok: true,
+        entries: entries,
+        count: entries.length
+      };
+    } else if (action === 'securityStatus') {
+      const email = activeEmail_();
+      if (!isAuthorizedTeacher_(email)) throw new Error('確認権限がありません。');
+      result = {
+        ok: true,
+        user: email,
+        admin: isSystemAdmin_(email),
+        githubConfigured: githubConfigured_(),
+        schoolYear: currentSchoolYear_(),
+        resetEpoch: currentResetEpoch_(),
+        qrVaultCount: listQrVault_().length
+      };
     } else if (action === 'getSyncStatus') {
       result = readSyncStatus_(String(p.token || '').trim());
     } else if (action === 'githubStatus') {
@@ -197,6 +237,8 @@ function doGet(e) {
  * POST:
  * - publishAnalysis : 集計結果を保存し、GitHub data/analysis.json へ自動反映
  * - publishExams    : 最新の試験データを GitHub data/exams.json へ自動反映
+ * - publishUsers    : 生徒認証用の公開データを data/users.json へ反映し、QR用の平文キーはGAS側だけに保管
+ * - annualReset     : 年度更新。公開データ・分析保管・QR保管庫を初期化
  */
 function doPost(e) {
   const p = (e && e.parameter) || {};
@@ -264,6 +306,110 @@ function doPost(e) {
       if (token) writeSyncStatus_(token, result);
       return output_(result);
 
+    } else if (action === 'publishUsers') {
+      if (!isSystemAdmin_(email)) throw new Error('生徒情報の更新はシステム管理者だけが実行できます。');
+      const raw = String(p.payload || '');
+      if (!raw) throw new Error('生徒データがありません。');
+
+      const input = JSON.parse(raw);
+      const bundle = sanitizeUsersBundle_(input.bundle || input);
+      const vaultEntries = Array.isArray(input.vaultEntries) ? input.vaultEntries : [];
+      saveQrVaultEntries_(bundle, vaultEntries, email);
+      pruneQrVault_(bundle.users.map(function(u) { return u.studentCode; }));
+
+      const stored = qrVaultCodeSet_();
+      bundle.users.forEach(function(u) { u.qrStored = stored.has(u.studentCode); });
+      bundle.updatedAt = new Date().toISOString();
+      bundle.schoolYear = text_(bundle.schoolYear || currentSchoolYear_(), 20);
+      bundle.resetEpoch = text_(bundle.resetEpoch || currentResetEpoch_(), 120);
+
+      const gh = githubPutJson_(
+        TDX_CONFIG.USERS_PATH,
+        bundle,
+        'T-DX Lab: update users (' + email + ')'
+      );
+      logSync_('生徒', String(bundle.users.length) + '人', email, '成功', gh.message);
+
+      const result = {
+        ok: true,
+        done: true,
+        action: action,
+        message: '生徒認証データを反映しました。QRの平文アクセスキーはGitHubへ公開していません。',
+        publishedBy: email,
+        users: bundle.users.length,
+        qrStored: stored.size,
+        updatedAt: bundle.updatedAt,
+        github: gh
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
+    } else if (action === 'annualReset') {
+      if (!isSystemAdmin_(email)) throw new Error('年度更新はシステム管理者だけが実行できます。');
+      const raw = String(p.payload || '');
+      if (!raw) throw new Error('年度更新データがありません。');
+      const input = JSON.parse(raw);
+      const targetYear = text_(input.targetYear, 20);
+      if (!/^20\d{2}$/.test(targetYear)) throw new Error('更新先年度を4桁で指定してください。');
+      const required = 'RESET-' + targetYear;
+      if (String(input.confirm || '') !== required) throw new Error('年度更新の確認文字列が一致しません。');
+
+      const resetEpoch = Utilities.getUuid();
+      const now = new Date().toISOString();
+
+      const usersPayload = {
+        version: 7,
+        systemName: 'T-DX Lab☆問題演習システム',
+        note: '生徒認証用の公開データ。平文アクセスキー・氏名・個人回答は含みません。',
+        schoolYear: targetYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        issuedCodeIds: [],
+        users: []
+      };
+      const examsPayload = {
+        version: 10,
+        systemName: 'T-DX Lab☆問題演習システム',
+        schoolYear: targetYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        exams: []
+      };
+      const analysisPayload = {
+        version: 3,
+        systemName: 'T-DX Lab☆問題演習システム',
+        schoolYear: targetYear,
+        resetEpoch: resetEpoch,
+        updatedAt: now,
+        analyses: []
+      };
+
+      const ghUsers = githubPutJson_(TDX_CONFIG.USERS_PATH, usersPayload, 'T-DX Lab: annual reset users ' + targetYear + ' (' + email + ')');
+      const ghExams = githubPutJson_(TDX_CONFIG.EXAMS_PATH, examsPayload, 'T-DX Lab: annual reset exams ' + targetYear + ' (' + email + ')');
+      const ghAnalysis = githubPutJson_(TDX_CONFIG.ANALYSIS_PATH, analysisPayload, 'T-DX Lab: annual reset analysis ' + targetYear + ' (' + email + ')');
+
+      clearAnalysisStorage_();
+      clearQrVault_();
+
+      const props = PropertiesService.getScriptProperties();
+      props.setProperty(TDX_CONFIG.PROP_SCHOOL_YEAR, targetYear);
+      props.setProperty(TDX_CONFIG.PROP_RESET_EPOCH, resetEpoch);
+
+      logSync_('年度更新', targetYear, email, '成功', '公開データ・分析・QR保管庫を初期化');
+
+      const result = {
+        ok: true,
+        done: true,
+        action: action,
+        message: targetYear + '年度用に初期化しました。Googleフォーム回答と端末に保存済みのExcel/PDFは削除していません。',
+        publishedBy: email,
+        schoolYear: targetYear,
+        resetEpoch: resetEpoch,
+        github: { users: ghUsers, exams: ghExams, analysis: ghAnalysis }
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
     } else {
       throw new Error('不明なPOST actionです。');
     }
@@ -274,7 +420,8 @@ function doPost(e) {
       ok: false, done: true, action: action, message: msg
     });
     try {
-      logSync_(action === 'publishExams' ? '試験' : '分析', '', activeEmail_(), '失敗', msg);
+      const kind = action === 'publishExams' ? '試験' : action === 'publishUsers' ? '生徒' : action === 'annualReset' ? '年度更新' : '分析';
+      logSync_(kind, '', activeEmail_(), '失敗', msg);
     } catch (ignore) {}
     return output_({ ok: false, done: true, message: msg });
   }
@@ -312,6 +459,195 @@ function isAuthorizedTeacher_(email) {
   } catch (err) {
     return false;
   }
+}
+
+
+function isSystemAdmin_(email) {
+  email = String(email || '').trim().toLowerCase();
+  if (!email) return false;
+  const ss = getTDXSpreadsheet_();
+  try {
+    const owner = ss.getOwner && ss.getOwner();
+    if (owner && String(owner.getEmail() || '').trim().toLowerCase() === email) return true;
+  } catch (err) {}
+  const extra = String(PropertiesService.getScriptProperties().getProperty(TDX_CONFIG.PROP_SYS_ADMINS) || '')
+    .split(',')
+    .map(function(x) { return x.trim().toLowerCase(); })
+    .filter(Boolean);
+  return extra.indexOf(email) >= 0;
+}
+
+function currentSchoolYear_() {
+  return String(PropertiesService.getScriptProperties().getProperty(TDX_CONFIG.PROP_SCHOOL_YEAR) || new Date().getFullYear());
+}
+
+function currentResetEpoch_() {
+  const props = PropertiesService.getScriptProperties();
+  let epoch = props.getProperty(TDX_CONFIG.PROP_RESET_EPOCH);
+  if (!epoch) {
+    epoch = Utilities.getUuid();
+    props.setProperty(TDX_CONFIG.PROP_RESET_EPOCH, epoch);
+  }
+  return epoch;
+}
+
+function qrPropKey_(studentCode) {
+  return TDX_CONFIG.QR_PROP_PREFIX + String(studentCode || '').trim();
+}
+
+function getQrVaultEntry_(studentCode) {
+  const raw = PropertiesService.getScriptProperties().getProperty(qrPropKey_(studentCode));
+  if (!raw) return null;
+  try {
+    const rec = JSON.parse(raw);
+    const accessCode = String(rec.accessCode || '').trim().toUpperCase();
+    if (!accessCode) return null;
+    return {
+      studentCode: String(studentCode),
+      classKey: String(rec.classKey || String(studentCode).slice(0, 2)),
+      accessCode: accessCode,
+      updatedAt: String(rec.updatedAt || '')
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
+function listQrVault_() {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  const out = [];
+  Object.keys(props).forEach(function(key) {
+    if (key.indexOf(TDX_CONFIG.QR_PROP_PREFIX) !== 0) return;
+    const code = key.slice(TDX_CONFIG.QR_PROP_PREFIX.length);
+    if (!/^\d{4}$/.test(code)) return;
+    try {
+      const rec = JSON.parse(props[key]);
+      const accessCode = String(rec.accessCode || '').trim().toUpperCase();
+      if (!accessCode) return;
+      out.push({
+        studentCode: code,
+        classKey: String(rec.classKey || code.slice(0, 2)),
+        accessCode: accessCode,
+        updatedAt: String(rec.updatedAt || '')
+      });
+    } catch (err) {}
+  });
+  return out.sort(function(a, b) { return a.studentCode.localeCompare(b.studentCode); });
+}
+
+function qrVaultCodeSet_() {
+  return new Set(listQrVault_().map(function(x) { return x.studentCode; }));
+}
+
+function saveQrVaultEntries_(bundle, entries, email) {
+  if (!entries.length) return;
+  const userMap = {};
+  bundle.users.forEach(function(u) { userMap[u.studentCode] = u; });
+  const props = PropertiesService.getScriptProperties();
+
+  entries.slice(0, 5000).forEach(function(x) {
+    const code = String(x && x.studentCode || '').trim();
+    const accessCode = String(x && x.accessCode || '').trim().toUpperCase();
+    if (!/^\d{4}$/.test(code) || !accessCode) return;
+    const user = userMap[code];
+    if (!user || !user.credential) throw new Error(code + ' の認証情報がありません。');
+    if (!verifyCredential_(accessCode, user.credential)) throw new Error(code + ' のアクセスキーと認証情報が一致しません。');
+    props.setProperty(qrPropKey_(code), JSON.stringify({
+      accessCode: accessCode,
+      classKey: String(user.classKey || code.slice(0, 2)),
+      updatedAt: new Date().toISOString(),
+      updatedBy: email
+    }));
+  });
+}
+
+function pruneQrVault_(validCodes) {
+  const keep = new Set((validCodes || []).map(String));
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  Object.keys(all).forEach(function(key) {
+    if (key.indexOf(TDX_CONFIG.QR_PROP_PREFIX) !== 0) return;
+    const code = key.slice(TDX_CONFIG.QR_PROP_PREFIX.length);
+    if (!keep.has(code)) props.deleteProperty(key);
+  });
+}
+
+function clearQrVault_() {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  Object.keys(all).forEach(function(key) {
+    if (key.indexOf(TDX_CONFIG.QR_PROP_PREFIX) === 0) props.deleteProperty(key);
+  });
+}
+
+function verifyCredential_(accessCode, credential) {
+  if (!credential || !credential.salt || !credential.hash) return false;
+  const source = String(credential.salt) + '|' + String(accessCode);
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, source, Utilities.Charset.UTF_8);
+  const hex = digest.map(function(b) {
+    const n = b < 0 ? b + 256 : b;
+    return ('0' + n.toString(16)).slice(-2);
+  }).join('');
+  return hex === String(credential.hash || '').toLowerCase();
+}
+
+function sanitizeUsersBundle_(x) {
+  if (!x || typeof x !== 'object' || !Array.isArray(x.users)) {
+    throw new Error('users.json の形式が不正です。');
+  }
+  if (x.users.length > 5000) throw new Error('生徒件数が多すぎます。');
+
+  const seen = {};
+  const users = [];
+  x.users.forEach(function(u) {
+    const code = text_(u && u.studentCode, 4);
+    if (!/^\d{4}$/.test(code) || seen[code]) return;
+    seen[code] = true;
+    const credential = sanitizeCredential_(u && u.credential);
+    users.push({
+      studentCode: code,
+      classKey: text_(u && u.classKey || code.slice(0, 2), 20),
+      credential: credential,
+      qrStored: !!(u && u.qrStored)
+    });
+  });
+
+  users.sort(function(a, b) { return a.studentCode.localeCompare(b.studentCode); });
+
+  return {
+    version: Math.max(7, Math.round(number_(x.version))),
+    systemName: text_(x.systemName || 'T-DX Lab☆問題演習システム', 200),
+    note: '生徒認証用の公開データ。credential はsalt+hashのみ。平文アクセスキー・氏名・個人回答・QR復号情報は含みません。',
+    schoolYear: text_(x.schoolYear || currentSchoolYear_(), 20),
+    resetEpoch: text_(x.resetEpoch || currentResetEpoch_(), 120),
+    updatedAt: new Date().toISOString(),
+    issuedCodeIds: Array.isArray(x.issuedCodeIds) ? x.issuedCodeIds.slice(0, 10000).map(function(v) { return text_(v, 128); }) : [],
+    users: users
+  };
+}
+
+function sanitizeCredential_(c) {
+  if (!c || typeof c !== 'object') return null;
+  const salt = text_(c.salt, 256);
+  const hash = text_(c.hash, 256);
+  if (!salt || !hash) return null;
+  return {
+    salt: salt,
+    hash: hash,
+    codeId: text_(c.codeId, 256),
+    issuedAt: validDate_(c.issuedAt) || ''
+  };
+}
+
+function clearAnalysisStorage_() {
+  const ss = getTDXSpreadsheet_();
+  [TDX_CONFIG.INDEX_SHEET, TDX_CONFIG.DATA_SHEET].forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (sheet && sheet.getLastRow() >= 2) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
+    }
+  });
+  SpreadsheetApp.flush();
 }
 
 function sanitizeAnalysis_(x) {
@@ -477,8 +813,10 @@ function sanitizeExamsBundle_(x) {
     throw new Error('exams.json の形式が不正です。');
   }
   const clean = JSON.parse(JSON.stringify(x));
-  clean.version = Math.max(9, Math.round(number_(clean.version)));
+  clean.version = Math.max(10, Math.round(number_(clean.version)));
   clean.systemName = text_(clean.systemName || 'T-DX Lab☆問題演習システム', 200);
+  clean.schoolYear = text_(clean.schoolYear || currentSchoolYear_(), 20);
+  clean.resetEpoch = text_(clean.resetEpoch || currentResetEpoch_(), 120);
   clean.updatedAt = new Date().toISOString();
   if (clean.exams.length > 1000) throw new Error('試験件数が多すぎます。');
   return clean;
@@ -501,11 +839,21 @@ function syncAnalysisToGitHub_(analysis, email) {
     return String(a.title || '').localeCompare(String(b.title || ''), 'ja');
   });
 
+  // publishToken は公開JSONでは不要なので除外する。同期確認用の一時値はGAS内部だけで扱う。
+  const publicNext = next.map(function(item) {
+    const copy = JSON.parse(JSON.stringify(item || {}));
+    delete copy.publishToken;
+    delete copy.publishedBy;
+    return copy;
+  });
+
   const payload = {
-    version: 2,
+    version: 3,
     systemName: 'T-DX Lab☆問題演習システム',
+    schoolYear: currentSchoolYear_(),
+    resetEpoch: currentResetEpoch_(),
     updatedAt: new Date().toISOString(),
-    analyses: next
+    analyses: publicNext
   };
 
   return githubPutJson_(

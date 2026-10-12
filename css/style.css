@@ -1072,3 +1072,10 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 
 /* v1.24.3: student analysis stays visible after exam window / quick publish extension */
 .student-list-block{margin-top:18px}.student-list-heading{margin:0 0 8px}.student-list-heading h3{margin:3px 0 2px;font-size:18px}.analysis-list-block{padding-top:18px;border-top:1px solid #e4edf6}.analysis-card{background:linear-gradient(180deg,#fbfdff,#f2f8ff)!important}.publish-extend-actions{margin-top:10px;align-items:center;flex-wrap:wrap}.publish-extend-actions .muted{margin-right:4px}.publish-extend-actions button{padding:7px 11px;min-width:auto}
+
+/* v1.25.0 年度更新・セキュリティ */
+.annual-reset-panel{margin-top:18px;padding:18px;border:1px solid #ead7d7;border-radius:18px;background:linear-gradient(180deg,#fffdfd,#fff7f7)}
+.annual-reset-grid{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:16px;align-items:end;margin:12px 0}
+.annual-reset-grid label{display:flex;flex-direction:column;gap:6px;font-weight:800}
+.annual-reset-grid input{width:100%}
+@media (max-width:760px){.annual-reset-grid{grid-template-columns:1fr}.annual-reset-grid .actions{justify-content:flex-start}}

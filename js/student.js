@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.6';
+const APP_VERSION='1.25.0';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -49,17 +49,32 @@ async function loadAnalysisIndex(){
   const ok=results.filter(x=>x.status==='fulfilled').map(x=>x.value);
   if(!ok.length){
     results.forEach(x=>{if(x.status==='rejected')console.warn('analysis.json load failed',x.reason)});
-    return {version:2,updatedAt:'',analyses:[],source:'',loaded:false};
+    return {version:3,updatedAt:'',analyses:[],source:'',loaded:false};
   }
   ok.sort((a,b)=>analysisTimestamp(b)-analysisTimestamp(a));
-  const picked=ok[0],data=picked.data||{version:2,analyses:[]};
-  return {version:Number(data.version||2),updatedAt:data.updatedAt||picked.lastModified||'',analyses:Array.isArray(data.analyses)?data.analyses:[],source:picked.label,loaded:true};
+  const picked=ok[0],data=picked.data||{version:3,analyses:[]};
+  return {version:Number(data.version||3),updatedAt:data.updatedAt||picked.lastModified||'',analyses:Array.isArray(data.analyses)?data.analyses:[],source:picked.label,loaded:true};
+}
+function applyAnnualResetEpoch(epoch){
+  const value=String(epoch||'').trim();
+  if(!value)return;
+  try{
+    const key='tdx:resetEpoch';
+    const prev=localStorage.getItem(key);
+    if(prev&&prev!==value){
+      for(let i=localStorage.length-1;i>=0;i--){
+        const k=localStorage.key(i);
+        if(k&&k.startsWith('tdx:answer:'))localStorage.removeItem(k);
+      }
+    }
+    localStorage.setItem(key,value);
+  }catch(e){console.warn('annual reset cleanup failed',e)}
 }
 async function loadData(){
   const [er,ur,ar]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json'),loadAnalysisIndex()]);
   dataVersionMeta.examError=er.status==='rejected';dataVersionMeta.userError=ur.status==='rejected';
   if(er.status==='rejected'||ur.status==='rejected'){updateVersionStatus();throw (er.status==='rejected'?er.reason:ur.reason)}
-  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value:{version:2,updatedAt:'',analyses:[],source:'',loaded:false};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
+  const e=er.value.data,u=ur.value.data;applyAnnualResetEpoch(u.resetEpoch||e.resetEpoch||'');analysisData=ar.status==='fulfilled'?ar.value:{version:3,updatedAt:'',analyses:[],source:'',loaded:false};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
   dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';
   dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';
   dataVersionMeta.analysis=analysisData.updatedAt||'';
