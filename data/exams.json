@@ -1130,8 +1130,12 @@
           }
         ],
         "nameRequired": true,
-        "testConfirmed": true,
-        "configuredAt": "2026-10-08T11:22:07.005Z"
+        "testConfirmed": false,
+        "configuredAt": "2026-10-08T11:22:07.005Z",
+        "verifiedAt": null,
+        "lastTestAttemptedAt": "2026-10-12T02:08:35.298Z",
+        "verificationSource": "clone_inherited",
+        "inheritedFrom": "exam_20261008_dthqs5"
       },
       "choiceConfig": {
         "options": [
@@ -1884,9 +1888,9 @@
         "mode": "auto"
       },
       "endedAt": null,
-      "updatedAt": "2026-10-12T00:55:57.635Z",
+      "updatedAt": "2026-10-12T02:08:35.298Z",
       "clonedFrom": "exam_20261008_dthqs5"
     }
   ],
-  "updatedAt": "2026-10-12T00:56:04.085Z"
+  "updatedAt": "2026-10-12T02:40:29.031Z"
 }
