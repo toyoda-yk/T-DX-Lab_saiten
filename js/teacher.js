@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 const ADMIN_HASH='e2ea9a3d893fb0d7a17736517404642f30fbca2154f95a1cda68839b4fb5b1a7'; // T-DXLab9999 のSHA-256
 const SYSTEM_ADMIN_HASH='888df25ae35772424a560c7152a1de794440e0ea5cfee62828333a456a506e05'; // 9999
-let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,allExamData=null;
+let exams=[],usersData={version:5,users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]},allExamData=null;
 let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
 let editorSectionTargets={};
@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.23.7';
+const APP_VERSION='1.23.9';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -237,7 +237,12 @@ function bind(){
   $('formTestConfirmed').onchange=renderGoogleFormStatus;
 
   $('analyzeBtn').onclick=analyzeFile;
-  $('classFilter').onchange=renderAnalysis;
+  $('classFilter').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
+  $('questionSort').onchange=renderAnalysis;
+  $('questionFilter').onchange=renderAnalysis;
+  $('studentSort').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
+  $('studentAnalysisBody').onclick=e=>{const b=e.target.closest('[data-student-detail]');if(b)renderStudentDetail(b.dataset.studentDetail)};
+  $('studentDetailClose').onclick=closeStudentAnalysisDetail;
 
   $('publishSubjectSelect').onchange=()=>{refreshPublishSelectors();loadPublishExam()};
   $('publishExamSelect').onchange=loadPublishExam;
@@ -1353,9 +1358,7 @@ async function testGoogleFormSubmission(){
   try{
     const st=googleFormMappingState();if(!st.ok)throw new Error('先に氏名・4桁番号・解答欄の対応を完成させてください。');
     const fields={};
-    const nameSample=entryByKey(st.nameEntry)?.value||'T-DXテスト';
-    const codeSample=entryByKey(st.codeEntry)?.value||'3301';
-    fields[st.nameEntry]=nameSample;fields[st.codeEntry]=/^\d{4}$/.test(codeSample)?codeSample:'3301';
+    fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
     st.answerEntries.forEach((m,i)=>{const sample=entryByKey(m.entry)?.value||configuredChoices()[0]||'0';fields[m.entry]=sample});
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields);googleFormSetup.testAttempted=true;
@@ -1483,9 +1486,7 @@ async function testSelectedExamGoogleForm(){
     if(!exam)throw new Error('試験を選択してください。');
     if(!storedGoogleFormConfigValid(exam))throw new Error('この試験のGoogleフォーム連携設定が不完全です。試験作成画面で連携設定を確認してください。');
     const f=exam.formSubmission,fields={};
-    const audience=examAudienceCodes(exam);
-    const fallbackCode=usersData.users.find(u=>/^\d{4}$/.test(String(u.studentCode||'')))?.studentCode||'3301';
-    const code=audience.find(x=>/^\d{4}$/.test(String(x)))||fallbackCode;
+    const code='9999';
     fields[f.nameEntry]='T-DXテスト';
     fields[f.studentCodeEntry]=code;
     const qMap=new Map((exam.questions||[]).map(q=>[String(q.id),q]));
@@ -1551,12 +1552,128 @@ function registerExam(){
   }catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
 
-async function readRows(file){if(/\.csv$/i.test(file.name)){return TDX.csvParse(await file.text())}const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''})}
-async function analyzeFile(){const f=$('responseFile').files[0];if(!f){alert('CSVまたはXLSXを選択してください。');return}analysisExam=exams.find(e=>e.id===$('analysisExam').value);const rows=await readRows(f);if(rows.length<2){alert('回答データが見つかりません。');return}const qCount=analysisExam.questions.length;analysisRows=[];for(const r of rows.slice(1)){const code=String(r[2]||'').trim();if(!/^\d{4}$/.test(code))continue;const ansVals=r.slice(r.length-qCount),answers={};analysisExam.questions.forEach((q,i)=>answers[q.id]=String(ansVals[i]??'').trim());const score=TDX.scoreExam(analysisExam,answers);analysisRows.push({code,classKey:code.slice(0,Number($('classDigits').value)||2),answers,score})}if(!analysisRows.length){alert('4桁番号を含む回答行を認識できませんでした。');return}const classes=[...new Set(analysisRows.map(r=>r.classKey))].sort();$('classFilter').innerHTML='<option value="ALL">全クラス</option>'+classes.map(c=>`<option value="${c}">${c}</option>`).join('');$('analysisOutput').classList.remove('hidden');renderAnalysis()}
-function renderAnalysis(){if(!analysisRows.length)return;const key=$('classFilter').value,rows=key==='ALL'?analysisRows:analysisRows.filter(r=>r.classKey===key),scores=rows.map(r=>r.score.total),avg=scores.reduce((a,b)=>a+b,0)/scores.length,max=Math.max(...scores),min=Math.min(...scores);$('analysisKpis').innerHTML=`<div class="kpi"><div class="muted small">回答者</div><div class="value">${rows.length}</div></div><div class="kpi"><div class="muted small">平均点</div><div class="value">${avg.toFixed(1)}</div></div><div class="kpi"><div class="muted small">最高点</div><div class="value">${max}</div></div><div class="kpi"><div class="muted small">最低点</div><div class="value">${min}</div></div>`;renderHistogram(scores);renderSections(rows);renderQuestionRates(rows)}
-function renderHistogram(scores){const bins=Array(10).fill(0);scores.forEach(s=>bins[Math.min(9,Math.floor(s/10))]++);const m=Math.max(...bins,1);$('histogram').innerHTML=bins.map((n,i)=>`<div class="col"><div class="stick" style="height:${Math.max(2,n/m*180)}px" title="${n}人"></div><div class="lab">${i*10}-${i===9?100:i*10+9}<br>${n}人</div></div>`).join('')}
-function renderSections(rows){$('sectionAnalysis').innerHTML=analysisExam.sections.map(s=>{const sum=rows.reduce((a,r)=>a+(r.score.sectionScores[s.id]||0),0),pct=sum/(rows.length*s.points)*100;return `<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div><div>${pct.toFixed(1)}%</div></div>`}).join('')}
-function renderQuestionRates(rows){const body=$('questionRates');body.innerHTML='';analysisExam.questions.forEach(q=>{let ok=0;rows.forEach(r=>{const d=r.score.detail.find(x=>x.q.id===q.id);if(d&&d.correct)ok++});const pct=ok/rows.length*100;body.insertAdjacentHTML('beforeend',`<tr><td>${q.label}</td><td>${pct.toFixed(1)}%</td><td>${ok}/${rows.length}</td></tr>`)})}
+async function readRows(file){
+  if(/\.csv$/i.test(file.name))return TDX.csvParse(await file.text());
+  if(typeof XLSX==='undefined')throw new Error('Excel読込ライブラリの準備ができていません。数秒待ってからもう一度実行するか、画面を再読み込みしてください。');
+  const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+}
+function normalizeHeader(v){return String(v??'').replace(/[\s　]+/g,'').replace(/[，,]/g,',').trim()}
+function findHeaderIndex(headers,words,fallback){
+  const idx=headers.findIndex(h=>words.some(w=>normalizeHeader(h).includes(w)));
+  return idx>=0?idx:fallback;
+}
+function normalizeStudentCode(v){
+  const s=String(v??'').trim().replace(/\.0+$/,'');
+  return /^\d{4}$/.test(s)?s:'';
+}
+function parseResponseTimestamp(value,rowIndex){
+  if(value instanceof Date&&Number.isFinite(value.getTime()))return value.getTime();
+  const s=String(value??'').trim();
+  const m=s.match(/(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if(m){const t=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4]),Number(m[5]),Number(m[6]||0)).getTime();if(Number.isFinite(t))return t}
+  const t=Date.parse(s);return Number.isFinite(t)?t:rowIndex;
+}
+function formatResponseTimestamp(value){
+  if(value instanceof Date&&Number.isFinite(value.getTime()))return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(value);
+  return String(value??'').trim()||'時刻不明';
+}
+function isSystemTestResponse(name){return normalizeHeader(name).toUpperCase()==='T-DXテスト'.toUpperCase()}
+function isLaterResponse(a,b){
+  if(Number.isFinite(a.timestampMs)&&Number.isFinite(b.timestampMs)&&a.timestampMs!==b.timestampMs)return a.timestampMs>b.timestampMs;
+  return a.rowIndex>b.rowIndex;
+}
+function currentAnalysisRows(){
+  const key=$('classFilter')?.value||'ALL';
+  return key==='ALL'?analysisRows:analysisRows.filter(r=>r.classKey===key);
+}
+async function analyzeFile(){
+  try{
+    const f=$('responseFile').files[0];if(!f){alert('回答ExcelまたはCSVを選択してください。');return}
+    analysisExam=exams.find(e=>e.id===$('analysisExam').value);if(!analysisExam){alert('分析する試験を選択してください。');return}
+    const rows=await readRows(f);if(rows.length<2){alert('回答データが見つかりません。');return}
+    const headers=rows[0]||[],qCount=(analysisExam.questions||[]).length;if(!qCount){alert('選択した試験に設問データがありません。');return}
+    const timestampIndex=findHeaderIndex(headers,['タイムスタンプ','timestamp'],0);
+    const nameIndex=findHeaderIndex(headers,['名前','氏名','name'],1);
+    const codeIndex=findHeaderIndex(headers,['クラス・出席番号','出席番号','4桁番号','４桁番号'],2);
+    const valid=[],duplicateCountByCode=new Map();let ignored=0,tests=0;
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i]||[],code=normalizeStudentCode(r[codeIndex]),name=String(r[nameIndex]??'').trim();
+      if(isSystemTestResponse(name)){tests++;continue}
+      if(!code){ignored++;continue}
+      const ansVals=r.slice(Math.max(0,r.length-qCount)),answers={};
+      analysisExam.questions.forEach((q,j)=>answers[q.id]=String(ansVals[j]??'').trim());
+      const score=TDX.scoreExam(analysisExam,answers),timestampValue=r[timestampIndex],timestampMs=parseResponseTimestamp(timestampValue,i);
+      valid.push({code,name:name||'（氏名なし）',classKey:code.slice(0,Number($('classDigits').value)||2),answers,score,timestampValue,timestampMs,rowIndex:i});
+      duplicateCountByCode.set(code,(duplicateCountByCode.get(code)||0)+1);
+    }
+    if(!valid.length){alert('分析できる回答行を認識できませんでした。4桁番号と回答データを確認してください。');return}
+    const latest=new Map();
+    valid.forEach(row=>{const prev=latest.get(row.code);if(!prev||isLaterResponse(row,prev))latest.set(row.code,row)});
+    analysisRows=[...latest.values()].sort((a,b)=>a.code.localeCompare(b.code));
+    const duplicateCodes=[...duplicateCountByCode.entries()].filter(([,n])=>n>1).map(([code,n])=>({code,count:n,removed:n-1}));
+    analysisMeta={raw:Math.max(0,rows.length-1),valid:valid.length,participants:analysisRows.length,duplicates:valid.length-analysisRows.length,tests,ignored,fileName:f.name,duplicateCodes};
+    const classes=[...new Set(analysisRows.map(r=>r.classKey))].sort();
+    $('classFilter').innerHTML='<option value="ALL">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    $('questionSort').value='rate-asc';$('questionFilter').value='all';$('studentSort').value='score-desc';
+    $('analysisOutput').classList.remove('hidden');closeStudentAnalysisDetail();renderAnalysis();
+  }catch(e){console.error(e);alert(e.message||'回答ファイルの分析中にエラーが発生しました。')}
+}
+function renderAnalysis(){
+  if(!analysisRows.length||!analysisExam)return;
+  const rows=currentAnalysisRows();
+  if(!rows.length){$('analysisKpis').innerHTML='<div class="notice">このクラスには採用された回答がありません。</div>';return}
+  const scores=rows.map(r=>Number(r.score.total||0)),avg=scores.reduce((a,b)=>a+b,0)/scores.length,max=Math.max(...scores),min=Math.min(...scores);
+  $('analysisKpis').innerHTML=`<div class="kpi"><div class="muted small">受験者数</div><div class="value">${rows.length}</div></div><div class="kpi"><div class="muted small">平均点</div><div class="value">${avg.toFixed(1)}</div></div><div class="kpi"><div class="muted small">最高点</div><div class="value">${max}</div></div><div class="kpi"><div class="muted small">最低点</div><div class="value">${min}</div></div>`;
+  renderAnalysisImportSummary(rows);renderHistogram(scores);renderSections(rows);renderAnalysisInsights(rows);renderQuestionRates(rows);renderStudentAnalysis(rows);
+}
+function renderAnalysisImportSummary(rows){
+  const root=$('analysisImportSummary');if(!root)return;
+  const dup=analysisMeta.duplicates?`<span class="analysis-import-chip warn">重複 ${analysisMeta.duplicates}件を最新回答に置換</span>`:'';
+  const tests=analysisMeta.tests?`<span class="analysis-import-chip test">テスト送信 ${analysisMeta.tests}件を除外</span>`:'';
+  const ignored=analysisMeta.ignored?`<span class="analysis-import-chip warn">4桁番号不正 ${analysisMeta.ignored}件を除外</span>`:'';
+  const duplicateText=analysisMeta.duplicateCodes.length?`<small>重複：${analysisMeta.duplicateCodes.map(x=>`${esc(x.code)}（${x.count}件→1件）`).join('、')}</small>`:'';
+  root.innerHTML=`<div class="analysis-import-main"><strong>${esc(analysisMeta.fileName||'回答ファイル')}</strong><span>読み込み ${analysisMeta.raw}件 → 採用 ${analysisMeta.participants}人</span><span class="analysis-import-chip ok">同一4桁番号は最新回答のみ採用</span>${dup}${tests}${ignored}</div>${duplicateText}${rows.length<10?'<small class="sample-note">※ 現在の表示対象は10人未満です。1人の正誤で正答率が大きく動くため、テストデータでは数値の変化を確認する用途として見てください。</small>':''}`;
+}
+function renderHistogram(scores){
+  const bins=Array(10).fill(0);scores.forEach(s=>bins[Math.min(9,Math.max(0,Math.floor(Number(s||0)/10)))]++);const m=Math.max(...bins,1);
+  $('histogram').innerHTML=bins.map((n,i)=>`<div class="col"><div class="stick" style="height:${Math.max(2,n/m*180)}px" title="${n}人"></div><div class="lab">${i*10}-${i===9?100:i*10+9}<br>${n}人</div></div>`).join('')
+}
+function renderSections(rows){
+  $('sectionAnalysis').innerHTML=(analysisExam.sections||[]).map(s=>{const points=Number(s.points||0),sum=rows.reduce((a,r)=>a+Number(r.score.sectionScores[s.id]||0),0),pct=points>0?sum/(rows.length*points)*100:0;return `<div class="bar-row"><strong>${esc(s.name)}</strong><div class="bar"><div style="width:${Math.min(100,pct).toFixed(1)}%"></div></div><div>${pct.toFixed(1)}%</div></div>`}).join('')
+}
+function questionStats(rows){
+  const sectionNames=new Map((analysisExam.sections||[]).map(s=>[s.id,s.name]));
+  return (analysisExam.questions||[]).map((q,index)=>{let ok=0;rows.forEach(r=>{const d=r.score.detail.find(x=>String(x.q.id)===String(q.id));if(d&&d.correct)ok++});const pct=rows.length?ok/rows.length*100:0;let level='middle',levelLabel='要確認';if(pct<50){level='review';levelLabel='重点復習'}else if(pct>=80){level='must';levelLabel='できてほしい'}return {q,index,ok,pct,total:rows.length,section:sectionNames.get(q.section)||q.section||'',level,levelLabel}})
+}
+function questionPointLabel(q){return ['complete_item','unordered_complete_item'].includes(q.type)?`${Number(q.groupPoints||0)}点（完答）`:`${Number(q.points||0)}点`}
+function questionTypeLabel(q){return ({normal:'',unordered_item:'順不同',complete_item:'完答',unordered_complete_item:'順不同・完答'})[q.type]||q.type||''}
+function renderAnalysisInsights(rows){
+  const root=$('analysisInsights');if(!root)return;const stats=questionStats(rows),review=stats.filter(x=>x.pct<50).sort((a,b)=>a.pct-b.pct),must=stats.filter(x=>x.pct>=80).sort((a,b)=>b.pct-a.pct),lowest=[...stats].sort((a,b)=>a.pct-b.pct)[0];
+  const chips=list=>list.slice(0,6).map(x=>`<span>${esc(x.q.label)} <strong>${x.pct.toFixed(1)}%</strong></span>`).join('');
+  root.innerHTML=`<div class="analysis-insight-card review"><div><span class="section-eyebrow">PRIORITY REVIEW</span><h4>重点復習問題 <b>${review.length}</b></h4><p>正答率50%未満。授業・解説で優先して扱いたい設問です。</p></div><div class="analysis-insight-chips">${chips(review)||'<em>該当なし</em>'}</div></div><div class="analysis-insight-card must"><div><span class="section-eyebrow">MUST GET</span><h4>できてほしい問題 <b>${must.length}</b></h4><p>正答率80%以上。個人で落としていた場合は振り返り対象にしやすい設問です。</p></div><div class="analysis-insight-chips">${chips(must)||'<em>該当なし</em>'}</div></div><div class="analysis-insight-card focus"><div><span class="section-eyebrow">LOWEST RATE</span><h4>最も苦戦した設問</h4><p>${lowest?`${esc(lowest.q.label)} ／ ${lowest.pct.toFixed(1)}%`:'—'}</p></div></div>`;
+}
+function renderQuestionRates(rows){
+  const body=$('questionRates'),summary=$('questionRateSummary');if(!body)return;let stats=questionStats(rows),filter=$('questionFilter')?.value||'all',sort=$('questionSort')?.value||'rate-asc';
+  if(filter==='review')stats=stats.filter(x=>x.pct<50);else if(filter==='must')stats=stats.filter(x=>x.pct>=80);else if(filter==='middle')stats=stats.filter(x=>x.pct>=50&&x.pct<80);
+  if(sort==='rate-asc')stats.sort((a,b)=>a.pct-b.pct||a.index-b.index);else if(sort==='rate-desc')stats.sort((a,b)=>b.pct-a.pct||a.index-b.index);else stats.sort((a,b)=>a.index-b.index);
+  if(summary)summary.textContent=`表示 ${stats.length}問 / 全${analysisExam.questions.length}問`;
+  body.innerHTML=stats.length?stats.map(x=>`<tr class="question-rate-row ${x.level}"><td><span class="question-section-mini">${esc(x.section)}</span></td><td><strong>${esc(x.q.label)}</strong>${questionTypeLabel(x.q)?`<small>${esc(questionTypeLabel(x.q))}</small>`:''}</td><td><code>${esc(String(x.q.answer??''))}</code></td><td>${esc(questionPointLabel(x.q))}</td><td><div class="rate-cell"><strong>${x.pct.toFixed(1)}%</strong><div class="mini-rate"><span style="width:${x.pct.toFixed(1)}%"></span></div></div></td><td>${x.ok}/${x.total}</td><td><span class="analysis-level ${x.level}">${x.levelLabel}</span></td></tr>`).join(''):'<tr><td colspan="7" class="muted">条件に該当する設問はありません。</td></tr>';
+}
+function studentCorrectCount(row){return row.score.detail.filter(d=>d.correct).length}
+function renderStudentAnalysis(rows){
+  const body=$('studentAnalysisBody'),summary=$('studentAnalysisSummary');if(!body)return;let sorted=[...rows],sort=$('studentSort')?.value||'score-desc';
+  if(sort==='score-desc')sorted.sort((a,b)=>b.score.total-a.score.total||a.code.localeCompare(b.code));else if(sort==='score-asc')sorted.sort((a,b)=>a.score.total-b.score.total||a.code.localeCompare(b.code));else sorted.sort((a,b)=>a.code.localeCompare(b.code));
+  if(summary)summary.textContent=`${sorted.length}人を表示`;
+  body.innerHTML=sorted.map(r=>{const sectionChips=(analysisExam.sections||[]).map(s=>`<span>${esc(s.name)} <strong>${Number(r.score.sectionScores[s.id]||0)}/${Number(s.points||0)}</strong></span>`).join('');return `<tr><td><strong>${esc(r.code)}</strong></td><td><strong>${esc(r.name)}</strong><small>${esc(formatResponseTimestamp(r.timestampValue))}</small></td><td>${esc(r.classKey)}</td><td class="student-score-cell"><strong>${Number(r.score.total||0)}</strong><small>/${Number(analysisExam.totalPoints||100)}</small></td><td>${studentCorrectCount(r)}/${analysisExam.questions.length}</td><td><div class="section-score-chips">${sectionChips}</div></td><td><button type="button" class="secondary glass-btn student-detail-btn" data-student-detail="${esc(r.code)}">詳細</button></td></tr>`}).join('');
+}
+function renderStudentDetail(code){
+  const row=currentAnalysisRows().find(r=>r.code===code);if(!row)return;const panel=$('studentDetailPanel'),body=$('studentDetailBody'),title=$('studentDetailTitle'),meta=$('studentDetailMeta');if(!panel||!body)return;
+  title.textContent=`${row.code} ${row.name}`;meta.textContent=`${row.score.total}/${Number(analysisExam.totalPoints||100)}点 ／ ${formatResponseTimestamp(row.timestampValue)} の回答を採用`;
+  const seenGroups=new Set();body.innerHTML=(analysisExam.questions||[]).map(q=>{const d=row.score.detail.find(x=>String(x.q.id)===String(q.id)),answer=d?String(d.answer??''):'',isComplete=['complete_item','unordered_complete_item'].includes(q.type);let earned='—';if(d){if(isComplete){if(!seenGroups.has(q.group)){seenGroups.add(q.group);earned=d.correct?`${Number(q.groupPoints||0)}点（完答）`:'0点（完答）'}}else earned=`${Number(d.earned||0)}点`};let correctText=String(q.answer??'');if((q.type||'').includes('unordered')&&q.groupAnswers)correctText=q.groupAnswers.join('・');return `<tr><td><span class="question-section-mini">${esc((analysisExam.sections||[]).find(s=>s.id===q.section)?.name||'')}</span><strong>${esc(q.label)}</strong></td><td>${esc(answer||'未回答')}</td><td>${esc(correctText)}</td><td><span class="answer-mark ${d?.correct?'ok':'ng'}">${d?.correct?'○':'×'}</span></td><td>${esc(earned)}</td></tr>`}).join('');panel.classList.remove('hidden');panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeStudentAnalysisDetail(){$('studentDetailPanel')?.classList.add('hidden')}
+
 function loadPublishExam(){
   const exam=exams.find(e=>e.id===$('publishExamSelect')?.value);
   if(!exam){

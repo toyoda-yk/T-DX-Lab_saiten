@@ -1,7 +1,7 @@
 let exams=[], users=[], currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null;
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.23.7';
+const APP_VERSION='1.23.9';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
