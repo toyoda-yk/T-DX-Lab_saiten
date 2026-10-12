@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.24.1';
+const APP_VERSION='1.24.2';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -23,11 +23,21 @@ async function fetchJsonWithMeta(path){
   if(!r.ok)throw new Error(`${path}: ${r.status}`);
   const data=await r.json();return {data,lastModified:r.headers.get('last-modified')||''};
 }
+async function loadAnalysisIndex(){
+  try{
+    const data=await TDX.gasJson({action:'listAnalysis'});
+    if(!data?.ok)throw new Error(data?.message||'分析一覧を取得できませんでした。');
+    return {version:2,analyses:Array.isArray(data.analyses)?data.analyses:[]};
+  }catch(gasError){
+    console.warn('GAS analysis index load failed. Trying legacy analysis.json.',gasError);
+    try{return (await fetchJsonWithMeta('data/analysis.json')).data}catch(e){return {version:2,analyses:[]}}
+  }
+}
 async function loadData(){
-  const [er,ur,ar]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json'),fetchJsonWithMeta('data/analysis.json')]);
+  const [er,ur,ar]=await Promise.allSettled([fetchJsonWithMeta('data/exams.json'),fetchJsonWithMeta('data/users.json'),loadAnalysisIndex()]);
   dataVersionMeta.examError=er.status==='rejected';dataVersionMeta.userError=ur.status==='rejected';
   if(er.status==='rejected'||ur.status==='rejected'){updateVersionStatus();throw (er.status==='rejected'?er.reason:ur.reason)}
-  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value.data:{version:1,analyses:[]};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
+  const e=er.value.data,u=ur.value.data;analysisData=ar.status==='fulfilled'?ar.value:{version:2,analyses:[]};analysisData.analyses=Array.isArray(analysisData.analyses)?analysisData.analyses:[];
   dataVersionMeta.exams=e.updatedAt||er.value.lastModified||'';dataVersionMeta.users=u.updatedAt||ur.value.lastModified||'';updateVersionStatus();
   exams=e.exams||[];
   // v1.5以前の配布用デモ3101だけを除外。本番で再発行済みの3101は残ります。
@@ -59,6 +69,14 @@ function audienceAllowed(exam,user){
 }
 function eligible(exam,user){return examEffectiveStatus(exam)==='published'&&audienceAllowed(exam,user)}
 function analysisEntryFor(examId){return (analysisData.analyses||[]).find(x=>x.examId===examId)||null}
+async function ensureAnalysisEntry(examId){
+  const cached=analysisEntryFor(examId);if(cached?.overall?.questions&&cached?.classes)return cached;
+  try{
+    const data=await TDX.gasJson({action:'getAnalysis',examId});
+    if(!data?.ok||!data.analysis)return null;
+    const rest=(analysisData.analyses||[]).filter(x=>x.examId!==examId);rest.push(data.analysis);analysisData={version:2,analyses:rest};return data.analysis;
+  }catch(e){console.warn('analysis detail load failed',e);return cached?.overall?.questions?cached:null}
+}
 async function login(){
   const code=$('studentCode').value.trim(),pass=$('accessCode').value.trim();
   $('loginMsg').className='small muted';$('loginMsg').textContent='最新の公開情報を確認しています…';
@@ -189,8 +207,9 @@ function analysisScopeSnapshot(entry){
   if(publicAnalysisScope==='class'){const c=entry.classes?.[currentUser?.classKey];if(c)return {snapshot:c,label:`${currentUser.classKey}組`}}
   return {snapshot:entry.overall,label:'全体'};
 }
-function openStudentAnalysis(examId){
-  const exam=exams.find(e=>e.id===examId),entry=analysisEntryFor(examId);if(!exam||!entry){alert('この試験の分析結果はまだ公開されていません。');return}
+async function openStudentAnalysis(examId){
+  const exam=exams.find(e=>e.id===examId);if(!exam){alert('試験データを確認できません。');return}
+  const entry=await ensureAnalysisEntry(examId);if(!entry?.overall?.questions){alert('この試験の分析結果はまだ公開されていないか、OEN分析共有サーバーへ接続できませんでした。');return}
   currentExam=exam;publicAnalysisScope=entry.classes?.[currentUser?.classKey]?'class':'all';$('publicAnalysisSort').value='rate-desc';renderPublicAnalysis();show('analysisPanel');window.scrollTo(0,0);
 }
 function renderPublicAnalysis(){

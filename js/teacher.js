@@ -10,7 +10,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionPassword='',qrVaultKey=null,dataLoaded=false;
-const APP_VERSION='1.24.1';
+const APP_VERSION='1.24.2';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -241,6 +241,7 @@ function bind(){
   $('formTestConfirmed').onchange=renderGoogleFormStatus;
 
   $('analyzeBtn').onclick=analyzeFile;
+  $('publishStudentAnalysisBtn').onclick=publishStudentAnalysisToGas;
   $('exportStudentAnalysisBtn').onclick=exportStudentAnalysisData;
   $('classFilter').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
   $('questionSort').onchange=renderAnalysis;
@@ -1726,27 +1727,62 @@ function publicAnalysisSnapshot(rows){
     questions
   };
 }
-function exportStudentAnalysisData(){
-  if(!analysisExam||!analysisRows.length){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
+function buildStudentAnalysisEntry(publishToken=''){
+  if(!analysisExam||!analysisRows.length)return null;
   const byClass={};
   [...new Set(analysisRows.map(r=>r.classKey).filter(Boolean))].sort().forEach(classKey=>{
     const rows=analysisRows.filter(r=>r.classKey===classKey);byClass[classKey]=publicAnalysisSnapshot(rows);
   });
-  const entry={
+  return {
     examId:analysisExam.id,
     title:analysisExam.title,
     subject:analysisExam.subject||'',
     totalPoints:Number(analysisExam.totalPoints||100),
     generatedAt:new Date().toISOString(),
-    source:{fileName:analysisMeta.fileName||'',rawResponses:analysisMeta.raw,participants:analysisRows.length},
+    publishToken,
     overall:publicAnalysisSnapshot(analysisRows),
     classes:byClass
   };
+}
+function exportStudentAnalysisData(){
+  const entry=buildStudentAnalysisEntry();
+  if(!entry){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
   const analyses=(allAnalysisData.analyses||[]).filter(x=>x.examId!==analysisExam.id);analyses.push(entry);
   analyses.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ja'));
-  allAnalysisData={version:1,systemName:'T-DX Lab☆問題演習システム',updatedAt:new Date().toISOString(),analyses};
+  allAnalysisData={version:2,systemName:'T-DX Lab☆問題演習システム',updatedAt:new Date().toISOString(),analyses};
   TDX.download('analysis.json',JSON.stringify(allAnalysisData,null,2));
-  alert('生徒用 analysis.json を書き出しました。\n\n氏名・4桁番号・個人回答は含まれていません。\nGitHub の data/analysis.json に上書きすると、生徒画面でクラス分析・全体分析が表示されます。');
+}
+function postAnalysisGasForm(fields){
+  return new Promise(resolve=>{
+    const frame=document.createElement('iframe');frame.name=`tdx_analysis_post_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
+    const form=document.createElement('form');form.method='POST';form.action=TDX.ANALYSIS_GAS_URL;form.target=frame.name;form.style.display='none';
+    Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
+    document.body.appendChild(form);let finished=false;
+    const done=()=>{if(finished)return;finished=true;form.remove();setTimeout(()=>frame.remove(),500);resolve()};
+    frame.onload=()=>setTimeout(done,150);HTMLFormElement.prototype.submit.call(form);setTimeout(done,2500);
+  });
+}
+function setAnalysisPublishMessage(text,type='muted'){
+  const el=$('analysisPublishMsg');if(!el)return;el.className=`small ${type}`;el.textContent=text;
+}
+async function publishStudentAnalysisToGas(){
+  if(!analysisExam||!analysisRows.length){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
+  const btn=$('publishStudentAnalysisBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='公開処理中…';setAnalysisPublishMessage('OEN共通の分析共有先へ接続しています…');
+  try{
+    const who=await TDX.gasJson({action:'whoami'});
+    if(!who?.ok)throw new Error(who?.message||'分析共有サーバーの確認に失敗しました。');
+    if(!who.teacher)throw new Error(`このOENアカウント（${who.user||'不明'}）は公開権限がありません。分析共有スプレッドシートを「編集者」で共有してください。`);
+    const token=(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`),entry=buildStudentAnalysisEntry(token);
+    setAnalysisPublishMessage(`公開中：${entry.title}（集計 ${entry.overall.participants}人）`);
+    await postAnalysisGasForm({action:'publishAnalysis',payload:JSON.stringify(entry)});
+    let confirmed=null;
+    for(let i=0;i<8;i++){
+      await new Promise(r=>setTimeout(r,i?700:350));
+      try{const check=await TDX.gasJson({action:'getAnalysisMeta',examId:entry.examId});if(check?.ok&&check.analysis?.publishToken===token){confirmed=check.analysis;break}}catch(e){if(i===7)throw e}
+    }
+    if(!confirmed)throw new Error('保存完了を確認できませんでした。少し待ってからもう一度「生徒に分析を公開」を押してください。');
+    setAnalysisPublishMessage(`✓ 公開しました　${confirmed.publishedBy||who.user||''} ／ ${new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(confirmed.generatedAt||Date.now()))}`,'success');
+  }catch(e){console.error(e);setAnalysisPublishMessage(`公開できませんでした：${e.message||e}`,'error');alert(`分析の公開に失敗しました。\n\n${e.message||e}`)}finally{btn.disabled=false;btn.textContent=old}
 }
 function renderAnalysisInsights(rows){
   const root=$('analysisInsights');if(!root)return;const stats=questionStats(rows),review=stats.filter(x=>x.pct<50).sort((a,b)=>a.pct-b.pct),must=stats.filter(x=>x.pct>=80).sort((a,b)=>b.pct-a.pct),lowest=[...stats].sort((a,b)=>a.pct-b.pct)[0];

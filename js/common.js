@@ -46,5 +46,33 @@ window.TDX = (() => {
     }
     return {total,sectionScores,detail};
   }
-  return {sha256Hex,randomCode,makeVerifier,verify,download,csvParse,scoreExam};
+  const ANALYSIS_GAS_URL='https://script.google.com/a/macros/oen.ed.jp/s/AKfycbykmZ-YUHPDy4tSgYWaWRZoNc7BjIh0QmyBFftRd2ksN6MllX2lf2xLQNEHRS33CMey/exec';
+  function gasUrl(params={}){
+    const u=new URL(ANALYSIS_GAS_URL);
+    Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,String(v))});
+    u.searchParams.set('_t',Date.now());
+    return u.toString();
+  }
+  function gasJsonp(params={},timeout=10000){
+    return new Promise((resolve,reject)=>{
+      const cb=`__tdxGas_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const script=document.createElement('script');let done=false;
+      const cleanup=()=>{if(done)return;done=true;clearTimeout(timer);script.remove();try{delete window[cb]}catch(e){window[cb]=undefined}};
+      window[cb]=data=>{cleanup();resolve(data)};
+      const timer=setTimeout(()=>{cleanup();reject(new Error('分析共有サーバーへの接続がタイムアウトしました。'))},timeout);
+      script.onerror=()=>{cleanup();reject(new Error('分析共有サーバーへ接続できませんでした。OENアカウントでログインしているか確認してください。'))};
+      script.src=gasUrl({...params,callback:cb});document.head.appendChild(script);
+    });
+  }
+  async function gasJson(params={},timeout=10000){
+    try{
+      const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
+      const r=await fetch(gasUrl(params),{cache:'no-store',credentials:'include',redirect:'follow',signal:ctrl.signal});clearTimeout(timer);
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const text=await r.text();return JSON.parse(text);
+    }catch(fetchError){
+      try{return await gasJsonp(params,timeout)}catch(jsonpError){throw new Error(`${jsonpError.message}（通常接続: ${fetchError.message||fetchError}）`)}
+    }
+  }
+  return {sha256Hex,randomCode,makeVerifier,verify,download,csvParse,scoreExam,ANALYSIS_GAS_URL,gasUrl,gasJson};
 })();
