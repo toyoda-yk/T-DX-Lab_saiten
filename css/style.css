@@ -1104,7 +1104,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .audit-result.ok{background:#e8f7ef;color:#18734a}
 .audit-result.ng{background:#fff0f0;color:#b63b3b}
 
-/* v1.26.3 registered exam loader + Google Form robust submit */
+/* v1.26.4 registered exam loader + Google Form submit regression fix */
 .registered-exam-loader{margin:14px 0 18px;padding:16px 18px;border:1px solid #cfe0f6;border-radius:18px;background:linear-gradient(135deg,#f8fbff,#eef6ff)}
 .registered-exam-loader-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
 .registered-exam-loader-head h3{margin:2px 0 4px}
