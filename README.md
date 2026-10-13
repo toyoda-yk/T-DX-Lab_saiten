@@ -1,4 +1,4 @@
-# T-DX Lab v1.25.8 OEN操作ログ対応 SAFE版
+# T-DX Lab v1.25.9 Googleフォーム複数選択対応 SAFE版
 
 ## 今回の更新
 - OEN認証済み教員の操作を共有スプレッドシート「操作ログ」に記録
@@ -20,3 +20,10 @@
 
 ## SAFE版
 現在運用中の data/users.json、data/exams.json、data/analysis.json は同梱していません。
+
+
+## v1.25.9
+- Googleフォームのチェックボックス設問で、同一entryを同じT-DXグループ内の複数解答欄に共有可能。
+- 生徒送信・テスト送信とも同一entryへ複数値をPOST。
+- Googleフォーム回答Excelの複数選択セルをT-DX解答欄へ展開して分析。
+- 模範解答・採点方式の仕様は変更していません。

@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.25.8';
+const APP_VERSION='1.25.9';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -212,13 +212,18 @@ function validFormSubmissionConfig(){
   const f=currentExam?.formSubmission;if(!f)return false;
   return f.provider==='google_forms'&&!!f.actionUrl&&!!f.nameEntry&&!!f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===currentExam.questions.length;
 }
+function addGoogleField(fields,key,value){
+  if(!key)return;
+  if(!(key in fields)){fields[key]=value;return}
+  if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
+}
 function postGoogleForm(actionUrl,fields){
   return new Promise((resolve,reject)=>{
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
       const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
-      Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
+      Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
       [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
@@ -231,7 +236,7 @@ async function sendCurrentExamToGoogle(answers,name){
   if(!validFormSubmissionConfig())throw new Error('Googleフォーム連携設定が不完全です。担当の先生に知らせてください。');
   const f=currentExam.formSubmission,fields={};
   fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
-  for(const m of f.questionEntries){fields[m.entry]=answers[m.questionId]??answers[String(m.questionId)]??''}
+  for(const m of f.questionEntries){addGoogleField(fields,m.entry,answers[m.questionId]??answers[String(m.questionId)]??'')}
   await postGoogleForm(f.actionUrl,fields);
   return {sent:true,attemptedAt:new Date().toISOString()};
 }

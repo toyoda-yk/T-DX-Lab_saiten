@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.8';
+const APP_VERSION='1.25.9';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1313,12 +1313,30 @@ function googleFormMappingState(){
   const nameEntry=$('formNameEntrySelect')?.value||'',codeEntry=$('formCodeEntrySelect')?.value||'';
   const sels=[...document.querySelectorAll('.form-answer-entry')];
   const answerEntries=sels.map((sel,i)=>({questionId:i+1,entry:sel.value||''}));
-  const used=[nameEntry,codeEntry,...answerEntries.map(x=>x.entry)].filter(Boolean),dups=used.filter((x,i)=>used.indexOf(x)!==i);
   const signatureOk=$('formMappingPanel')?.dataset.signature===currentEditorSignature();
   const mapped=answerEntries.filter(x=>x.entry).length;
-  const unused=googleFormSetup.entries.filter(e=>!used.includes(e.key));
+
+  // Googleフォームのチェックボックス設問では、1つのentryに複数の値を送るのが正しい。
+  // T-DX側で同一グループに属する解答欄だけは、同じentryの共有を正式に許可する。
+  const entryRows=new Map();
+  answerEntries.forEach((m,i)=>{if(m.entry)(entryRows.get(m.entry)||entryRows.set(m.entry,[]).get(m.entry)).push(i)});
+  const invalidDuplicates=[];const sharedEntries=[];
+  for(const [entry,idxs] of entryRows){
+    if(idxs.length<2)continue;
+    const rows=idxs.map(i=>editorRows[i]);
+    const group=rows[0]?.group||'';
+    const sameGroup=!!group&&rows.every(r=>r?.group===group);
+    if(sameGroup)sharedEntries.push({entry,group,count:idxs.length,rows:idxs});
+    else invalidDuplicates.push(entry);
+  }
+  // 氏名・4桁番号と解答欄が同じentryになるのは常に不正。
+  const identityConflict=answerEntries.filter(x=>x.entry&&(x.entry===nameEntry||x.entry===codeEntry)).map(x=>x.entry);
+  if(nameEntry&&codeEntry&&nameEntry===codeEntry)identityConflict.push(nameEntry);
+  const dups=[...new Set([...invalidDuplicates,...identityConflict])];
+  const used=[nameEntry,codeEntry,...answerEntries.map(x=>x.entry)].filter(Boolean);
+  const unused=googleFormSetup.entries.filter((e,i)=>!used.includes(e.key));
   const ok=!!googleFormSetup.actionUrl&&!!nameEntry&&!!codeEntry&&nameEntry!==codeEntry&&mapped===editorRows.length&&!dups.length&&signatureOk;
-  return {ok,nameEntry,codeEntry,answerEntries,mapped,dups:[...new Set(dups)],unused,signatureOk};
+  return {ok,nameEntry,codeEntry,answerEntries,mapped,dups,sharedEntries,unused,signatureOk};
 }
 function renderGoogleFormStatus(){
   const root=$('formMappingKpis');if(!root||$('formMappingPanel').classList.contains('hidden'))return;
@@ -1326,7 +1344,8 @@ function renderGoogleFormStatus(){
   root.innerHTML=`<div class="kpi"><div class="muted small">取得entry</div><div class="value">${entryCount}</div></div><div class="kpi ${st.nameEntry?'':'kpi-warn'}"><div class="muted small">氏名</div><div class="value">${st.nameEntry?'✓':'—'}</div></div><div class="kpi ${st.codeEntry?'':'kpi-warn'}"><div class="muted small">4桁番号</div><div class="value">${st.codeEntry?'✓':'—'}</div></div><div class="kpi ${st.mapped===editorRows.length?'':'kpi-warn'}"><div class="muted small">解答対応</div><div class="value">${st.mapped}/${editorRows.length}</div></div>`;
   let msg=[];
   if(!st.signatureOk)msg.push('設問構成が変更されています。自動対応をやり直してください。');
-  if(st.dups.length)msg.push('同じentryが複数項目に使われています。');
+  if(st.dups.length)msg.push('別の設問グループで同じentryが重複しています。対応を確認してください。');
+  if(st.sharedEntries?.length)msg.push(`複数選択 ${st.sharedEntries.length}設問：同じentryをグループ内で共有しています（正常）。`);
   if(st.mapped<editorRows.length){
     const shortage=editorRows.length-st.mapped;
     msg.push(`Googleフォームの解答欄が ${shortage}件不足しています。事前入力リンクを作るときに、すべての解答欄へ値を入れたか確認してリンクを取り直してください。`);
@@ -1347,10 +1366,15 @@ function resetGoogleFormLink(){
 function buildGoogleFormSubmissionConfig(questions){
   if(!googleFormSetup.actionUrl)return null;
   const st=googleFormMappingState();
-  if(!st.ok)throw new Error('Googleフォーム連携の対応に未設定または重複があります。連携情報を確認してください。');
+  if(!st.ok)throw new Error('Googleフォーム連携の対応に未設定または不正な重複があります。連携情報を確認してください。');
   if(questions.length!==st.answerEntries.length)throw new Error('Googleフォームの解答対応数と現在の設問数が一致しません。自動対応をやり直してください。');
   const confirmed=!!$('formTestConfirmed').checked,now=new Date().toISOString();
   return {provider:'google_forms',version:1,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry})),nameRequired:true,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
+}
+function addGoogleField(fields,key,value){
+  if(!key)return;
+  if(!(key in fields)){fields[key]=value;return}
+  if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
 function postGoogleForm(actionUrl,fields){
   return new Promise((resolve,reject)=>{
@@ -1358,7 +1382,7 @@ function postGoogleForm(actionUrl,fields){
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
       const frame=document.createElement('iframe');frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
-      Object.entries(fields).forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(v??'');form.appendChild(input)});
+      Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
       [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
@@ -1372,7 +1396,11 @@ async function testGoogleFormSubmission(){
     const st=googleFormMappingState();if(!st.ok)throw new Error('先に氏名・4桁番号・解答欄の対応を完成させてください。');
     const fields={};
     fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
-    st.answerEntries.forEach((m,i)=>{const sample=entryByKey(m.entry)?.value||configuredChoices()[0]||'0';fields[m.entry]=sample});
+    st.answerEntries.forEach((m,i)=>{
+      // 同じentryを共有する複数選択は、同名hidden inputを複数作って送信する。
+      const sample=String(editorRows[i]?.answer??'').trim()||entryByKey(m.entry)?.value||configuredChoices()[0]||'0';
+      addGoogleField(fields,m.entry,sample);
+    });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields);googleFormSetup.testAttempted=true;
     $('formTestMsg').className='success small';$('formTestMsg').textContent='テスト送信処理を実行しました。Googleフォームの「回答」タブを開き、1件追加されていることを確認したら「受信を確認した」にチェックしてください。';
@@ -1508,7 +1536,7 @@ async function testSelectedExamGoogleForm(){
       if(!q)throw new Error(`Googleフォーム連携に対応する設問 ${m.questionId} が見つかりません。`);
       const sample=String(q.answer??q.options?.[0]??'').trim();
       if(sample==='')throw new Error(`${q.label||`設問${q.id}`} のテスト送信用回答を作れません。正答または選択肢を確認してください。`);
-      fields[m.entry]=sample;
+      addGoogleField(fields,m.entry,sample);
     }
     btn.disabled=true;
     msg.className='small muted';
@@ -1601,6 +1629,41 @@ function currentAnalysisRows(){
   const key=$('classFilter')?.value||'ALL';
   return key==='ALL'?analysisRows:analysisRows.filter(r=>r.classKey===key);
 }
+function uniqueFormAnswerEntries(exam){
+  const out=[];const seen=new Set();
+  for(const m of exam?.formSubmission?.questionEntries||[]){if(m?.entry&&!seen.has(m.entry)){seen.add(m.entry);out.push(m.entry)}}
+  return out;
+}
+function splitGoogleCheckboxCell(value){
+  const s=String(value??'').trim();if(!s)return [];
+  // Googleフォームのチェックボックス回答は通常「A, B」の1セルで出力される。
+  return s.split(/\s*[,，、]\s*/).map(x=>x.trim()).filter(Boolean);
+}
+function answersFromGoogleResponseRow(exam,row){
+  const qs=exam.questions||[],maps=exam.formSubmission?.questionEntries||[];
+  if(!maps.length||maps.length!==qs.length)return null;
+  const uniqueEntries=uniqueFormAnswerEntries(exam);
+  if(!uniqueEntries.length)return null;
+  const vals=row.slice(Math.max(0,row.length-uniqueEntries.length));
+  if(vals.length!==uniqueEntries.length)return null;
+  const byEntry=new Map(uniqueEntries.map((e,i)=>[e,vals[i]]));
+  const answers={};
+  const grouped=new Map();
+  maps.forEach((m,i)=>{(grouped.get(m.entry)||grouped.set(m.entry,[]).get(m.entry)).push({m,q:qs[i]})});
+  for(const [entry,items] of grouped){
+    const raw=byEntry.get(entry)??'';
+    if(items.length===1){answers[items[0].q.id]=String(raw).trim();continue}
+    const selected=splitGoogleCheckboxCell(raw);
+    // 同一entry共有＝Googleフォームの複数選択。順序を持たないため、
+    // 正答集合と一致する場合はT-DX内部の各欄へ正答順に復元し、完答判定を正しく保つ。
+    const targets=items.map(x=>String(x.q.answer??'').trim());
+    const a=[...selected].sort(),b=[...targets].sort();
+    const same=a.length===b.length&&a.every((v,i)=>v===b[i]);
+    const restored=same?targets:selected;
+    items.forEach((x,i)=>answers[x.q.id]=String(restored[i]??'').trim());
+  }
+  return answers;
+}
 async function analyzeFile(){
   try{
     const f=$('responseFile').files[0];if(!f){alert('回答ExcelまたはCSVを選択してください。');return}
@@ -1615,8 +1678,11 @@ async function analyzeFile(){
       const r=rows[i]||[],code=normalizeStudentCode(r[codeIndex]),name=String(r[nameIndex]??'').trim();
       if(isSystemTestResponse(name)){tests++;continue}
       if(!code){ignored++;continue}
-      const ansVals=r.slice(Math.max(0,r.length-qCount)),answers={};
-      analysisExam.questions.forEach((q,j)=>answers[q.id]=String(ansVals[j]??'').trim());
+      let answers=answersFromGoogleResponseRow(analysisExam,r);
+      if(!answers){
+        const ansVals=r.slice(Math.max(0,r.length-qCount));answers={};
+        analysisExam.questions.forEach((q,j)=>answers[q.id]=String(ansVals[j]??'').trim());
+      }
       const score=TDX.scoreExam(analysisExam,answers),timestampValue=r[timestampIndex],timestampMs=parseResponseTimestamp(timestampValue,i);
       valid.push({code,name:name||'（氏名なし）',classKey:code.slice(0,Number($('classDigits').value)||2),answers,score,timestampValue,timestampMs,rowIndex:i});
       duplicateCountByCode.set(code,(duplicateCountByCode.get(code)||0)+1);
