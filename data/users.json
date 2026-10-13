@@ -4,728 +4,1449 @@
   "note": "生徒認証用の公開データ。credential はsalt+hashのみ。平文アクセスキー・氏名・個人回答・QR復号情報は含みません。",
   "schoolYear": "2026",
   "resetEpoch": "c7926e5b-803d-4795-aff7-07c6c8642cf4",
-  "updatedAt": "2026-10-13T12:13:42.136Z",
-  "issuedCodeIds": [],
+  "updatedAt": "2026-10-13T12:13:58.708Z",
+  "issuedCodeIds": [
+    "1da4431a605550c5d19f5c18e7fdc29d904abf94aefa6564093c63f3b588a5a1",
+    "08ce53de03fe324aa069de9986e168ef08ef7cdd4e2d30ec6abe82d76ce980e2",
+    "77a862e3b57f207239511f7ba62d061e897bcf32b094b7ccfada997ac8e613ba",
+    "3ac3a64f465f38352565930ecb6847acdc0a0471f3eb05b2ef0e91330d0c9ddf",
+    "4ad85adbed8809f7b03fb1bb5b29c22489620b3cdd5440121bf52db614d140eb",
+    "5280e86a09d874fa980c7963a635f3c0a73aa062386adfcf00373e282cd07e4d",
+    "821c2e4a987464c1c7d0bbff4f82661197d1e19302f513b85426c24636e3872f",
+    "d7f00fe8b4341711f61a8d653e6a605a073e30c2fb6c38b634e39fc1b5d79c46",
+    "c93ce73f912b1b4cde7cba349781e72881247d485f9d1943d93a1852e7061e21",
+    "d31e985c15172d46e389ea2db2d4e7c001b6c69eac4df3d2667798422e66e2d9",
+    "59996f5318b5e4b3d57493a29ce71521a805c442c51575b8c9e067b8cacf6a49",
+    "2d809108b3972f119f2fff952713aa856905f976645146a796fc446cedcd8404",
+    "69a17e34dd54d51aaf7ced058c9b3b567fb29a31b5f68c93dfecdbe09c2a2d1d",
+    "4b33f06c20421e5db56ab16b2f8f49199ead0089e5b5b530c380be3eab250ea9",
+    "d162c6f49aebb5bf5f0dfb33389ae82b46d2adc292f1efe79f248bf2af29c065",
+    "9541e1e4ca553ece8273cd6bfb47fa7bd2c210b26c539b4b74f4ded534802d86",
+    "7eba45e2f8642817ddaecd92648ff42260f0d7677ccdd375a8d90c155069981a",
+    "025bc8d71858d6955a55fbd21ad1aec3dd8396f96829360685228c6b48944ad4",
+    "b97cf804398504e19cc90c0fe10638164e9f16df5820506c75f18282182f2f24",
+    "58db3e1d49ca25a573c7838e7097caca19bd7cef2c8060778fb33ad14b06ba41",
+    "a32f1cfac3af3d441efbfa8dcbf95701e3f8693e1affc56e6ebd4a8759ec5dd9",
+    "aadc4638fc954ec41b8af17e985d97c9ff2da28ff5ef47ffc55baeba1e35e974",
+    "780303b5eeb4b4f9735c3c455bccae8f05f54fc718af069e8edda5f4e172524c",
+    "27715176c2ea2e9cc2e67825fad381ffa19465b7132e64b5b19bb8d6b9ec9bb1",
+    "d4a46394f9beaf7c16ae5fdd8e6f7c980478788c0cdd8013c885cc843d599d3d",
+    "7a8e20f56b7defadb75e5a51447b9a1801a9c722fdfc326aa9075b28abeee343",
+    "2507835a54c3d38795000a6600b55c9dd8700adcb6bb3cf602665d8c0818217c",
+    "f98319bbaf00d89c5367b05e11a7f1c4d53acb4a64e54aad0b3f77914e848739",
+    "8a9f87d6ecaf5ca1a527728cca48692fb12ced4086fef83d2c0545201e54d382",
+    "000198a2d9fc2f2a4a7d1d17cd33417c1e62107b4e11028cb898c8422539916c",
+    "32c788144c5370433fe419ee78edfda9e39467f8c230aca8815665d8b8139a78",
+    "93d718a67a6eb6ca60fea91866414a3b7ff3fe744e002c6fa395487ce971528c",
+    "eaa4783b88db079184592ed91b8a87d9135b0b67364044ffbddb0867a08230e3",
+    "82ea3963d5144e3d2feb7e6bfe6b404ecbe98ec1fa09cd62949987783c4c05ba",
+    "d017a121617f93bfa72bfa1211ebe0298c304dae0aa56397bafe8779c1a88174",
+    "2bb7abcaa31ab619b19b2766db954bd57535e3a674efb3a0d582d3d8b6aebd14",
+    "f6010fd9d365c82bc7534be52ae60185518f14f9f7b52357cc0c497e2f5f4fd7",
+    "bfa17876d82ee979026e44bbf39824ea992a2c1c4c5f9a4d0fb2cdf0c25f167a",
+    "55dcbce3dd68c5f5aa1198147ce6918e94d54ec862c760559669afb33bb9d13f",
+    "032c634f1a889b2b6ef06f327ec04b84d41d7b2976058e20849cd04704a353d7",
+    "a5aec52b7c20a15af8267117f7154d8063656df68f505099b0ad5b8ca94424e7",
+    "bc046c4e558ea29ad72a148fb215c92ae965d4b1cd6b8d8248fb1e92128e90f6",
+    "22a50ccbb26832cac2047fcbdacd417265205dd2b5763bf738bda2f5bd498319",
+    "7f585ab2f90f4d207173f3abf761008333d9d294d4ff0096bd5e8e22939d7012",
+    "412c2a00f40386d07bbda3c1c6af4a7ec8b6461277ec6642ea0365207588ae02",
+    "ef7894feae0ddb17b9fa79e43166b86f37ca705006dc5ddcb824d9968f4eac40",
+    "ac1088a5dfc44f4ea8115a785fcbc1fcd9bfb4463ce70006eb97b2992834ee62",
+    "a796234a90a43c587e4f2c2615597b0f04a05f20da48e740761aa72d0f748a13",
+    "f548c8278dc8cd3865bdd10efcbe9b3c1e26b33f3dc8895b86e152232d62ccfc",
+    "77949eb7bfb0847e3029e29460503d0ba4b20f3d5db066d9a242e94a0ccdaecd",
+    "b3dd8c90057b91f96881f66b031f43f69e1f14ff8639e7fa7b0f231c2832a382",
+    "0c7a3dee7c267bf6d3bdae5bb51beade2727c624a572886dbd48413e0edcc4e6",
+    "6ae4cc05f552432274ac115258babed42038f1d4910c3a792fd51c4c325e8edf",
+    "a8c5e59c67b0f7b7b673c9357dace7d020ac9d825c9f70446f60a11f8c302e75",
+    "a7c06465e5b7f705f12416399485842b7aa33fa1fb85123a894a24825dddbe25",
+    "cc8966819b58ca3fa294accdf230d93ab8c9a8e206ae7ccc94621ee546802730",
+    "4deb7b4c9c9d563b02cefe73c9bf4860accdaeda374ec29b8f6f083562841c97",
+    "ed12960f13c7eaf85b5b18b561d02348a71e5c0d33e7ee7b1ff48cfacaec5454",
+    "7c818b258c4b191327fc00162de2f24586429aa224860080a6040ef6519fc897",
+    "e30e979846a97f39ed10984e40c0552498c51a579380b448f7f673bddfa9ea70",
+    "fcf7732daf11e550d0faa9f2389f73fac92ad088de2609f35f45ee557ac642b1",
+    "56e894835003f499e973b185fd4e47e12b0e88b2607249111f8af2566a30a784",
+    "10c9ea8d4d82d1f670bb09cc23a28ee75a09b6bc82374e64f91c90b4fe736a23",
+    "9a0c01bee4bd2150ad9c64cbb2acdff4a7c9e7074a0840786a8bf79a04af067d",
+    "16527b8e528b88c51ab2ee726302a26d1a3d03814f5204dc787c4c1669ce3498",
+    "eb0a963599c80453776c07e44ec7d96d49c05da3ec3b4628289bf81210d0cffd",
+    "fc4d74d49418b1a85d6cf4f121a8b3ecbddd9f61845db6d1fa26d3b0ee8837cf",
+    "39fd4a120ff2e43e11ace3ec601f089238764de43b1477089e566bded44bdecd",
+    "7c8fa41bb9007fa788c6fa06869588f65d3ddf1e6888ca2a765a85135a3fbdc4",
+    "075351a1804f4a299ae70d9a282b9e1a9d69fef950a9a284705002a36ee04f5e",
+    "94974f3bf126aab9f319e700d50acd8f4bfb6f8533d89619d735412f109f2dd9",
+    "c5c2822a67dba9bbdb98e8df546c212309a6c6de31f4b28c16f5d66dab31983a",
+    "175e0931d6fd43e9d4f075e605683ce1e31d9e5e23e55ed8fc74dfdb3160339b",
+    "56c0ffdd390464e3ab9e0495c2d44cf66fc4eecef9c6a02b7faed7f4a89a5492",
+    "aea027b714388a410f0f57db5e646c8128ea3dc2e0dff79029dde94e02ca9bf4",
+    "bdd0dcccedc8f4b23b84cf50c45e82ac557120430717e0cc4082d1635f8951cd",
+    "9a22045690aa1d10e566b20bab735319add991663bcec2dfaf6c860136f9e0dc",
+    "914bf72e146a120130fabb4d2777a00642c5466e5cf6a8220aedc69616508e66",
+    "ef890cd6ea369232964bcec5d5686db2111badd162bdc1c34adc02f6edf72345",
+    "c937c2727f8267798dd14bc42597e25bbb9a3973ad6fd1d8beafc44109a15b01",
+    "19564fc87d2612fa493cafbe5e7e35439f56cea224f6dff4094fce48ec99a163",
+    "d170f4308c424b77a1258f55fa3f56a5752687b3b36640526b6b2fb126ee8f9a",
+    "e92e979fb3bc462d61fd3ffba1e2b3b0718ef9a2f6edf478694b3d57db6bfcef",
+    "aa849116c495e5a04436b034a1403f55d540d4d06265386fa274acc0d91d6674",
+    "c70eac2c42f14668baffda35a0bafa7a6cf72cfe9af3ca01f6262459e0e55eb6",
+    "54631e11decdfcddeb3cfb69de14d16593890c0fe25c055d4c4078c3566f1ab8",
+    "ecab3664f4bacbdc540991ce7cd44459b190d51d8088c5f7d62c83d260e3edc0",
+    "07819c2c624a55d94abcb4bd0d5dc7ab2091a34d39067b776d026d3da6bfc955",
+    "daa1a41486bc53846849dee7256a7992ce8f8920e51da50c2625085e6de6c362",
+    "bb68b3c71fd304d0a828b3c6d55ef53f489965ac4436ee4cc3e7b35f370501fd",
+    "042c7b87436dcbc85d7c323217346c60b2fb1423d8694e5812b72745de83ec9f",
+    "c3b773d0868c0ba3f51424c6c957d6ad0701c9f805fa77606adf3dc87c85d08f",
+    "d3aa5277162b97924a37e4e41e3095c1a62f120db107bedf86f9b4cf84bc7569",
+    "643273387e9dc4d377f36c1589073c8a298ae2a94b66c8e0978088ba476853a8",
+    "de608bd464f393d6f7ac56d0c27ac83771938c8ba3f037bc82b2ddfdfffb2f47",
+    "f12cdd9d57b5fc74771530a66735586c25df2dd779a8a8cc88fbe7589871382b",
+    "530f29c11c580ce61b7c8e809fce250f59d4a22832921c3e772de6ea67e3f446",
+    "d9a0315a406185b2868fa1d5515e4ca62444a9e6d3bf09f301e06163d38d2c13",
+    "8efc854332e515800bfcc36bf147d8014fb18c412f95d44b6e127dd4d6d6be12",
+    "f8e83cfccbdbd58fc149f6c30f18e4ec78af8f6620dd2d8fe95aca6d8b5dc63c",
+    "fcff7b47c11fda8f1acea2a450375d8f7fc6d92efbc7662ab70f9e8e31615fc1",
+    "3f68dd3f36a5157e9c0467a6c2ba1508a693b240b54c5f7eca086310eab819f0",
+    "65ac1b3e9600f9a3b2956c3e074722d050e9aeb1f978949e2f7e67efc098433f",
+    "d61a266d15cc4fb0cbf3e091ef5a85d2b7ab35bfd13002174f1440c6fa306190",
+    "4b465ee510e4f4560414a76dee5473dd2e8e58c24711c2b271e000d957bb7ed8",
+    "2d4ab24bdd8f999621566bdba2076bb831c51b995b0db419d9001b9e39ce9db2",
+    "b46f1bf331468b9ae71362b615c0c4736b3dfd4b142974dc6ec427d0b179d689",
+    "16eea228ca30607095b457d449c7519bf70dcefeeaf99fe9941c10158a360a03",
+    "b2dbcbfb9f81622aa394fea3679f6e2e93673c121e528ec6b37bc4e825274e74",
+    "aae3b4365cfadd7c8454f305de5350fe7ab8eb3e2bf3ea18ee227a47d5a2a9be",
+    "76b832d859a976168523b1d0363fb1b00786a36e54b2e3498e0306ef0cf8b308",
+    "55da78664a1efca765675e3aa9c108cc1a5841c5ed39a24abdf9abb4e0cc87ac",
+    "e095b42e5d53a6c13a6511e106e4de6accaf8104f55c372957d17d19f80615d4",
+    "e7afa83d9acda4b9ef39a707a355574c7a17b6b3fcc511ceb1b136cf46283d6a",
+    "6f9c19bc12e8d4781d6e332aac90f35a2f5d40cf87672e2e5fa239bd98081833",
+    "8ff8f88f04a13dd969490691cfa3c1a9026832920208bbb850b4e3cdcbc3e233",
+    "33b7a3f63525ca77169a34577ce6acb75e4c51d3889bf62fa77627db80029e30",
+    "d307dd946ac0e4b3da8fde4962dcb222e277878ff8d67a677dbe138007bd6bee",
+    "2fd88f67db407804209aa7bb3a5890bd1e44483a358bb0769c5ae8b75a4bb16c",
+    "fd8953e0467e8ca86a6876c3001ad2b57cec3bf1987b1e15480d0454342954c9"
+  ],
   "users": [
     {
       "studentCode": "3301",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "437f307c6c8c4e8b6b2c0d46e4558077",
+        "hash": "ef9fa1993972c05b3a31fff70ad034ede3450d6372c5fd8dab7791ae249635a0",
+        "codeId": "1da4431a605550c5d19f5c18e7fdc29d904abf94aefa6564093c63f3b588a5a1",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3302",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "fcf75e13344019e6e6ea1358ccf2d8d4",
+        "hash": "5f9721958fae62ad9ff3e06815dd134e2bd5dbcd84bea07a97691abc19f6e5cf",
+        "codeId": "08ce53de03fe324aa069de9986e168ef08ef7cdd4e2d30ec6abe82d76ce980e2",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3303",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "14d595ad76dec3d3f3caaa7448f38f26",
+        "hash": "164805e1c7ff9f147e44e8457cc0a6a0cec2e3f5bd394f76100ab25901a4a50b",
+        "codeId": "77a862e3b57f207239511f7ba62d061e897bcf32b094b7ccfada997ac8e613ba",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3304",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "09dff1fade1eff56f8cac23d36a95e29",
+        "hash": "7a0ad77586557d1afc5ecca70a6a8c98239f9a41aa3c4496060a0b09a6435509",
+        "codeId": "3ac3a64f465f38352565930ecb6847acdc0a0471f3eb05b2ef0e91330d0c9ddf",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3305",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "511c6c7fac693ce0ebe464c22236bf52",
+        "hash": "8b0a2c5a39395c77ebc3614169db6b61c08fad44820060b3d6432d22f45b35ea",
+        "codeId": "4ad85adbed8809f7b03fb1bb5b29c22489620b3cdd5440121bf52db614d140eb",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3306",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7e991103524a63bd969a7a8bed0c7a36",
+        "hash": "06784c22564d30dc5e69d46477dfa2649f39e170d093dc02541c7e196ba907ee",
+        "codeId": "5280e86a09d874fa980c7963a635f3c0a73aa062386adfcf00373e282cd07e4d",
+        "issuedAt": "2026-10-13T12:13:49.706Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3307",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "090400302f2b29a0853dc304e4acac99",
+        "hash": "f6fe4cbc59706ff3208e07a139a8715dc9b526451de42af0053f35eb1f606095",
+        "codeId": "821c2e4a987464c1c7d0bbff4f82661197d1e19302f513b85426c24636e3872f",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3308",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "09a1527267e7cb6aa832446409375aa0",
+        "hash": "57fb8a92a137ee89e35be262282278bb6f4998803633a78479d5603264557631",
+        "codeId": "d7f00fe8b4341711f61a8d653e6a605a073e30c2fb6c38b634e39fc1b5d79c46",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3309",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "64a8df3a63f5b009d36ab3deaf1d937f",
+        "hash": "97d66a1803b4ffb445b0a5415fd1d2cec927733c62caed0e5445379b778f5187",
+        "codeId": "c93ce73f912b1b4cde7cba349781e72881247d485f9d1943d93a1852e7061e21",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3310",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a37e8cc08539d29fc2435d2d5e9eb1e6",
+        "hash": "efe661c4dd8dbf53077502cef07348556186815cb2ee413a055106a319d1460e",
+        "codeId": "d31e985c15172d46e389ea2db2d4e7c001b6c69eac4df3d2667798422e66e2d9",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3311",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "53691fad634f3169cfde6972b5bb492a",
+        "hash": "1569235375a76cce9a264bbe3e888d2a2efdf26d9f65202193b06fed8f52f589",
+        "codeId": "59996f5318b5e4b3d57493a29ce71521a805c442c51575b8c9e067b8cacf6a49",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3312",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a7fb32ed2675cb889dade28090a7ee41",
+        "hash": "e3193c4ab06206090ee975c75e51638c5631c9dc40563aa98332abf8b7fcb567",
+        "codeId": "2d809108b3972f119f2fff952713aa856905f976645146a796fc446cedcd8404",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3313",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "828f1894bf9e4e7e5ae906192e5067a5",
+        "hash": "55059e5ded4eda26e3326eab77228614bf1a96e37285626d9df6bf40b0431fa0",
+        "codeId": "69a17e34dd54d51aaf7ced058c9b3b567fb29a31b5f68c93dfecdbe09c2a2d1d",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3314",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "48288cb95c478dfd588889f646cd826a",
+        "hash": "3062b2c6c6c2822d6287380393685ff63c5cd7a98210778936d4297ad594301e",
+        "codeId": "4b33f06c20421e5db56ab16b2f8f49199ead0089e5b5b530c380be3eab250ea9",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3315",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "4e76c56c033ea7998e795f78ba6a883f",
+        "hash": "0da94968618362e032de18cd12d4fae6e48a084f4402ee1c220cee2d9ae00a33",
+        "codeId": "d162c6f49aebb5bf5f0dfb33389ae82b46d2adc292f1efe79f248bf2af29c065",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3316",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "6581caa202ccf8237ba0d9c1a6f854e5",
+        "hash": "3b08d5011f1fe594c9381b1490a04bf026d0b753bd5ffd60d3b6e10c4f7e4902",
+        "codeId": "9541e1e4ca553ece8273cd6bfb47fa7bd2c210b26c539b4b74f4ded534802d86",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3317",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "0ff49e277bef455060da706dba0515d0",
+        "hash": "289a062a3115b1482e66aebd46d9df46047128b34e684618980507a1e4dd11f7",
+        "codeId": "7eba45e2f8642817ddaecd92648ff42260f0d7677ccdd375a8d90c155069981a",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3318",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "e510dcfd0fa0c0d89e9e5f3cd22e8651",
+        "hash": "20c892226cb89f9e082491d01fc1e3ef9eda8810b7796d8becde191c8bb2eca9",
+        "codeId": "025bc8d71858d6955a55fbd21ad1aec3dd8396f96829360685228c6b48944ad4",
+        "issuedAt": "2026-10-13T12:13:49.707Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3319",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "69ede78ad09e9933cb78c09f7a199dba",
+        "hash": "df63d8700ad11360b18c134055d9d4aeabd4d16ba82a952a0aab10603849a3e1",
+        "codeId": "b97cf804398504e19cc90c0fe10638164e9f16df5820506c75f18282182f2f24",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3320",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1f638624012194a5696f5896d2b8c494",
+        "hash": "503eeb649f87c8253e1346887d4aca8d6a70496f4f165dae6aacee5cac59ac2f",
+        "codeId": "58db3e1d49ca25a573c7838e7097caca19bd7cef2c8060778fb33ad14b06ba41",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3321",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9da7db65b20113886003c9e7ccc417b6",
+        "hash": "1b00eea31ab8f1d0055232c1d2432f1e34176c997126d6b70996cd67a8e3ae10",
+        "codeId": "a32f1cfac3af3d441efbfa8dcbf95701e3f8693e1affc56e6ebd4a8759ec5dd9",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3322",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "8d2800b1188efee01ce86f3a06b7565c",
+        "hash": "e6780e5a3bff709a31a577bc5280f0f6557ccd483a95cb524ca549363b824ed3",
+        "codeId": "aadc4638fc954ec41b8af17e985d97c9ff2da28ff5ef47ffc55baeba1e35e974",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3323",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a048eea67dd98a559b9274e06a295a0a",
+        "hash": "4c6e67f7c4b9c7aeb89a8032b10fd5fa496533e49ff2d14a091d34e5562cce26",
+        "codeId": "780303b5eeb4b4f9735c3c455bccae8f05f54fc718af069e8edda5f4e172524c",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3324",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "143fcdd6263dd6deceaa498b5aed8369",
+        "hash": "20739de2cbc30db67606ec8220d2896f7e25f8fa448e7f737d1e739db7fb32de",
+        "codeId": "27715176c2ea2e9cc2e67825fad381ffa19465b7132e64b5b19bb8d6b9ec9bb1",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3325",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "2aa0c4d1d1e900cdb7417212266c58a6",
+        "hash": "8891b7a0618c6e0791aab421ebdc1507957b54694cf02401aa8a4d5f66b43dd4",
+        "codeId": "d4a46394f9beaf7c16ae5fdd8e6f7c980478788c0cdd8013c885cc843d599d3d",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3326",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7c3f818c4db154a81f4510df47371f9a",
+        "hash": "1213db6d4b78b4f7c0c43856cbdc3d7d7db141ad373f4bd0a96795c67a1424ec",
+        "codeId": "7a8e20f56b7defadb75e5a51447b9a1801a9c722fdfc326aa9075b28abeee343",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3327",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "f2f7d09d42d97a923ec970300db7456e",
+        "hash": "754fa9f05ff2e280a6213d0cfdbd174991c243ab1677d169e7a6555735c18c41",
+        "codeId": "2507835a54c3d38795000a6600b55c9dd8700adcb6bb3cf602665d8c0818217c",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3328",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "355d7fad1f467727c511ade3f948ca62",
+        "hash": "17be78a871fd5e4636ae50dba8ecbf3fa936bf4e2b61009bcd619579f2183d64",
+        "codeId": "f98319bbaf00d89c5367b05e11a7f1c4d53acb4a64e54aad0b3f77914e848739",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3329",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "e90b3d620533d89f161d5f3b3bc25530",
+        "hash": "a6f8d3bd4a47ad0470a04e3bf14942d019c579c1cc19ae9c8e236f9f31239eb6",
+        "codeId": "8a9f87d6ecaf5ca1a527728cca48692fb12ced4086fef83d2c0545201e54d382",
+        "issuedAt": "2026-10-13T12:13:49.708Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3330",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7e43d8d10c797b3f8c982671ed799c96",
+        "hash": "b7a212054f53a3b74cb11218a440bb866e08108e98b79f5f481e8ad4e69f663a",
+        "codeId": "000198a2d9fc2f2a4a7d1d17cd33417c1e62107b4e11028cb898c8422539916c",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3331",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "6184efd11c249f1df7d9667208d4dabe",
+        "hash": "157f0afd52acda990ecd6a4fa30addd11d331e253e12050068b9df6b4fddbec9",
+        "codeId": "32c788144c5370433fe419ee78edfda9e39467f8c230aca8815665d8b8139a78",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3332",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "6336757f6fb1b8054137fa1ab0ff8581",
+        "hash": "74697e08bb7345a2fb09396008efd987d9ae3d0e155cf56fd555732e7dddd2c3",
+        "codeId": "93d718a67a6eb6ca60fea91866414a3b7ff3fe744e002c6fa395487ce971528c",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3333",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "10bd3dd36ed5eecd250ddeecce4bc929",
+        "hash": "0a7f58cdc54f8e41bfd8d2334fc60cd47c502711d2f109943b9fa4b26020d523",
+        "codeId": "eaa4783b88db079184592ed91b8a87d9135b0b67364044ffbddb0867a08230e3",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3334",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "761dfddf0716c105cd49d5c1928f7567",
+        "hash": "8132474a16aae7ef1dbc027dac8856c73b955d6108c1413e4321ea4a9d27aa03",
+        "codeId": "82ea3963d5144e3d2feb7e6bfe6b404ecbe98ec1fa09cd62949987783c4c05ba",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3335",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9eb636cafd6d0c75e36266b3e4d9e0b1",
+        "hash": "41b292d536f1cea681a6d2f9beb925838d71d68b1ca3852e2c009e4e36de7964",
+        "codeId": "d017a121617f93bfa72bfa1211ebe0298c304dae0aa56397bafe8779c1a88174",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3336",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "3d4704de6b08e7a14985ed4fb91bb750",
+        "hash": "a2e1365228ff32001fbd3233fe8d11611c3a7206992566cede432d90ccee97ae",
+        "codeId": "2bb7abcaa31ab619b19b2766db954bd57535e3a674efb3a0d582d3d8b6aebd14",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3337",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "72b7ce4b2a064319c616d2182896d13d",
+        "hash": "bd58c60e25705bc87d22eba430f955dda6399f6057ab7a8fdc102466aa230553",
+        "codeId": "f6010fd9d365c82bc7534be52ae60185518f14f9f7b52357cc0c497e2f5f4fd7",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3338",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "55a4a46ab7160ae1b2a494bbb2c59a12",
+        "hash": "42df862cdf1855f8acfb47c7f160519afe182ad5738f86e0bd16c70d9a909e36",
+        "codeId": "bfa17876d82ee979026e44bbf39824ea992a2c1c4c5f9a4d0fb2cdf0c25f167a",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3339",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "edb0e269f9bb3f6d46cf515aeb20cb53",
+        "hash": "7817ee2fb5882591dc5ad6097d37c1be5deab29aa25ed868fdbfc95b7cd282c5",
+        "codeId": "55dcbce3dd68c5f5aa1198147ce6918e94d54ec862c760559669afb33bb9d13f",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3340",
       "classKey": "33",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "b1b3c410247e87f142d8c12123b60298",
+        "hash": "807dd6d29a6db12ab6d5d87a97b7e0bdd872a2b5c36d9bb722fc26e9ee98213c",
+        "codeId": "032c634f1a889b2b6ef06f327ec04b84d41d7b2976058e20849cd04704a353d7",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3401",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "23c04e325e10f63b3726929023780965",
+        "hash": "cfd0a91a5f8f33f7f9550f6fabab9fb4230ec9152f2062f49ad1e7288a157b21",
+        "codeId": "a5aec52b7c20a15af8267117f7154d8063656df68f505099b0ad5b8ca94424e7",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3402",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "60f0ead3071586c8add9e147d77feef2",
+        "hash": "e37ad38f261cfd06716ab16d1bba334b328f361b71199fc0b094862fd6f8e8fb",
+        "codeId": "bc046c4e558ea29ad72a148fb215c92ae965d4b1cd6b8d8248fb1e92128e90f6",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3403",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9df14bca8f2862bc86e79ba422b54b46",
+        "hash": "c7189ad8e466234e2c4c6b095acede016bbec497c8e2ce486592761eec77b0f5",
+        "codeId": "22a50ccbb26832cac2047fcbdacd417265205dd2b5763bf738bda2f5bd498319",
+        "issuedAt": "2026-10-13T12:13:49.709Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3404",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "fe1ff8e103673e182735b9ce86eb90da",
+        "hash": "0135d21160a534d6c2b6a793306dd36573c506a7502541211ef34dff1c45cc50",
+        "codeId": "7f585ab2f90f4d207173f3abf761008333d9d294d4ff0096bd5e8e22939d7012",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3405",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "59ee883e6ec0cb0ab67d74c174731df6",
+        "hash": "27a22338c1ef22784fa63bde9c07e8f57ebc7b77ae0d47d8e33dcc96e822968f",
+        "codeId": "412c2a00f40386d07bbda3c1c6af4a7ec8b6461277ec6642ea0365207588ae02",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3406",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "32276a2382495ba68b2451f634aa431e",
+        "hash": "fac2e6ab5b9d4e48cac6a516ee57505a6dc47512b97824fb6275580c64aca3b2",
+        "codeId": "ef7894feae0ddb17b9fa79e43166b86f37ca705006dc5ddcb824d9968f4eac40",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3407",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "2300d7c17182c371ab5c441743636d23",
+        "hash": "6ad145cb8908ccdd10b6cdc52d0501dbf51c74bfe11b7ab2b4344812d9d5f364",
+        "codeId": "ac1088a5dfc44f4ea8115a785fcbc1fcd9bfb4463ce70006eb97b2992834ee62",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3408",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "4f66c219e50f030aca63d6bf34059a5b",
+        "hash": "d042c9cf8cd17396602475ee7e630768c392149afa234fc6026fb3d841b158df",
+        "codeId": "a796234a90a43c587e4f2c2615597b0f04a05f20da48e740761aa72d0f748a13",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3409",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a76489b3878ba8a0abed4afb778aee37",
+        "hash": "566ec66712fe1f8b65c9905668876ceea5fca7cee597321c252717a95e0be87d",
+        "codeId": "f548c8278dc8cd3865bdd10efcbe9b3c1e26b33f3dc8895b86e152232d62ccfc",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3410",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "0dc7f05ffb9e7e1afd4c279a6ec96cd0",
+        "hash": "b48a49d3db5d85da9ccac48a3be174591c427f90a0f48b834f23ed2563a2c6a0",
+        "codeId": "77949eb7bfb0847e3029e29460503d0ba4b20f3d5db066d9a242e94a0ccdaecd",
+        "issuedAt": "2026-10-13T12:13:49.710Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3411",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "17b60e4dea733c50d0d4033b1b59e8d7",
+        "hash": "58f3f01321ec34e15d280cb5a17c33237f237b0b01a8e0d62a305ecebb3da9c9",
+        "codeId": "b3dd8c90057b91f96881f66b031f43f69e1f14ff8639e7fa7b0f231c2832a382",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3412",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1a72767d7a00f2992b6289d2baa98996",
+        "hash": "2d71eb228b06e9956fef1ade04b5397928d79857d6db1fa4ce49b3664459fc22",
+        "codeId": "0c7a3dee7c267bf6d3bdae5bb51beade2727c624a572886dbd48413e0edcc4e6",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3413",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "5ced4092c43b6eddc48c10210296fd06",
+        "hash": "df5e58f45d1cdc1cd90b5b27ba10d8bfcf13ce0f4e93074ed12185a4e1016adb",
+        "codeId": "6ae4cc05f552432274ac115258babed42038f1d4910c3a792fd51c4c325e8edf",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3414",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "b5a6eae4ed448fd6d9c05213cc68dd8e",
+        "hash": "9718a9e38fe15c0d469d23bc3e77562cc8abe1c4e24d578aaa73d39c6f1392c7",
+        "codeId": "a8c5e59c67b0f7b7b673c9357dace7d020ac9d825c9f70446f60a11f8c302e75",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3415",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "effd84bca6c49f07be513febcc49157e",
+        "hash": "e2ade3030c36d681c8fb8c170b11a1d9fec72adbadb4841993175919bde3c9b9",
+        "codeId": "a7c06465e5b7f705f12416399485842b7aa33fa1fb85123a894a24825dddbe25",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3416",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "6c42f3b1c4fb8dbd493e51cba66af4c5",
+        "hash": "f60e85b87668fcb7ec55998d31c390353e8cec9defdca91082d4aaa7a2840462",
+        "codeId": "cc8966819b58ca3fa294accdf230d93ab8c9a8e206ae7ccc94621ee546802730",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3417",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "d14355c7a6d8e139452c1423a3c1c11f",
+        "hash": "b7a0db603c001600615c4d80eebdf8e18ba83e4b764eb1a20412180b724b2b2f",
+        "codeId": "4deb7b4c9c9d563b02cefe73c9bf4860accdaeda374ec29b8f6f083562841c97",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3418",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "4c48053b24b565a75f0092819aef6a9b",
+        "hash": "36faad9fd97a7653186da36347cb22c4f9b6aeb186ab7bc5e3768a1022358947",
+        "codeId": "ed12960f13c7eaf85b5b18b561d02348a71e5c0d33e7ee7b1ff48cfacaec5454",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3419",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "13733778cc7373ca632b4c983cdae909",
+        "hash": "57e53357f57f0d61f99191402367bc0cb6f9e54e27f0eed405ef22f740558e56",
+        "codeId": "7c818b258c4b191327fc00162de2f24586429aa224860080a6040ef6519fc897",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3420",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a576f61ebf0ac8b1e9f25a890768eb11",
+        "hash": "e2e548beebaea74d1cd359cf36d51e509759d71623e8c584e564ab22c81115fc",
+        "codeId": "e30e979846a97f39ed10984e40c0552498c51a579380b448f7f673bddfa9ea70",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3421",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9ad8f43815acae19714665bf0c580a6f",
+        "hash": "9924c576394bdd975b530cd394be235f72b43f0aa240ff692e83581399aec77c",
+        "codeId": "fcf7732daf11e550d0faa9f2389f73fac92ad088de2609f35f45ee557ac642b1",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3422",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "dc3005e8e8597b26de11d975261859c1",
+        "hash": "c887fbc2bedb1a9bf789364f7e8def236c0e75de5c5b7441216897d95c348ec0",
+        "codeId": "56e894835003f499e973b185fd4e47e12b0e88b2607249111f8af2566a30a784",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3423",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "90c9e314468958f3093136be7f1ba35e",
+        "hash": "4cc7f663ffb5d1119eaabd620e211a3d3580267743f9cd413592261700011722",
+        "codeId": "10c9ea8d4d82d1f670bb09cc23a28ee75a09b6bc82374e64f91c90b4fe736a23",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3424",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "fa7a5fe59dd14ba061b9616056ca96a1",
+        "hash": "849807dcef439a4f916a9aa165cfc050a91f04dfcc2b166b6a48b03f6675c43a",
+        "codeId": "9a0c01bee4bd2150ad9c64cbb2acdff4a7c9e7074a0840786a8bf79a04af067d",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3425",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1fc5b416d897fdb8ea061f76b5606178",
+        "hash": "148ff2d454ab4fc5975e81aea82856d281a9156c5b7c1ec8159d8af089e9e4a9",
+        "codeId": "16527b8e528b88c51ab2ee726302a26d1a3d03814f5204dc787c4c1669ce3498",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3426",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "04286f0d89b69945e4b41645d8b73391",
+        "hash": "4993df58ea882ded8563383d2a34a391a73a1cc500c78d5556ff912a0845d83a",
+        "codeId": "eb0a963599c80453776c07e44ec7d96d49c05da3ec3b4628289bf81210d0cffd",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3427",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "27fab39502c4ce43a22b11036b058ef3",
+        "hash": "6bd7bb6fd5d9ef6253d0bfcae2cc86a633fd297db72d1b9cbb0b3a26065fe519",
+        "codeId": "fc4d74d49418b1a85d6cf4f121a8b3ecbddd9f61845db6d1fa26d3b0ee8837cf",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3428",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "06c63b599bc8e141be33587e353fb106",
+        "hash": "2cd2fd84dbf83c841f5fae062f2f22edec393c0c8715f19f08fb54c04d59c901",
+        "codeId": "39fd4a120ff2e43e11ace3ec601f089238764de43b1477089e566bded44bdecd",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3429",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7c69775dbf4770baf7530705ab917775",
+        "hash": "aa7e477c9bfc167a7b5934f449dd41d712a4aa9a14d53adace6df44e3b39e06f",
+        "codeId": "7c8fa41bb9007fa788c6fa06869588f65d3ddf1e6888ca2a765a85135a3fbdc4",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3430",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "077a454c36b7c0938157c026d522fcaa",
+        "hash": "086d587a93083d7ffbaf52e75ecc5b9c7d043f5dd5ff15919fd244d08203ea77",
+        "codeId": "075351a1804f4a299ae70d9a282b9e1a9d69fef950a9a284705002a36ee04f5e",
+        "issuedAt": "2026-10-13T12:13:49.711Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3431",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "0c6571c729b304db00059e6873abfdf6",
+        "hash": "78adbe89349f7d07847c81ddab830cf077856aa623c7b37362b366e941614ad5",
+        "codeId": "94974f3bf126aab9f319e700d50acd8f4bfb6f8533d89619d735412f109f2dd9",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3432",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "b4b36868c6da0b29e1e6f6b60c5c393f",
+        "hash": "121169c33deba5ee98670667dcf4b68af49fe61b6d4c2a7f4a46213f6e9856a0",
+        "codeId": "c5c2822a67dba9bbdb98e8df546c212309a6c6de31f4b28c16f5d66dab31983a",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3433",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1ab8aacde41f3db5636602f30d9079ea",
+        "hash": "b4a1154b0976a841689b81dd8f693cf9308e0bd25fa8ab1d587e273e5eeb5fd2",
+        "codeId": "175e0931d6fd43e9d4f075e605683ce1e31d9e5e23e55ed8fc74dfdb3160339b",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3434",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1bc0839685f49062277e085ea56050ab",
+        "hash": "3d328e10402766eef6fabed3c6c1c879db8a25a14fe4926170998d60694727a3",
+        "codeId": "56c0ffdd390464e3ab9e0495c2d44cf66fc4eecef9c6a02b7faed7f4a89a5492",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3435",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1b7bf052e09b067394b2727c1dbccb22",
+        "hash": "438a60ab915dbd28f9fb33512f399a9af9f1d1ac64754c65a7dd3df5dd702d6d",
+        "codeId": "aea027b714388a410f0f57db5e646c8128ea3dc2e0dff79029dde94e02ca9bf4",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3436",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "e607268683fe2fdb80039211e069970f",
+        "hash": "7bf9639091e07e697e5f419dabc37e7645b0475d4eb2a5838b7e5a1b66670e40",
+        "codeId": "bdd0dcccedc8f4b23b84cf50c45e82ac557120430717e0cc4082d1635f8951cd",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3437",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7db0029ea30ade2ec41dbbfc9ce50696",
+        "hash": "db073b51651f5a8012db4fd56e48926fbb893aa011a3604faaca36a0694281f8",
+        "codeId": "9a22045690aa1d10e566b20bab735319add991663bcec2dfaf6c860136f9e0dc",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3438",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "db2317f37b392dcb18be105fb4264f4e",
+        "hash": "a9359e4d44a2f65e94450e79f997c11c17192721e21de1720879c50309bdf343",
+        "codeId": "914bf72e146a120130fabb4d2777a00642c5466e5cf6a8220aedc69616508e66",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3439",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "6eb36d62fd950737d0e58daf68448b30",
+        "hash": "a115274d4d9afa0d21d83b386aa13e594d47388a21e3852606f4dbad9305fa16",
+        "codeId": "ef890cd6ea369232964bcec5d5686db2111badd162bdc1c34adc02f6edf72345",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3440",
       "classKey": "34",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "0e695bbbdde63377f27603249f8c0eab",
+        "hash": "6164ec0a45eb47cd8ac82f418fc3b237e3d4b04c536466fb1d0097b210c44112",
+        "codeId": "c937c2727f8267798dd14bc42597e25bbb9a3973ad6fd1d8beafc44109a15b01",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3501",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "3f38e7f3d4b566e721888ca82ce33f1b",
+        "hash": "495abf2ef3889f7c1620a00e94d8e1551b49a0f5667040d907d65b849f1fd151",
+        "codeId": "19564fc87d2612fa493cafbe5e7e35439f56cea224f6dff4094fce48ec99a163",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3502",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7e9606059b24a0899d4fce124e8c6ecf",
+        "hash": "2afc7b5e135ae4063018dc7588b23a3065bbecbcac1b431a9842cd6db42e47ff",
+        "codeId": "d170f4308c424b77a1258f55fa3f56a5752687b3b36640526b6b2fb126ee8f9a",
+        "issuedAt": "2026-10-13T12:13:49.712Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3503",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "5a743fbff7fd1f53c6cbbabc37570a30",
+        "hash": "9b055403e35d1103d5b58585b6d849e05f1a336b07a40d85abba49ccf7e289f7",
+        "codeId": "e92e979fb3bc462d61fd3ffba1e2b3b0718ef9a2f6edf478694b3d57db6bfcef",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3504",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "ed04015f586ea9a3eec763254b03674b",
+        "hash": "e7c294ab9f11d076784e6da69e4340b2de234029bc325b010181741150712904",
+        "codeId": "aa849116c495e5a04436b034a1403f55d540d4d06265386fa274acc0d91d6674",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3505",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "189206d32b739085c5046a4701781c21",
+        "hash": "2c4632759cdd8203cf8255288a7f031a27dcd15da37a9cba8fe99ea3e4595f69",
+        "codeId": "c70eac2c42f14668baffda35a0bafa7a6cf72cfe9af3ca01f6262459e0e55eb6",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3506",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "e6dd189e14e45c0d9419bfae3747f4eb",
+        "hash": "19a5aa1a3c299f7e49529c3a2e8db6cd1cccc9685895889bd074342b3a747afd",
+        "codeId": "54631e11decdfcddeb3cfb69de14d16593890c0fe25c055d4c4078c3566f1ab8",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3507",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "d8c14c5b6426ce2c029929e4dec6455f",
+        "hash": "55752d98885839c31587932ac6a322127b8422d051c17ea5e4641371721fc364",
+        "codeId": "ecab3664f4bacbdc540991ce7cd44459b190d51d8088c5f7d62c83d260e3edc0",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3508",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "24b2bd7e9e8cc18bd6476985c9156ad7",
+        "hash": "88cb7ad55009f29a5606fb7570e824172cd3ce9d662b3faf270e82ec91a78fd2",
+        "codeId": "07819c2c624a55d94abcb4bd0d5dc7ab2091a34d39067b776d026d3da6bfc955",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3509",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "2ab1acaafbd224356b127ce901766008",
+        "hash": "c7809fa745cbc6236b46ac247483f2606c2174924d34af381fe702765f2cd553",
+        "codeId": "daa1a41486bc53846849dee7256a7992ce8f8920e51da50c2625085e6de6c362",
+        "issuedAt": "2026-10-13T12:13:49.713Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3510",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "f2d74ecd09a433266876bdf8a3d5d3ff",
+        "hash": "ff55cb2a18582f879fb015c5d7f63f7d9449511b66a1cadf25aeba06dacfc22e",
+        "codeId": "bb68b3c71fd304d0a828b3c6d55ef53f489965ac4436ee4cc3e7b35f370501fd",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3511",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "828a17e9bf5cb2f056475717cafcf98a",
+        "hash": "f42bca2564c384d462ea479774992074a77564bd4cbec01867b07eab4725ee60",
+        "codeId": "042c7b87436dcbc85d7c323217346c60b2fb1423d8694e5812b72745de83ec9f",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3512",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "a14822d28b304834f9e56f55ed135397",
+        "hash": "9fe7f126f5a0291f6182002f62956c7775a4cb1063ee5c3e8ddf3152ba0655d8",
+        "codeId": "c3b773d0868c0ba3f51424c6c957d6ad0701c9f805fa77606adf3dc87c85d08f",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3513",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "8d9490f8f4e68fc70f47e8b758a50af9",
+        "hash": "33c8ed51d81fc35d73371fc21ec9d6b5ace269bd15aca70917a931c97ae5e2af",
+        "codeId": "d3aa5277162b97924a37e4e41e3095c1a62f120db107bedf86f9b4cf84bc7569",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3514",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "c82412a32ef2624b2a0f60b7237975f2",
+        "hash": "b642bdbd015ce99222a0a997d0357b53082db0da85dafc50fbec91cd37596489",
+        "codeId": "643273387e9dc4d377f36c1589073c8a298ae2a94b66c8e0978088ba476853a8",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3515",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7df320116a7e9585588bb678d8ab5b7e",
+        "hash": "2f0cefe087792695c9b47f5df3a1d0c2c1d3e14cc60b035087328a0d006018b9",
+        "codeId": "de608bd464f393d6f7ac56d0c27ac83771938c8ba3f037bc82b2ddfdfffb2f47",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3516",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "03455875d1defb783155abf670158fb0",
+        "hash": "7c61c3586951ef19776902ee4c6f413efac498248211d802f94f50455158ba25",
+        "codeId": "f12cdd9d57b5fc74771530a66735586c25df2dd779a8a8cc88fbe7589871382b",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3517",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "851ca45bedb24432e02fbad925a5f0e2",
+        "hash": "a682b3d87579188a26ab53bd43a7491c486985aee609cdc61021ebaf6949d6cf",
+        "codeId": "530f29c11c580ce61b7c8e809fce250f59d4a22832921c3e772de6ea67e3f446",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3518",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "fe76abbfb2847592ee28592255e4914a",
+        "hash": "bab467827a2924234e06d402aedbda98fbe5007cfa0e9c11715e9347f72b14a4",
+        "codeId": "d9a0315a406185b2868fa1d5515e4ca62444a9e6d3bf09f301e06163d38d2c13",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3519",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7fb70f12f2228e0c0ac34b1614eef4d9",
+        "hash": "a9392431d260dab5bbb521fb3462d840bf21a2228266c91e7e8baf61ac7217e9",
+        "codeId": "8efc854332e515800bfcc36bf147d8014fb18c412f95d44b6e127dd4d6d6be12",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3520",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "8a9b37c64ba14d3fdc8d7738c4ba804b",
+        "hash": "a937cb342e4a980fb289481bbbc2538745fa186cb8a9cd65c67b6955894ea920",
+        "codeId": "f8e83cfccbdbd58fc149f6c30f18e4ec78af8f6620dd2d8fe95aca6d8b5dc63c",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3521",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "7f47d50bb689fb65a42b59904b04bf8e",
+        "hash": "87cbd23ba22e45a339ae05a87fc9a93257e5153abcc887db7499ba1e3041ad81",
+        "codeId": "fcff7b47c11fda8f1acea2a450375d8f7fc6d92efbc7662ab70f9e8e31615fc1",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3522",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9a0896e616d2929934adaf8d173f24c4",
+        "hash": "02db5eaf7fd6502842b93f51bd0385d3206033c19f1a4f6a79aad6ac77a13ba2",
+        "codeId": "3f68dd3f36a5157e9c0467a6c2ba1508a693b240b54c5f7eca086310eab819f0",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3523",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "70d51a6cef9d9f64e60ce02077ce2c3e",
+        "hash": "51a9c492b60c97efe3d727a669f409833e21ebcf9c76e325b47feedb0a541d1d",
+        "codeId": "65ac1b3e9600f9a3b2956c3e074722d050e9aeb1f978949e2f7e67efc098433f",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3524",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "57292e5ae2acde59cb51cc0d7bb419d8",
+        "hash": "61fb775fdfe7673b7dc5d0cde242cc761543479abdcab153341cdb7d6d1168fc",
+        "codeId": "d61a266d15cc4fb0cbf3e091ef5a85d2b7ab35bfd13002174f1440c6fa306190",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3525",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "4c3542a97d0a4f3984004e8d554fafa1",
+        "hash": "badbe9ce5be34a702086bc19d2085818e3c111e6bf0886e5784c1c9221f5e544",
+        "codeId": "4b465ee510e4f4560414a76dee5473dd2e8e58c24711c2b271e000d957bb7ed8",
+        "issuedAt": "2026-10-13T12:13:49.714Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3526",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "d7891f73a9be727d863955a8bf68815a",
+        "hash": "b3c86c36414c7866be90b6ad83a8689f9862900cb8f5d05b1e7ea118338d724a",
+        "codeId": "2d4ab24bdd8f999621566bdba2076bb831c51b995b0db419d9001b9e39ce9db2",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3527",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1152facac2c687ff9f118bf66aaacb9c",
+        "hash": "718e91368fe25d4c37d39914aedd13685698e7b74bb79f3f760981ea1f6ab262",
+        "codeId": "b46f1bf331468b9ae71362b615c0c4736b3dfd4b142974dc6ec427d0b179d689",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3528",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "243e6ab049ef4ccc02ae9fc434e1b7f8",
+        "hash": "f78ce2d13c1e6c8137aed2d68ba78129d2080ecbe0718ef47e9111b636b37be1",
+        "codeId": "16eea228ca30607095b457d449c7519bf70dcefeeaf99fe9941c10158a360a03",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3529",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "e2c56933b57f4ac3d7d3ba526989f679",
+        "hash": "ac524a9c5d3a7814517a2606a62cb1aad0cdfdc48bc923b68e82046a08c3136a",
+        "codeId": "b2dbcbfb9f81622aa394fea3679f6e2e93673c121e528ec6b37bc4e825274e74",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3530",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1f7bfc572adfc59a555f66f8f0288c9a",
+        "hash": "335784a39f1825c290c03dfb6bd9ef963768bce0a990daccc7d86982d3673c38",
+        "codeId": "aae3b4365cfadd7c8454f305de5350fe7ab8eb3e2bf3ea18ee227a47d5a2a9be",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3531",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "411d90f0c0b5ff55e312ffa5136825d2",
+        "hash": "bf1d1e9b205871cbf4edb57bdd30b5409ff039a0cd95109431368727c97b7db8",
+        "codeId": "76b832d859a976168523b1d0363fb1b00786a36e54b2e3498e0306ef0cf8b308",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3532",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "b092ce41bd134425e49650bff735d346",
+        "hash": "98601037003c1a953802bc8ea4e012a3328d01cc8534619d2f412eb946876051",
+        "codeId": "55da78664a1efca765675e3aa9c108cc1a5841c5ed39a24abdf9abb4e0cc87ac",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3533",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "ea2e1082db81020f236608efaa04f715",
+        "hash": "a7f5220374282bd552a6e658e73bbb78cb8113e4233541f74c62f26b157b43b2",
+        "codeId": "e095b42e5d53a6c13a6511e106e4de6accaf8104f55c372957d17d19f80615d4",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3534",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "eddc380a6e829f1f1b04effcc215500b",
+        "hash": "0397c93669b69ff66fd755c960048463e78da693711bb782dffd0cc64885fc7e",
+        "codeId": "e7afa83d9acda4b9ef39a707a355574c7a17b6b3fcc511ceb1b136cf46283d6a",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3535",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "736f6aba5d32647de70a6c631921ad05",
+        "hash": "84f38c5e161b61a4d82d7b964e5a3c924dd274164680ee856e997de9bb884ea1",
+        "codeId": "6f9c19bc12e8d4781d6e332aac90f35a2f5d40cf87672e2e5fa239bd98081833",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3536",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "b9b1b87d23b2502c633daa49b42dba65",
+        "hash": "77764546c0666cd63ee00a622b6367df7c6c99fad49d74911a0a5712ff9129c2",
+        "codeId": "8ff8f88f04a13dd969490691cfa3c1a9026832920208bbb850b4e3cdcbc3e233",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3537",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "9b76c80bc1868d2b11336bd2392f1d84",
+        "hash": "7f1d5b42ac28821368c2d05e9eaa63b9e7ca834b3d295ec7029da4a38a109f61",
+        "codeId": "33b7a3f63525ca77169a34577ce6acb75e4c51d3889bf62fa77627db80029e30",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3538",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "93426a2c72649150912e1c6f770b5c45",
+        "hash": "73e8904408d6014fbe2b41083e4a7318155d6b66562c5aa4dbe37a7d0febca60",
+        "codeId": "d307dd946ac0e4b3da8fde4962dcb222e277878ff8d67a677dbe138007bd6bee",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3539",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "1f5691eeb47da2fd8e12d03a09cc10e5",
+        "hash": "7fc3dbcacf37546857529e1d9e931ac8afd6645e596bf40bd5c3449657d65f11",
+        "codeId": "2fd88f67db407804209aa7bb3a5890bd1e44483a358bb0769c5ae8b75a4bb16c",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     },
     {
       "studentCode": "3540",
       "classKey": "35",
-      "credential": null,
-      "qrStored": false
+      "credential": {
+        "salt": "d36fc3da9b86605c0f71aec4b421bc6e",
+        "hash": "0aface06557ca6f0a42a2fbc69cbe2cce5d8cff2c08b4e9baf1f684ae7b7b429",
+        "codeId": "fd8953e0467e8ca86a6876c3001ad2b57cec3bf1987b1e15480d0454342954c9",
+        "issuedAt": "2026-10-13T12:13:49.715Z"
+      },
+      "qrStored": true
     }
   ]
 }
