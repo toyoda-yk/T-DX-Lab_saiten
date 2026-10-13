@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.25.6" rel="stylesheet"/>
+<link href="css/style.css?v=1.25.7" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.25.6</span>
+<span class="tdx-version-pill">v1.25.7</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -92,12 +92,12 @@
 <div class="annual-access-head-v122">
 <div><span class="section-eyebrow">ANNUAL ACCESS</span><h3>STEP 2　アクセスキー・QRカードを発行</h3><p class="muted small">名簿登録後は、①アクセスキー発行 → ②QRカードPDF の2操作で完了です。</p></div>
 <div class="actions compact-actions annual-primary-actions">
-<button class="orange" id="generateAnnualCodesBtn">① アクセスキーを発行</button>
+<button class="orange" id="generateAnnualCodesBtn">① アクセスキーを準備</button>
 <button class="teacher-action" disabled="" id="printAnnualCardsBtn">② QRカードPDFを作成</button>
 </div>
 </div>
 <div class="annual-secondary-row">
-<div class="info-strip teacher-strip" id="annualMasterStatus"><span>QR</span> 名簿登録後、未発行者のアクセスキーを発行してください。</div>
+<div class="info-strip teacher-strip" id="annualMasterStatus"><span>QR</span> 名簿登録後、アクセスキーを準備してください。未発行者だけでなく、QR再印刷情報がない生徒も自動で整えます。</div>
 </div>
 <div class="annual-code-preview" id="annualCodePreview"><div class="notice small">初回は登録した生徒全員のQRカードが作成されます。PDFを印刷して配布すれば完了です。紛失時は「QRを再印刷する」から1人ずつ再印刷できます。</div></div>
 
@@ -461,8 +461,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.25.6"></script>
-<script src="js/teacher.js?v=1.25.6"></script>
+<script src="js/common.js?v=1.25.7"></script>
+<script src="js/teacher.js?v=1.25.7"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

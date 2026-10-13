@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.6';
+const APP_VERSION='1.25.7';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function examStoredStatus(exam){
@@ -363,7 +363,7 @@ async function saveRoster(){
     renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();loadPublishExam();
     $('rosterMsg').className='notice small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。生徒画面へ反映しています…`;
     await syncUsersToPublicData([]);
-    $('rosterMsg').className='success small';$('rosterMsg').textContent=`✓ ${codes.length}人の名簿を登録し、生徒認証データへ自動反映しました。未発行者は次に年間アクセスキーを発行してください。`;
+    $('rosterMsg').className='success small';$('rosterMsg').textContent=`✓ ${codes.length}人の名簿を登録し、生徒認証データへ自動反映しました。次にアクセスキーを準備してください。`;
   }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message||String(e)}
 }
 function renderRosterSummary(){
@@ -388,7 +388,7 @@ function individualStudentRows(){
 }
 function individualAccessState(u){
   if(!u.credential)return '<span class="master-status unissued">○ 未発行</span>';
-  return accessSecretMap().has(u.studentCode)||u.qrStored?'<span class="master-status ready">✓ 発行済・GAS保管</span>':'<span class="master-status missing">△ QR保管庫への移行必要</span>';
+  return accessSecretMap().has(u.studentCode)||u.qrStored?'<span class="master-status ready">✓ 発行済・再印刷可能</span>':'<span class="master-status missing">△ 要再発行</span>';
 }
 function renderIndividualStudents(){
   const root=$('individualStudentTable');if(!root)return;
@@ -507,10 +507,14 @@ async function createUniqueAccessCode(){
 }
 async function generateAnnualCodes(regenerateAll=false){
   if(!usersData.users.length){alert('先に生徒名簿を登録してください。');return}
-  if(regenerateAll&&!confirm('全生徒の年間アクセスキーを再発行します。以前のQRカードはすべて無効になります。\n\n旧バージョンの公開履歴にQR暗号が残っている場合のセキュリティ更新にも使えます。\n\nよろしいですか？'))return;
+  if(regenerateAll&&!confirm('全生徒の年間アクセスキーを再発行します。以前のQRカードはすべて無効になります。\n\nよろしいですか？'))return;
+  const repairTargets=!regenerateAll?(usersData.users||[]).filter(u=>!!u.credential&&!u.qrStored):[];
+  if(repairTargets.length){
+    const ok=confirm(`${repairTargets.length}人はアクセスキー自体は発行済みですが、QR再印刷用の保管情報がありません。\n\nこの生徒だけ新しいアクセスキーへ更新します。対象生徒の古いQRカードは使えなくなるため、処理後に「② QRカードPDFを作成」で新しいカードを印刷してください。\n\n続けますか？`);
+    if(!ok)return;
+  }
   try{
     await ensureSystemAdminAccess();
-    if(!regenerateAll&&legacyQrPendingCount()>0)throw new Error('旧バージョンのQR情報が残っています。本番前にやり直す場合は「完全初期化（年度維持）」を実行してください。引き継ぐ場合は「全員のアクセスキーを再発行」で旧キーを無効化してください。');
     annualSecrets=[];
     if(regenerateAll){
       accessVault=[];
@@ -518,24 +522,27 @@ async function generateAnnualCodes(regenerateAll=false){
       (usersData.users||[]).forEach(u=>{delete u.qrSecret;u.qrStored=false});
     }
     for(const u of usersData.users){
-      if(u.credential&&!regenerateAll)continue;
+      const needsIssue=!u.credential;
+      const needsRepair=!!u.credential&&!u.qrStored;
+      if(!regenerateAll&&!needsIssue&&!needsRepair)continue;
       const {pretty,codeId}=await createUniqueAccessCode(),v=await TDX.makeVerifier(pretty);
       u.credential={salt:v.salt,hash:v.hash,codeId,issuedAt:new Date().toISOString()};
+      delete u.qrSecret;
       u.qrStored=true;
       annualSecrets.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
     }
     mergeIntoAccessVault(annualSecrets);
     if(annualSecrets.length)await syncUsersToPublicData(annualSecrets);
-    renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();
+    renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();renderIndividualStudents();
     if(annualSecrets.length){
       $('printAnnualCardsBtn').disabled=false;updateAnnualMasterButtons();
       $('rosterMsg').className='success small';
-      $('rosterMsg').textContent=`✓ ${annualSecrets.length}人分の年間アクセスキーを発行し、生徒認証データへ自動反映しました。平文キーはGAS側だけに保管しています。QRカードを印刷してください。`;
+      $('rosterMsg').textContent=`✓ ${annualSecrets.length}人分のアクセスキーを準備し、生徒認証データへ自動反映しました。QRカードPDFを作成して配布してください。`;
     }else{
-      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員すでに年間アクセスキー発行済みです。QRをなくした生徒は「QRカード再印刷」から再印刷できます。';
+      $('rosterMsg').className='notice small';$('rosterMsg').textContent='全員のアクセスキーとQR再印刷情報は準備済みです。QRをなくした生徒は「QRカード再印刷」から再印刷できます。';
     }
   }catch(e){
-    $('rosterMsg').className='error small';$('rosterMsg').textContent=`アクセスキーを発行できませんでした：${e.message||e}`;
+    $('rosterMsg').className='error small';$('rosterMsg').textContent=`アクセスキーを準備できませんでした：${e.message||e}`;
   }
 }
 function renderAnnualSecrets(){
@@ -560,9 +567,9 @@ function renderAnnualMasterStatus(st=annualMasterState()){
   if(!st.total){el.className='info-strip teacher-strip';el.innerHTML='<span>QR</span> まず生徒名簿を登録してください。年間CSVの作成・読込は不要です。';return}
   if(st.complete){el.className='info-strip teacher-strip success-strip';el.innerHTML=`<span>READY</span> 登録 <strong>${st.total}人</strong> ／ アクセスキー発行済 <strong>${st.issued}人</strong>。QR再印刷は一般教員画面からいつでも行えます。`;return}
   const parts=[`登録 ${st.total}人`,`発行済 ${st.issued}人`,`未発行 ${st.unissued}人`];
-  if(st.missing)parts.push(`QR保管確認 ${st.missing}人`);
+  if(st.missing)parts.push(`要再発行 ${st.missing}人`);
   el.className='info-strip teacher-strip warning-strip';
-  el.innerHTML=`<span>NEXT</span> ${parts.join(' / ')}。未発行者がいれば「① 未発行者にアクセスキーを発行」を押してください。`;
+  el.innerHTML=`<span>NEXT</span> ${parts.join(' / ')}。「① アクセスキーを準備」を押してください。未発行者には新規発行し、再印刷情報がない生徒だけ安全に再発行します。`;
 }
 
 function refreshAccessVaultClassFilter(){
@@ -581,7 +588,7 @@ function currentManagedUsers(){
 function renderAccessVaultSummary(){
   const root=$('accessVaultSummary');if(!root)return;
   const st=annualMasterState();
-  root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">QR再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">管理者設定待ち</div><div class="value">${st.missing+st.unissued}</div></div>`;
+  root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">QR再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">QR再印刷不可</div><div class="value">${st.missing+st.unissued}</div></div>`;
   const cache=$('qrCacheStatus');if(cache){cache.className='qr-cache-status '+(st.known?'ready':'');cache.innerHTML=st.known?`<span>READY</span> ${st.known}人をそのまま再印刷できます`:'<span>CHECK</span> システム管理者の初期設定が必要です';}
 }
 function renderAccessVaultManager(){
@@ -592,7 +599,7 @@ function renderAccessVaultManager(){
   root.innerHTML=`<div class="table-shell"><table><thead><tr><th>4桁番号</th><th>クラス</th><th>状態</th><th>操作</th></tr></thead><tbody>${rows.map(u=>{
     const secret=m.get(u.studentCode),issued=!!u.credential;
     const available=issued&&!!u.qrStored;
-    const state=!issued?'<span class="master-status unissued">○ 未発行</span>':available?'<span class="master-status ready">✓ 再印刷可能</span>':'<span class="master-status missing">△ 管理者設定待ち</span>';
+    const state=!issued?'<span class="master-status unissued">○ 未発行</span>':available?'<span class="master-status ready">✓ 再印刷可能</span>':'<span class="master-status missing">△ 管理者に確認</span>';
     return `<tr><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td><button type="button" class="teacher-action qr-one-reprint" data-qr-reprint="${esc(u.studentCode)}" ${available?'':'disabled'}>QRを再印刷</button></td></tr>`
   }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。一般教員が行うのは「同じQRの再印刷」だけです。アクセスキーを変更する必要がある場合はシステム管理者へ連絡してください。</p>`;
   root.querySelectorAll('[data-qr-reprint]').forEach(b=>b.onclick=()=>reprintOneCard(b.dataset.qrReprint));
@@ -2357,7 +2364,7 @@ const OPERATION_GUIDES={
     title:'システム管理者が見る3つの場所',
     intro:'管理者画面は「年度初め」「年度途中」「システム管理」に分けています。通常は年度初めの作業が終われば、頻繁に触る必要はありません。',
     steps:[
-      ['年度初め','名簿 → アクセスキー → QR','クラスごとの4桁番号を登録し、未発行者へアクセスキーを発行してQRカードPDFを印刷します。'],
+      ['年度初め','名簿 → アクセスキー → QR','クラスごとの4桁番号を登録し、アクセスキーを準備してQRカードPDFを印刷します。'],
       ['年度途中','生徒の変更','転入・4桁番号訂正・削除があるときだけ生徒個別管理を使います。'],
       ['システム管理','リセット・年度更新','本番前の完全初期化、年度末の年度更新、漏えい時の全員キー再発行だけを扱います。']
     ]
@@ -2378,7 +2385,7 @@ const OPERATION_GUIDES={
     intro:'年間マスターCSVは不要です。画面を上から順に3STEPだけ進めます。',
     steps:[
       ['STEP 1','年度名簿を登録','クラスごとに「最初の4桁番号」と「最後の4桁番号」を登録します。'],
-      ['STEP 2','アクセスキーを発行','「アクセスキーを発行」を押すと、未発行の生徒だけに年間アクセスキーが生成されます。'],
+      ['STEP 2','アクセスキーを準備','「アクセスキーを準備」を押すと、未発行者へ新規発行します。QR再印刷情報がない生徒がいる場合は、その生徒だけ新しいキーへ更新します。'],
       ['','QRカードPDFを作成','続けて「QRカードPDFを作成」を押します。今回発行した生徒分のカードが作られます。印刷して配布します。'],
       ['STEP 3','1枚だけ動作確認','発行したQRカードで生徒画面へ入り、ログインできることを確認します。']
     ],
