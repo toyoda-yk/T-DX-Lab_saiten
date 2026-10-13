@@ -8,8 +8,32 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.7';
+const APP_VERSION='1.25.8';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
+
+function auditEvent(operation,target='',detail=''){
+  // 操作ログは学校OEN認証済みのGASへ記録する。画面操作は止めない。
+  TDX.gasJson({action:'logEvent',operation,target,detail},8000).catch(()=>{});
+}
+function formatAuditTime(value){
+  const t=Date.parse(String(value||''));
+  if(!Number.isFinite(t))return String(value||'');
+  return new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date(t));
+}
+async function loadOperationLogs(){
+  const btn=$('refreshOperationLogBtn'),old=btn?.textContent||'最新50件を表示';
+  if(btn){btn.disabled=true;btn.textContent='読込中…'}
+  const body=$('operationLogBody'),msg=$('operationLogMsg');
+  try{
+    const result=await TDX.gasJson({action:'listOperationLogs',limit:50},15000);
+    if(!result?.ok)throw new Error(result?.message||'操作ログを読み込めませんでした。');
+    const rows=Array.isArray(result.logs)?result.logs:[];
+    if(body)body.innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(formatAuditTime(r.time))}</td><td><strong>${esc(r.operation||'')}</strong><small>${esc(r.role||'')}</small></td><td>${esc(r.target||'—')}</td><td>${esc(r.email||'')}</td><td><span class="audit-result ${r.result==='成功'?'ok':'ng'}">${esc(r.result||'')}</span></td><td>${esc(r.detail||'')}</td></tr>`).join(''):'<tr><td colspan="6" class="muted">まだ操作ログはありません。</td></tr>';
+    if(msg){msg.className='small muted';msg.textContent=`最新${rows.length}件を表示しています。全件は共有スプレッドシートの「操作ログ」シートで確認できます。`;}
+  }catch(e){
+    if(msg){msg.className='error small';msg.textContent=`操作ログを読み込めませんでした：${e.message||e}`;}
+  }finally{if(btn){btn.disabled=false;btn.textContent=old}}
+}
 
 function examStoredStatus(exam){
   const s=String(exam?.status||'').toLowerCase();
@@ -208,6 +232,7 @@ function bind(){
   if($('annualBackupBtn'))$('annualBackupBtn').onclick=downloadAnnualBackup;
   if($('currentYearResetBtn'))$('currentYearResetBtn').onclick=currentYearReset;
   if($('annualResetBtn'))$('annualResetBtn').onclick=annualReset;
+  if($('refreshOperationLogBtn'))$('refreshOperationLogBtn').onclick=loadOperationLogs;
   $('accessVaultClassFilter').onchange=renderAccessVaultManager;
   $('qrStudentSearch').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);renderAccessVaultManager()});
 
@@ -268,6 +293,7 @@ async function adminLogin(){
     if(!who?.ok)throw new Error(who?.message||'OEN認証を確認できません。');
     if(!who.teacher)throw new Error(`このOENアカウント（${who.user||'不明'}）には教員管理権限がありません。`);
     teacherSessionEmail=who.user||'';
+    auditEvent('教員画面ログイン','教員管理画面','OEN認証・共有スプレッドシート編集権限を確認');
     accessVault=[];
     $('adminGate').classList.add('hidden');
     $('adminApp').classList.remove('hidden');
@@ -290,7 +316,8 @@ async function systemAdminLogin(){
   const btn=$('systemAdminLoginBtn'),old=btn?.textContent||'OEN権限を確認して開く';
   if(btn){btn.disabled=true;btn.textContent='確認中…'}
   try{
-    await ensureSystemAdminAccess();
+    const who=await ensureSystemAdminAccess();
+    auditEvent('システム管理者ログイン','システム管理','システム管理者権限を確認');
     systemAdminUnlocked=true;
     accessVault=[]; // QRキー全件は読み込まない。再印刷時に必要な1人分だけGASから取得する。
     $('systemAdminMsg').className='success small';$('systemAdminMsg').textContent='OENのシステム管理者権限を確認しました。';
@@ -362,7 +389,7 @@ async function saveRoster(){
     accessVault=accessVault.filter(x=>codes.includes(x.studentCode));
     renderRosterSummary();renderIndividualStudents();renderAccessVaultManager();loadPublishExam();
     $('rosterMsg').className='notice small';$('rosterMsg').textContent=`${codes.length}人を名簿に登録しました。生徒画面へ反映しています…`;
-    await syncUsersToPublicData([]);
+    await syncUsersToPublicData([],{operation:'年度名簿登録',target:`${codes.length}人`,detail:`クラス ${[...new Set(codes.map(x=>x.slice(0,2)))].sort().join('・')}組`});
     $('rosterMsg').className='success small';$('rosterMsg').textContent=`✓ ${codes.length}人の名簿を登録し、生徒認証データへ自動反映しました。次にアクセスキーを準備してください。`;
   }catch(e){$('rosterMsg').className='error small';$('rosterMsg').textContent=e.message||String(e)}
 }
@@ -425,7 +452,7 @@ async function addIndividualStudent(){
     if(input)input.value='';
     syncRosterAfterIndividualChange();
     setIndividualStudentMessage(`${code} を追加しました。生徒認証データへ反映しています…`,'notice');
-    await syncUsersToPublicData([]);
+    await syncUsersToPublicData([],{operation:'生徒追加',target:code,detail:`${code.slice(0,2)}組へ追加`});
     setIndividualStudentMessage(`✓ ${code} を追加し、生徒認証データへ自動反映しました。アクセスキーはまだ未発行です。`,'success');
   }catch(e){setIndividualStudentMessage(`追加できませんでした：${e.message||e}`,'error')}
 }
@@ -465,7 +492,7 @@ async function editIndividualStudent(oldCode){
     usersData.users.sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
     syncRosterAfterIndividualChange();
     setIndividualStudentMessage(`${oldCode} → ${newCode} を反映しています…`,'notice');
-    await syncUsersToPublicData(secret?[{...secret,studentCode:newCode,classKey:newCode.slice(0,2)}]:[]);
+    await syncUsersToPublicData(secret?[{...secret,studentCode:newCode,classKey:newCode.slice(0,2)}]:[],{operation:'4桁番号変更',target:`${oldCode} → ${newCode}`,detail:'生徒認証情報を更新'});
     if(touched)await syncExamsToPublicData();
     setIndividualStudentMessage(`✓ ${oldCode} を ${newCode} に変更し、自動反映しました。${issued?' 新しい4桁番号でQRカードを再印刷してください。':''}`,'success');
   }catch(e){setIndividualStudentMessage(`変更の反映に失敗しました：${e.message||e}`,'error')}
@@ -482,7 +509,7 @@ async function deleteIndividualStudent(code){
     const touched=replaceExamStudentTarget(code,'');
     syncRosterAfterIndividualChange();
     setIndividualStudentMessage(`${code} を削除し、生徒画面へ反映しています…`,'notice');
-    await syncUsersToPublicData([]);
+    await syncUsersToPublicData([],{operation:'生徒削除',target:code,detail:'年度名簿・生徒認証情報から削除'});
     if(touched)await syncExamsToPublicData();
     setIndividualStudentMessage(`✓ ${code} を削除し、自動反映しました。Googleフォームに既に届いている回答はそのまま残ります。`,'success');
   }catch(e){setIndividualStudentMessage(`削除の反映に失敗しました：${e.message||e}`,'error')}
@@ -532,7 +559,7 @@ async function generateAnnualCodes(regenerateAll=false){
       annualSecrets.push({studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey});
     }
     mergeIntoAccessVault(annualSecrets);
-    if(annualSecrets.length)await syncUsersToPublicData(annualSecrets);
+    if(annualSecrets.length)await syncUsersToPublicData(annualSecrets,{operation:regenerateAll?'全員アクセスキー再発行':'アクセスキー準備',target:`${annualSecrets.length}人`,detail:regenerateAll?'漏えい等に備え全員分を再発行':'未発行・要再発行の生徒を準備'});
     renderAnnualSecrets();renderAccessVaultManager();renderRosterSummary();renderIndividualStudents();
     if(annualSecrets.length){
       $('printAnnualCardsBtn').disabled=false;updateAnnualMasterButtons();
@@ -613,6 +640,7 @@ async function reprintOneCard(code){
       secret={studentCode:String(result.entry.studentCode||code),accessCode:String(result.entry.accessCode||'').toUpperCase(),classKey:String(result.entry.classKey||code.slice(0,2))};
     }
     await generateAccessCardsPdf([secret],`T-DX_Lab_QRカード_${code}_再印刷.pdf`);
+    auditEvent('QR再印刷',code,'アクセスキーは変更せず同じQRカードを再生成');
     setAccessMessage(`${code} のQRカードを再印刷しました。アクセスキーは変更していません。`,'success');
   }catch(e){
     setAccessMessage(`${code} のQRカードを再印刷できませんでした：${e.message||e}`,'error');
@@ -628,7 +656,7 @@ async function reissueOneStudent(code){
     u.qrStored=true;
     annualSecrets=[{studentCode:u.studentCode,accessCode:pretty,classKey:u.classKey}];
     mergeIntoAccessVault(annualSecrets);
-    await syncUsersToPublicData(annualSecrets);
+    await syncUsersToPublicData(annualSecrets,{operation:'アクセスキー再発行',target:code,detail:'旧QRを無効化し新しいアクセスキーを発行'});
     renderAnnualSecrets();renderIndividualStudents();renderAccessVaultManager();renderRosterSummary();
     $('printAnnualCardsBtn').disabled=false;
     setIndividualStudentMessage(`✓ ${code} のアクセスキーを再発行し、生徒認証データへ自動反映しました。今回発行分QRカードを印刷してください。`,'success');
@@ -1530,6 +1558,7 @@ function registerExam(){
     if(exam.formSubmission&&!exam.formSubmission.testConfirmed)warnings.push('Googleフォームのテスト送信は設定済みですが、受信確認のチェックがまだありません');
     if(warnings.length&&!confirm(`公開前に確認したい項目があります。\n\n${warnings.join('\n')}\n\nこのまま非公開の試験データとして登録しますか？`))return;
     exams.push(exam);allExamData.exams=exams;refreshExamSelects(exam.id);
+    auditEvent('試験登録',exam.title,`教科：${exam.subject} / ${exam.questions.length}解答欄 / 非公開で登録`);
     const formStatus=exam.formSubmission?' / Googleフォーム連携済み':' / Googleフォーム連携なし';
     $('draftExamMsg').className='success small';$('draftExamMsg').innerHTML=`<strong>✓ 模範解答・採点設定の登録が完了しました。</strong><br>試験：${esc(exam.title)} / 試験ID：<code>${esc(exam.id)}</code>${formStatus}<br><span class="publish-next-warning">⚠ まだ生徒には公開されていません。</span><div class="actions compact-actions"><button type="button" id="goPublishFromRegister" class="orange">受験者・公開設定へ進む</button></div>`;
     $('publishSubjectSelect').value=exam.subject;refreshPublishSelectors(exam.id);loadPublishExam();renderExamExportSummary();
@@ -1602,6 +1631,7 @@ async function analyzeFile(){
     $('classFilter').innerHTML='<option value="ALL">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
     $('questionSort').value='rate-asc';$('questionFilter').value='all';$('studentSort').value='score-desc';
     $('analysisOutput').classList.remove('hidden');closeStudentAnalysisDetail();renderAnalysis();
+    auditEvent('回答分析',analysisExam.title,`採用 ${analysisRows.length}人 / 重複 ${analysisMeta.duplicates}件 / テスト送信除外 ${analysisMeta.tests}件`);
   }catch(e){console.error(e);alert(e.message||'回答ファイルの分析中にエラーが発生しました。')}
 }
 function renderAnalysis(){
@@ -1769,8 +1799,14 @@ async function ensureTeacherPublishAccess(){
   if(!who.githubConfigured)throw new Error('公開連携の初期設定が完了していません。システム管理者へ連絡してください。');
   return who;
 }
-async function postGasSync(action,payload,token=newGasSyncToken()){
-  await postAnalysisGasForm({action,payload:JSON.stringify(payload),syncToken:token});
+async function postGasSync(action,payload,token=newGasSyncToken(),auditMeta=null){
+  const fields={action,payload:JSON.stringify(payload),syncToken:token};
+  if(auditMeta?.operation){
+    fields.auditOperation=auditMeta.operation;
+    fields.auditTarget=auditMeta.target||'';
+    fields.auditDetail=auditMeta.detail||'';
+  }
+  await postAnalysisGasForm(fields);
   return await waitForGasSync(token);
 }
 function currentExamBundleForSync(){
@@ -1782,12 +1818,12 @@ function currentExamBundleForSync(){
   allExamData.updatedAt=new Date().toISOString();
   return allExamData;
 }
-async function syncExamsToPublicData(){
+async function syncExamsToPublicData(auditMeta=null){
   await ensureTeacherPublishAccess();
-  return await postGasSync('publishExams',currentExamBundleForSync());
+  return await postGasSync('publishExams',currentExamBundleForSync(),newGasSyncToken(),auditMeta);
 }
 
-async function syncUsersToPublicData(vaultEntries=[]){
+async function syncUsersToPublicData(vaultEntries=[],auditMeta=null){
   const who=await ensureSystemAdminAccess();
   if(!who.githubConfigured)throw new Error('公開連携の初期設定が完了していません。システム管理者へ連絡してください。');
   const missingLegacy=legacyQrPendingCount();
@@ -1795,7 +1831,7 @@ async function syncUsersToPublicData(vaultEntries=[]){
     throw new Error(`旧バージョンのQR情報が ${missingLegacy}人分残っています。本番前にやり直す場合は「完全初期化（年度維持）」を実行してください。`);
   }
   const payload={bundle:currentUsersBundleForSync(),vaultEntries:vaultEntries||[]};
-  const result=await postGasSync('publishUsers',payload);
+  const result=await postGasSync('publishUsers',payload,newGasSyncToken(),auditMeta);
   usersData.version=7;
   usersData.updatedAt=new Date().toISOString();
   const stored=new Set(accessVault.map(x=>x.studentCode));
@@ -1809,7 +1845,7 @@ async function manualSyncUsers(){
   const btn=$('syncRosterUsersBtn'),old=btn?.textContent||'生徒データを反映';
   if(btn){btn.disabled=true;btn.textContent='反映中…'}
   try{
-    const result=await syncUsersToPublicData([]);
+    const result=await syncUsersToPublicData([],{operation:'生徒認証データ手動反映',target:`${usersData.users.length}人`,detail:'管理者による手動再反映'});
     setIndividualStudentMessage(`✓ 生徒認証データを自動反映しました（${result.users??usersData.users.length}人）。平文アクセスキーはGitHubへ送っていません。`,'success');
   }catch(e){
     setIndividualStudentMessage(`反映できませんでした：${e.message||e}`,'error');
@@ -2083,6 +2119,7 @@ function cloneCurrentExam(){
     clone.formSubmission.inheritedFrom=exam.id;
   }
   exams.push(clone);allExamData.exams=exams;
+  auditEvent('試験複製',clone.title,`複製元：${exam.title}`);
   refreshExamSelects(clone.id);
   if($('publishSubjectSelect'))$('publishSubjectSelect').value=clone.subject||'';
   refreshPublishSelectors(clone.id);if($('publishExamSelect'))$('publishExamSelect').value=clone.id;
@@ -2185,7 +2222,7 @@ async function applyPublish(){
   $('publishMsg').innerHTML=`<strong>公開設定を保存しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>生徒用の公開データを更新しています…</span>`;
 
   try{
-    const result=await syncExamsToPublicData();
+    const result=await syncExamsToPublicData({operation:'公開設定反映',target:exam.title,detail:`${effective} / 対象 ${selected.length}人${windowText?` / ${windowText}`:''}`});
     $('publishMsg').className='success small';
     $('publishMsg').innerHTML=`<strong>✓ 生徒画面へ反映しました。</strong> ${esc(effective)} / 対象 ${selected.length}人${windowText?` / ${esc(windowText)}`:''}<br><span>公開期間の延長・短縮も、このボタンだけで反映されます。システム側へ自動反映されます。</span>`;
   }catch(e){
@@ -2219,7 +2256,7 @@ Googleフォーム側に保存済みの回答は削除されません。`);
   $('publishMsg').className='notice small';
   $('publishMsg').innerHTML=`<strong>「${esc(exam.title)}」を削除しました。</strong><br>生徒用試験データへ反映しています…`;
   try{
-    await syncExamsToPublicData();
+    await syncExamsToPublicData({operation:'試験削除',target:exam.title,detail:'試験設定・模範解答・配点・公開設定を削除'});
     $('publishMsg').className='success small';
     $('publishMsg').innerHTML=`<strong>✓ 「${esc(exam.title)}」を生徒用試験データから削除しました。</strong><br>※すでに公開済みの集計分析は別データのため残ります。必要な場合は分析公開管理から扱います。`;
   }catch(e){

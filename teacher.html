@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.25.7" rel="stylesheet"/>
+<link href="css/style.css?v=1.25.8" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.25.7</span>
+<span class="tdx-version-pill">v1.25.8</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -143,7 +143,14 @@
 </div>
 <div class="notice small"><strong>年度更新：</strong>完全初期化と同じデータを消したうえで、システム年度も更新先年度へ変更します。トークンを年度ごとに交換する場合は、年度更新後にGitHubで旧トークンを削除し、Apps Scriptの <code>setupGitHubConnection</code> から新トークンを登録してください。</div>
 <div class="small muted" id="annualResetMsg"></div>
-</section><details class="danger-admin-details">
+</section><details class="operation-log-details">
+<summary>操作ログを確認</summary>
+<div class="operation-log-inner">
+<div class="compact-card-head"><div><span class="section-eyebrow">AUDIT LOG</span><h3>教員の操作ログ</h3><p class="muted small">OENアカウント・日時・操作内容を共有スプレッドシートへ記録します。トークンやアクセスキー、生徒の個人回答は記録しません。</p></div><button class="secondary glass-btn" id="refreshOperationLogBtn" type="button">最新50件を表示</button></div>
+<div class="table-shell operation-log-shell"><table><thead><tr><th>日時</th><th>操作</th><th>対象</th><th>OENアカウント</th><th>結果</th><th>詳細</th></tr></thead><tbody id="operationLogBody"><tr><td colspan="6" class="muted">［最新50件を表示］を押すと確認できます。</td></tr></tbody></table></div>
+<div class="small muted" id="operationLogMsg">全件は共有スプレッドシートの「操作ログ」シートに残ります。</div>
+</div>
+</details><details class="danger-admin-details">
 <summary>セキュリティ対応（漏えい時のみ）</summary>
 <div class="danger-admin-inner">
 <p>アクセスキーの漏えいが疑われる場合だけ使用します。通常は操作しません。</p>
@@ -461,8 +468,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.25.7"></script>
-<script src="js/teacher.js?v=1.25.7"></script>
+<script src="js/common.js?v=1.25.8"></script>
+<script src="js/teacher.js?v=1.25.8"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

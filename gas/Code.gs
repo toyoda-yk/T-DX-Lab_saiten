@@ -1,3 +1,4 @@
+// T-DX Lab 公開同期GAS v1.4 - OEN操作ログ対応
 const TDX_CONFIG = {
   PROP_SS_ID: 'TDX_SPREADSHEET_ID',
   PROP_GH_OWNER: 'TDX_GITHUB_OWNER',
@@ -12,6 +13,7 @@ const TDX_CONFIG = {
   INDEX_SHEET: '分析一覧',
   DATA_SHEET: '分析データ',
   SYNC_SHEET: '公開同期ログ',
+  AUDIT_SHEET: '操作ログ',
   CHUNK_SIZE: 40000,
   ANALYSIS_PATH: 'data/analysis.json',
   EXAMS_PATH: 'data/exams.json',
@@ -39,6 +41,9 @@ function setupTDXLab() {
   ]);
   ensureSheet_(ss, TDX_CONFIG.SYNC_SHEET, [
     '日時', '種類', '対象', '実行ユーザー', '結果', 'メッセージ'
+  ]);
+  ensureSheet_(ss, TDX_CONFIG.AUDIT_SHEET, [
+    '日時', 'OENアカウント', '権限', '操作', '対象', '結果', '詳細'
   ]);
 
   SpreadsheetApp.flush();
@@ -149,6 +154,19 @@ function doGet(e) {
         resetEpoch: currentResetEpoch_(),
         message: isAuthorizedTeacher_(email) ? '公開権限あり' : '閲覧のみ'
       };
+    } else if (action === 'logEvent') {
+      const email = activeEmail_();
+      if (!isAuthorizedTeacher_(email)) throw new Error('操作ログの記録権限がありません。');
+      const operation = text_(p.operation || '画面操作', 80);
+      const target = text_(p.target || '', 160);
+      const detail = text_(p.detail || '', 500);
+      logOperation_(operation, target, email, '成功', detail);
+      result = { ok: true, message: '操作ログを記録しました。' };
+    } else if (action === 'listOperationLogs') {
+      const email = activeEmail_();
+      if (!isSystemAdmin_(email)) throw new Error('操作ログの閲覧はシステム管理者だけが行えます。');
+      const limit = Math.max(1, Math.min(200, Math.round(Number(p.limit || 50))));
+      result = { ok: true, logs: listOperationLogs_(limit) };
     } else if (action === 'writeTest') {
       const email = activeEmail_();
       if (!isAuthorizedTeacher_(email)) throw new Error('書き込み権限がありません。');
@@ -268,6 +286,7 @@ function doPost(e) {
       saveAnalysis_(clean, email);
       const gh = syncAnalysisToGitHub_(clean, email);
       logSync_('分析', clean.examId, email, '成功', gh.message);
+      logOperation_('分析公開', clean.title || clean.examId, email, '成功', '集計 ' + String(clean.overall && clean.overall.participants || 0) + '人を生徒画面へ公開');
 
       const result = {
         ok: true,
@@ -294,6 +313,7 @@ function doPost(e) {
         'T-DX Lab: update exams (' + email + ')'
       );
       logSync_('試験', String(clean.exams.length) + '件', email, '成功', gh.message);
+      if (p.auditOperation) logOperation_(text_(p.auditOperation, 80), text_(p.auditTarget || String(clean.exams.length) + '件', 160), email, '成功', text_(p.auditDetail || gh.message, 500));
 
       const result = {
         ok: true,
@@ -330,6 +350,7 @@ function doPost(e) {
         'T-DX Lab: update users (' + email + ')'
       );
       logSync_('生徒', String(bundle.users.length) + '人', email, '成功', gh.message);
+      if (p.auditOperation) logOperation_(text_(p.auditOperation, 80), text_(p.auditTarget || String(bundle.users.length) + '人', 160), email, '成功', text_(p.auditDetail || ('QR再印刷可能 ' + String(stored.size) + '人'), 500));
 
       const result = {
         ok: true,
@@ -398,6 +419,7 @@ function doPost(e) {
       // schoolYear / Spreadsheet ID / GitHub repository / branch / token / system-admin settings are intentionally preserved.
 
       logSync_('完全初期化', schoolYear, email, '成功', '現年度を維持して公開データ・分析・QR保管庫を初期化');
+      logOperation_('完全初期化', schoolYear + '年度', email, '成功', '現年度を維持して生徒認証・試験・公開分析・QR保管庫を初期化');
 
       const result = {
         ok: true,
@@ -464,6 +486,7 @@ function doPost(e) {
       props.setProperty(TDX_CONFIG.PROP_RESET_EPOCH, resetEpoch);
 
       logSync_('年度更新', targetYear, email, '成功', '公開データ・分析・QR保管庫を初期化');
+      logOperation_('年度更新', targetYear + '年度', email, '成功', '新年度へ切替し、生徒認証・試験・公開分析・QR保管庫を初期化');
 
       const result = {
         ok: true,
@@ -489,7 +512,10 @@ function doPost(e) {
     });
     try {
       const kind = action === 'publishExams' ? '試験' : action === 'publishUsers' ? '生徒' : action === 'currentYearReset' ? '完全初期化' : action === 'annualReset' ? '年度更新' : '分析';
-      logSync_(kind, '', activeEmail_(), '失敗', msg);
+      const email = activeEmail_();
+      logSync_(kind, '', email, '失敗', msg);
+      const op = text_(p.auditOperation || (action === 'publishAnalysis' ? '分析公開' : action === 'publishExams' ? '試験データ反映' : action === 'publishUsers' ? '生徒認証データ反映' : action === 'currentYearReset' ? '完全初期化' : action === 'annualReset' ? '年度更新' : kind), 80);
+      logOperation_(op, text_(p.auditTarget || '', 160), email, '失敗', msg);
     } catch (ignore) {}
     return output_({ ok: false, done: true, message: msg });
   }
@@ -1110,6 +1136,55 @@ function logSync_(kind, target, email, result, message) {
     ['日時', '種類', '対象', '実行ユーザー', '結果', 'メッセージ']
   );
   sheet.appendRow([new Date(), kind, target, email, result, message]);
+}
+
+function auditRole_(email) {
+  return isSystemAdmin_(email) ? 'システム管理者' : '一般教員';
+}
+
+function logOperation_(operation, target, email, result, detail) {
+  email = text_(String(email || '').trim().toLowerCase(), 200);
+  if (!email) return;
+  const ss = getTDXSpreadsheet_();
+  const sheet = ensureSheet_(
+    ss,
+    TDX_CONFIG.AUDIT_SHEET,
+    ['日時', 'OENアカウント', '権限', '操作', '対象', '結果', '詳細']
+  );
+  sheet.appendRow([
+    new Date(),
+    email,
+    auditRole_(email),
+    text_(operation, 80),
+    text_(target, 160),
+    text_(result, 40),
+    text_(detail, 500)
+  ]);
+}
+
+function listOperationLogs_(limit) {
+  const ss = getTDXSpreadsheet_();
+  const sheet = ensureSheet_(
+    ss,
+    TDX_CONFIG.AUDIT_SHEET,
+    ['日時', 'OENアカウント', '権限', '操作', '対象', '結果', '詳細']
+  );
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const count = Math.min(Math.max(1, Number(limit || 50)), last - 1);
+  const start = last - count + 1;
+  const values = sheet.getRange(start, 1, count, 7).getValues();
+  return values.reverse().map(function(r) {
+    return {
+      time: r[0] instanceof Date ? r[0].toISOString() : String(r[0] || ''),
+      email: String(r[1] || ''),
+      role: String(r[2] || ''),
+      operation: String(r[3] || ''),
+      target: String(r[4] || ''),
+      result: String(r[5] || ''),
+      detail: String(r[6] || '')
+    };
+  });
 }
 
 function output_(obj, callback) {
