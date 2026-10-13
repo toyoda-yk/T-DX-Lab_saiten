@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-let exams=[],usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:String(new Date().getFullYear()),resetEpoch:'',users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]},allExamData=null,allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',updatedAt:null,analyses:[]};
+let exams=[],usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:String(new Date().getFullYear()),resetEpoch:'',users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[],responseMode:''},allExamData=null,allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',updatedAt:null,analyses:[]};
 let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
 let editorSectionTargets={};
@@ -8,7 +8,7 @@ let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.25.9';
+const APP_VERSION='1.26.0';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1259,16 +1259,37 @@ function googleFormEntryLabel(e,i){
   const short=v.length>24?`${v.slice(0,24)}…`:v;
   return `${i+1}. ${e.key}${short?` （${short}）`:''}`;
 }
-function googleEntryOptions(selected=''){
-  return '<option value="">選択してください</option>'+googleFormSetup.entries.map((e,i)=>`<option value="${esc(e.key)}" ${e.key===selected?'selected':''}>${esc(googleFormEntryLabel(e,i))}</option>`).join('');
+function googleEntryOptions(selected='',emptyLabel='選択してください'){
+  return `<option value="">${esc(emptyLabel)}</option>`+googleFormSetup.entries.map((e,i)=>`<option value="${esc(e.key)}" ${e.key===selected?'selected':''}>${esc(googleFormEntryLabel(e,i))}</option>`).join('');
 }
 function currentEditorSignature(){return editorRows.map(r=>`${r.section}|${r.label}`).join('||')}
 function entryByKey(key){return googleFormSetup.entries.find(e=>e.key===key)||null}
+function normalizeGoogleFormChoiceValue(v){
+  const circled={'⓪':'0','①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9'};
+  let s=String(v??'').trim().replace(/[⓪①②③④⑤⑥⑦⑧⑨]/g,ch=>circled[ch]||ch);
+  s=toHalfWidth(s).trim();if(/^[A-Za-z]$/.test(s))s=s.toLowerCase();return s;
+}
+function googleFormValueFormatFromSample(v){
+  return /[⓪①②③④⑤⑥⑦⑧⑨]/.test(String(v??''))?'circled_digit':'plain';
+}
+function toGoogleFormChoiceValue(v,format='plain'){
+  const s=normalizedChoiceValue(v);
+  if(format==='circled_digit'){
+    const m={'0':'⓪','1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨'};
+    return m[s]||s;
+  }
+  return s;
+}
+function googleEntryValueFormat(key){
+  const samples=googleFormSetup.entries.filter(e=>e.key===key).map(e=>e.value);
+  return samples.some(v=>googleFormValueFormatFromSample(v)==='circled_digit')?'circled_digit':'plain';
+}
 function detectGoogleIdentityEntries(entries){
-  const code=entries.find(e=>/^\d{4}$/.test(String(e.value||'').trim()));
-  const answerLike=v=>/^(?:\d{1,2}|[a-z])$/i.test(String(v||'').trim());
-  const name=entries.find(e=>e!==code&&!answerLike(e.value))||entries.find(e=>e!==code)||null;
-  return {nameEntry:name?.key||'',codeEntry:code?.key||''};
+  const code=entries.find(e=>/^\d{4}$/.test(toHalfWidth(String(e.value||'').trim())));
+  // 氏名は推測しない。氏名欄がないフォームでは、解答値を氏名と誤認すると
+  // 以降の対応が1列ずつずれてしまうため、明示的なテスト文字列がある場合だけ検出する。
+  const explicitName=entries.find(e=>/T-DXテスト|テスト太郎|氏名/i.test(String(e.value||''))&&e!==code)||null;
+  return {nameEntry:explicitName?.key||'',codeEntry:code?.key||''};
 }
 function analyzeGoogleFormLink(){
   try{
@@ -1276,11 +1297,11 @@ function analyzeGoogleFormLink(){
     const ep=googleFormEndpoints(raw),u=new URL(cleanGoogleFormUrlInput(raw));
     const entries=[];
     for(const [key,value] of u.searchParams.entries())if(/^entry\.\d+$/.test(key))entries.push({key,value});
-    if(entries.length<3)throw new Error('entry番号を十分に取得できませんでした。氏名・4桁番号・解答欄をすべて事前入力してからリンクを取得してください。');
+    if(entries.length<2)throw new Error('entry番号を十分に取得できませんでした。4桁番号と解答欄をすべて事前入力してからリンクを取得してください。');
     googleFormSetup={entries,viewUrl:ep.viewUrl,actionUrl:ep.actionUrl,formKey:ep.formKey,testAttempted:false};
     $('formUrl').value=ep.viewUrl;
     const ids=detectGoogleIdentityEntries(entries);
-    $('formNameEntrySelect').innerHTML=googleEntryOptions(ids.nameEntry);
+    $('formNameEntrySelect').innerHTML=googleEntryOptions(ids.nameEntry,'送信しない（推奨）');
     $('formCodeEntrySelect').innerHTML=googleEntryOptions(ids.codeEntry);
     $('formMappingPanel').classList.remove('hidden');
     $('autoMapFormBtn').disabled=false;
@@ -1288,7 +1309,7 @@ function analyzeGoogleFormLink(){
     renderGoogleFormAnswerTable();
     autoMapGoogleFormAnswers(true);
     $('formLinkMsg').className='success small';
-    $('formLinkMsg').textContent=`entry番号を ${entries.length}件 取得しました。GoogleフォームURLもこのフォームに設定しました。氏名・4桁番号・解答欄の対応を確認してください。`;
+    $('formLinkMsg').textContent=`entry番号を ${entries.length}件 取得しました。GoogleフォームURLも設定しました。4桁番号・解答欄の対応を確認してください。氏名項目は任意です。`;
   }catch(e){console.error(e);$('formLinkMsg').className='error small';$('formLinkMsg').textContent=e.message}
 }
 function renderGoogleFormAnswerTable(){
@@ -1335,13 +1356,13 @@ function googleFormMappingState(){
   const dups=[...new Set([...invalidDuplicates,...identityConflict])];
   const used=[nameEntry,codeEntry,...answerEntries.map(x=>x.entry)].filter(Boolean);
   const unused=googleFormSetup.entries.filter((e,i)=>!used.includes(e.key));
-  const ok=!!googleFormSetup.actionUrl&&!!nameEntry&&!!codeEntry&&nameEntry!==codeEntry&&mapped===editorRows.length&&!dups.length&&signatureOk;
+  const ok=!!googleFormSetup.actionUrl&&!!codeEntry&&(!nameEntry||nameEntry!==codeEntry)&&mapped===editorRows.length&&!dups.length&&signatureOk;
   return {ok,nameEntry,codeEntry,answerEntries,mapped,dups,sharedEntries,unused,signatureOk};
 }
 function renderGoogleFormStatus(){
   const root=$('formMappingKpis');if(!root||$('formMappingPanel').classList.contains('hidden'))return;
   const st=googleFormMappingState(),entryCount=googleFormSetup.entries.length,tested=$('formTestConfirmed')?.checked;
-  root.innerHTML=`<div class="kpi"><div class="muted small">取得entry</div><div class="value">${entryCount}</div></div><div class="kpi ${st.nameEntry?'':'kpi-warn'}"><div class="muted small">氏名</div><div class="value">${st.nameEntry?'✓':'—'}</div></div><div class="kpi ${st.codeEntry?'':'kpi-warn'}"><div class="muted small">4桁番号</div><div class="value">${st.codeEntry?'✓':'—'}</div></div><div class="kpi ${st.mapped===editorRows.length?'':'kpi-warn'}"><div class="muted small">解答対応</div><div class="value">${st.mapped}/${editorRows.length}</div></div>`;
+  root.innerHTML=`<div class="kpi"><div class="muted small">取得entry</div><div class="value">${entryCount}</div></div><div class="kpi"><div class="muted small">氏名（任意）</div><div class="value">${st.nameEntry?'✓':'送信なし'}</div></div><div class="kpi ${st.codeEntry?'':'kpi-warn'}"><div class="muted small">4桁番号</div><div class="value">${st.codeEntry?'✓':'—'}</div></div><div class="kpi ${st.mapped===editorRows.length?'':'kpi-warn'}"><div class="muted small">解答対応</div><div class="value">${st.mapped}/${editorRows.length}</div></div>`;
   let msg=[];
   if(!st.signatureOk)msg.push('設問構成が変更されています。自動対応をやり直してください。');
   if(st.dups.length)msg.push('別の設問グループで同じentryが重複しています。対応を確認してください。');
@@ -1351,7 +1372,7 @@ function renderGoogleFormStatus(){
     msg.push(`Googleフォームの解答欄が ${shortage}件不足しています。事前入力リンクを作るときに、すべての解答欄へ値を入れたか確認してリンクを取り直してください。`);
   }
   if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。必須項目の場合は送信できないため、テスト送信で必ず確認してください。`);
-  if(st.ok)msg.push(`連携設定OK：氏名・4桁番号・解答 ${st.mapped}件を送信できます。${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
+  if(st.ok)msg.push(`連携設定OK：4桁番号・解答 ${st.mapped}件を送信できます。${st.nameEntry?' 氏名も送信します。':' 氏名はGoogleフォームへ送りません。'}${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
   $('formLinkMsg').className=(st.ok?'success':'error')+' small';
   $('formLinkMsg').textContent=msg.join(' ')||(st.ok?'連携設定OKです。':'連携項目を確認してください。');
   const next=$('formNextStepMsg');if(next)next.classList.toggle('hidden',!(st.ok&&tested));
@@ -1369,7 +1390,7 @@ function buildGoogleFormSubmissionConfig(questions){
   if(!st.ok)throw new Error('Googleフォーム連携の対応に未設定または不正な重複があります。連携情報を確認してください。');
   if(questions.length!==st.answerEntries.length)throw new Error('Googleフォームの解答対応数と現在の設問数が一致しません。自動対応をやり直してください。');
   const confirmed=!!$('formTestConfirmed').checked,now=new Date().toISOString();
-  return {provider:'google_forms',version:1,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry})),nameRequired:true,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
+  return {provider:'google_forms',version:2,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:googleEntryValueFormat(x.entry)})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
@@ -1393,13 +1414,13 @@ function postGoogleForm(actionUrl,fields){
 }
 async function testGoogleFormSubmission(){
   try{
-    const st=googleFormMappingState();if(!st.ok)throw new Error('先に氏名・4桁番号・解答欄の対応を完成させてください。');
+    const st=googleFormMappingState();if(!st.ok)throw new Error('先に4桁番号・解答欄の対応を完成させてください。');
     const fields={};
-    fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
+    if(st.nameEntry)fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
     st.answerEntries.forEach((m,i)=>{
       // 同じentryを共有する複数選択は、同名hidden inputを複数作って送信する。
-      const sample=String(editorRows[i]?.answer??'').trim()||entryByKey(m.entry)?.value||configuredChoices()[0]||'0';
-      addGoogleField(fields,m.entry,sample);
+      const sample=String(editorRows[i]?.answer??'').trim()||normalizeGoogleFormChoiceValue(entryByKey(m.entry)?.value)||configuredChoices()[0]||'0';
+      addGoogleField(fields,m.entry,toGoogleFormChoiceValue(sample,googleEntryValueFormat(m.entry)));
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields);googleFormSetup.testAttempted=true;
@@ -1409,7 +1430,7 @@ async function testGoogleFormSubmission(){
 
 function storedGoogleFormConfigValid(exam){
   const f=exam?.formSubmission;
-  return !!(f&&f.provider==='google_forms'&&f.actionUrl&&f.nameEntry&&f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===(exam.questions||[]).length&&f.questionEntries.every(x=>x?.entry));
+  return !!(f&&f.provider==='google_forms'&&f.actionUrl&&f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===(exam.questions||[]).length&&f.questionEntries.every(x=>x?.entry));
 }
 function storedGoogleFormViewUrl(exam){
   const direct=String(exam?.googleFormUrl||'').trim();
@@ -1449,7 +1470,7 @@ function renderPublishGoogleFormPanel(exam){
       const f=exam.formSubmission,q=(exam.questions||[]).length;
       const inherited=f.verificationSource==='clone_inherited'||f.inheritedFrom;
       const source=inherited?' / 複製元から引継ぎ':'';
-      summary.innerHTML=`<span><strong>entry対応：</strong>氏名 1 / 4桁番号 1 / 解答 ${q}件${source}</span>`;
+      summary.innerHTML=`<span><strong>entry対応：</strong>${f.nameEntry?'氏名 1 / ':''}4桁番号 1 / 解答 ${q}件${source}</span>`;
     }else summary.innerHTML='<span class="warn-text"><strong>entry対応が不完全です。</strong> 下の「Googleフォームを変更・再設定する」から事前入力URLを読み込んでください。</span>';
   }
   const msg=$('publishFormTestMsg');
@@ -1485,12 +1506,11 @@ function openSelectedExamGoogleFormEditor(){
 function parsePrefilledGoogleFormForExam(raw,exam){
   const ep=googleFormEndpoints(raw),u=new URL(cleanGoogleFormUrlInput(raw)),entries=[];
   for(const [key,value] of u.searchParams.entries())if(/^entry\.\d+$/.test(key))entries.push({key,value});
-  const expected=(exam?.questions||[]).length+2;
-  if(entries.length!==expected)throw new Error(`事前入力リンクから entry を ${entries.length}件 取得しました。現在の試験では「氏名・4桁番号・解答 ${(exam?.questions||[]).length}件」の合計 ${expected}件 が必要です。全項目を事前入力してリンクを取り直してください。`);
   const ids=detectGoogleIdentityEntries(entries);
-  if(!ids.nameEntry||!ids.codeEntry||ids.nameEntry===ids.codeEntry)throw new Error('氏名と4桁番号のentryを判別できませんでした。氏名には文字列、4桁番号には4桁の数字を事前入力してリンクを取得してください。');
-  const answers=entries.filter(e=>e.key!==ids.nameEntry&&e.key!==ids.codeEntry);
-  if(answers.length!==(exam.questions||[]).length)throw new Error('Googleフォームの解答欄数と試験の解答欄数が一致しません。');
+  if(!ids.codeEntry)throw new Error('4桁番号のentryを判別できませんでした。4桁番号には「9999」など4桁の数字を事前入力してリンクを取得してください。');
+  if(ids.nameEntry&&ids.nameEntry===ids.codeEntry)throw new Error('氏名と4桁番号のentryが同じになっています。対応を確認してください。');
+  const answers=entries.filter(e=>e.key!==ids.codeEntry&&(!ids.nameEntry||e.key!==ids.nameEntry));
+  if(answers.length!==(exam.questions||[]).length)throw new Error(`Googleフォームの解答対応数が一致しません。現在 ${answers.length}件 / 必要 ${(exam.questions||[]).length}件です。チェックボックス問題は選択数ぶん同じentryが並んでいて正常です。すべての解答欄へ仮入力してリンクを取り直してください。`);
   return {ep,entries,ids,answers};
 }
 function replaceSelectedExamGoogleForm(){
@@ -1500,10 +1520,10 @@ function replaceSelectedExamGoogleForm(){
     const raw=$('publishFormPrefillUrl')?.value.trim();if(!raw)throw new Error('事前入力したGoogleフォームのリンクを貼り付けてください。');
     const parsed=parsePrefilledGoogleFormForExam(raw,exam),now=new Date().toISOString();
     exam.googleFormUrl=parsed.ep.viewUrl;
-    exam.formSubmission={provider:'google_forms',version:1,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key})),nameRequired:true,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
+    exam.formSubmission={provider:'google_forms',version:2,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value)})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
     exam.updatedAt=now;allExamData.exams=exams;
     $('publishFormPrefillUrl').value='';
-    if(msg){msg.className='success small';msg.textContent=`Googleフォームを差し替えました。entry ${parsed.entries.length}件（氏名・4桁番号・解答 ${(exam.questions||[]).length}件）を対応しました。次にテスト送信してください。`}
+    if(msg){msg.className='success small';msg.textContent=`Googleフォームを差し替えました。4桁番号・解答 ${(exam.questions||[]).length}件を対応しました。${parsed.ids.nameEntry?'氏名も送信します。':'氏名は送信しません。'} 次にテスト送信してください。`}
     const t=$('publishFormTestMsg');if(t){delete t.dataset.keep;t.textContent=''}
     renderPublishGoogleFormPanel(exam);renderExamReadiness(exam);renderExamExportSummary();
   }catch(e){console.error(e);if(msg){msg.className='error small';msg.textContent=e.message}}
@@ -1528,7 +1548,7 @@ async function testSelectedExamGoogleForm(){
     if(!storedGoogleFormConfigValid(exam))throw new Error('この試験のGoogleフォーム連携設定が不完全です。試験作成画面で連携設定を確認してください。');
     const f=exam.formSubmission,fields={};
     const code='9999';
-    fields[f.nameEntry]='T-DXテスト';
+    if(f.nameEntry)fields[f.nameEntry]='T-DXテスト';
     fields[f.studentCodeEntry]=code;
     const qMap=new Map((exam.questions||[]).map(q=>[String(q.id),q]));
     for(const m of f.questionEntries){
@@ -1536,7 +1556,7 @@ async function testSelectedExamGoogleForm(){
       if(!q)throw new Error(`Googleフォーム連携に対応する設問 ${m.questionId} が見つかりません。`);
       const sample=String(q.answer??q.options?.[0]??'').trim();
       if(sample==='')throw new Error(`${q.label||`設問${q.id}`} のテスト送信用回答を作れません。正答または選択肢を確認してください。`);
-      addGoogleField(fields,m.entry,sample);
+      addGoogleField(fields,m.entry,toGoogleFormChoiceValue(sample,m.valueFormat||'plain'));
     }
     btn.disabled=true;
     msg.className='small muted';
@@ -1544,7 +1564,7 @@ async function testSelectedExamGoogleForm(){
     await postGoogleForm(f.actionUrl,fields);
     f.lastTestAttemptedAt=new Date().toISOString();exam.updatedAt=f.lastTestAttemptedAt;allExamData.exams=exams;
     msg.dataset.keep='1';msg.className='success small';
-    msg.innerHTML=`<strong>テスト送信処理を実行しました。</strong> 氏名「T-DXテスト」・4桁番号「${esc(code)}」で送っています。Googleフォームの「回答」タブを開き、1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>※ ブラウザからGoogleフォーム側の受理結果までは確認できません。</span>`;
+    msg.innerHTML=`<strong>テスト送信処理を実行しました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。Googleフォームの「回答」タブを開き、1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>※ ブラウザからGoogleフォーム側の受理結果までは確認できません。</span>`;
     renderPublishGoogleFormPanel(exam);
   }catch(e){
     console.error(e);
@@ -1605,6 +1625,30 @@ function findHeaderIndex(headers,words,fallback){
   const idx=headers.findIndex(h=>words.some(w=>normalizeHeader(h).includes(w)));
   return idx>=0?idx:fallback;
 }
+function detectGoogleResponseMode(headers){
+  const norm=headers.map(normalizeHeader);
+  return norm.some(h=>/^(スコア|score|得点)$/i.test(h)||h.includes('スコア'))?'quiz':'standard';
+}
+function isGoogleResponseMetaHeader(h){
+  const n=normalizeHeader(h).toLowerCase();
+  if(!n)return false;
+  return n.includes('タイムスタンプ')||n==='timestamp'||n==='スコア'||n==='score'||n.includes('メールアドレス')||n.includes('emailaddress')||n==='email';
+}
+function googleResponseAnswerValues(exam,row,headers,identityIndexes=[]){
+  const uniqueCount=uniqueFormAnswerEntries(exam).length;
+  if(!uniqueCount)return null;
+  const blocked=new Set(identityIndexes.filter(i=>Number.isInteger(i)&&i>=0));
+  const candidates=[];
+  for(let i=0;i<headers.length;i++){
+    if(blocked.has(i)||isGoogleResponseMetaHeader(headers[i]))continue;
+    candidates.push(i);
+  }
+  // 通常フォーム/クイズのどちらでも、スコア等のメタ列を除いた回答列を使用する。
+  // 未使用列がある場合に備えて、フォーム回答順の末尾側から必要数を採用する。
+  const picked=(candidates.length>=uniqueCount?candidates.slice(-uniqueCount):[]);
+  if(picked.length!==uniqueCount)return null;
+  return picked.map(i=>row[i]??'');
+}
 function normalizeStudentCode(v){
   const s=String(v??'').trim().replace(/\.0+$/,'');
   return /^\d{4}$/.test(s)?s:'';
@@ -1637,14 +1681,14 @@ function uniqueFormAnswerEntries(exam){
 function splitGoogleCheckboxCell(value){
   const s=String(value??'').trim();if(!s)return [];
   // Googleフォームのチェックボックス回答は通常「A, B」の1セルで出力される。
-  return s.split(/\s*[,，、]\s*/).map(x=>x.trim()).filter(Boolean);
+  return s.split(/\s*[,，、;；\n]+\s*/).map(x=>normalizeGoogleFormChoiceValue(x)).filter(Boolean);
 }
-function answersFromGoogleResponseRow(exam,row){
+function answersFromGoogleResponseRow(exam,row,headers,identityIndexes=[]){
   const qs=exam.questions||[],maps=exam.formSubmission?.questionEntries||[];
   if(!maps.length||maps.length!==qs.length)return null;
   const uniqueEntries=uniqueFormAnswerEntries(exam);
   if(!uniqueEntries.length)return null;
-  const vals=row.slice(Math.max(0,row.length-uniqueEntries.length));
+  const vals=googleResponseAnswerValues(exam,row,headers,identityIndexes) || row.slice(Math.max(0,row.length-uniqueEntries.length));
   if(vals.length!==uniqueEntries.length)return null;
   const byEntry=new Map(uniqueEntries.map((e,i)=>[e,vals[i]]));
   const answers={};
@@ -1652,11 +1696,11 @@ function answersFromGoogleResponseRow(exam,row){
   maps.forEach((m,i)=>{(grouped.get(m.entry)||grouped.set(m.entry,[]).get(m.entry)).push({m,q:qs[i]})});
   for(const [entry,items] of grouped){
     const raw=byEntry.get(entry)??'';
-    if(items.length===1){answers[items[0].q.id]=String(raw).trim();continue}
+    if(items.length===1){answers[items[0].q.id]=normalizeGoogleFormChoiceValue(raw);continue}
     const selected=splitGoogleCheckboxCell(raw);
     // 同一entry共有＝Googleフォームの複数選択。順序を持たないため、
     // 正答集合と一致する場合はT-DX内部の各欄へ正答順に復元し、完答判定を正しく保つ。
-    const targets=items.map(x=>String(x.q.answer??'').trim());
+    const targets=items.map(x=>normalizeGoogleFormChoiceValue(x.q.answer));
     const a=[...selected].sort(),b=[...targets].sort();
     const same=a.length===b.length&&a.every((v,i)=>v===b[i]);
     const restored=same?targets:selected;
@@ -1670,15 +1714,16 @@ async function analyzeFile(){
     analysisExam=exams.find(e=>e.id===$('analysisExam').value);if(!analysisExam){alert('分析する試験を選択してください。');return}
     const rows=await readRows(f);if(rows.length<2){alert('回答データが見つかりません。');return}
     const headers=rows[0]||[],qCount=(analysisExam.questions||[]).length;if(!qCount){alert('選択した試験に設問データがありません。');return}
+    const responseMode=detectGoogleResponseMode(headers);
     const timestampIndex=findHeaderIndex(headers,['タイムスタンプ','timestamp'],0);
-    const nameIndex=findHeaderIndex(headers,['名前','氏名','name'],1);
-    const codeIndex=findHeaderIndex(headers,['クラス・出席番号','出席番号','4桁番号','４桁番号'],2);
+    const nameIndex=findHeaderIndex(headers,['名前','氏名','name'],-1);
+    const codeIndex=findHeaderIndex(headers,['クラス・出席番号','出席番号','4桁番号','４桁番号'],responseMode==='quiz'?2:1);
     const valid=[],duplicateCountByCode=new Map();let ignored=0,tests=0;
     for(let i=1;i<rows.length;i++){
-      const r=rows[i]||[],code=normalizeStudentCode(r[codeIndex]),name=String(r[nameIndex]??'').trim();
-      if(isSystemTestResponse(name)){tests++;continue}
+      const r=rows[i]||[],code=normalizeStudentCode(r[codeIndex]),name=nameIndex>=0?String(r[nameIndex]??'').trim():'';
+      if(code==='9999'||isSystemTestResponse(name)){tests++;continue}
       if(!code){ignored++;continue}
-      let answers=answersFromGoogleResponseRow(analysisExam,r);
+      let answers=answersFromGoogleResponseRow(analysisExam,r,headers,[timestampIndex,nameIndex,codeIndex]);
       if(!answers){
         const ansVals=r.slice(Math.max(0,r.length-qCount));answers={};
         analysisExam.questions.forEach((q,j)=>answers[q.id]=String(ansVals[j]??'').trim());
@@ -1692,7 +1737,7 @@ async function analyzeFile(){
     valid.forEach(row=>{const prev=latest.get(row.code);if(!prev||isLaterResponse(row,prev))latest.set(row.code,row)});
     analysisRows=[...latest.values()].sort((a,b)=>a.code.localeCompare(b.code));
     const duplicateCodes=[...duplicateCountByCode.entries()].filter(([,n])=>n>1).map(([code,n])=>({code,count:n,removed:n-1}));
-    analysisMeta={raw:Math.max(0,rows.length-1),valid:valid.length,participants:analysisRows.length,duplicates:valid.length-analysisRows.length,tests,ignored,fileName:f.name,duplicateCodes};
+    analysisMeta={raw:Math.max(0,rows.length-1),valid:valid.length,participants:analysisRows.length,duplicates:valid.length-analysisRows.length,tests,ignored,fileName:f.name,duplicateCodes,responseMode};
     const classes=[...new Set(analysisRows.map(r=>r.classKey))].sort();
     $('classFilter').innerHTML='<option value="ALL">全クラス</option>'+classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
     $('questionSort').value='rate-asc';$('questionFilter').value='all';$('studentSort').value='score-desc';
@@ -1714,7 +1759,8 @@ function renderAnalysisImportSummary(rows){
   const tests=analysisMeta.tests?`<span class="analysis-import-chip test">テスト送信 ${analysisMeta.tests}件を除外</span>`:'';
   const ignored=analysisMeta.ignored?`<span class="analysis-import-chip warn">4桁番号不正 ${analysisMeta.ignored}件を除外</span>`:'';
   const duplicateText=analysisMeta.duplicateCodes.length?`<small>重複：${analysisMeta.duplicateCodes.map(x=>`${esc(x.code)}（${x.count}件→1件）`).join('、')}</small>`:'';
-  root.innerHTML=`<div class="analysis-import-main"><strong>${esc(analysisMeta.fileName||'回答ファイル')}</strong><span>読み込み ${analysisMeta.raw}件 → 採用 ${analysisMeta.participants}人</span><span class="analysis-import-chip ok">同一4桁番号は最新回答のみ採用</span>${dup}${tests}${ignored}</div>${duplicateText}${rows.length<10?'<small class="sample-note">※ 現在の表示対象は10人未満です。1人の正誤で正答率が大きく動くため、テストデータでは数値の変化を確認する用途として見てください。</small>':''}`;
+  const modeChip=analysisMeta.responseMode?`<span class="analysis-import-chip ok">Googleフォーム：${analysisMeta.responseMode==='quiz'?'クイズ':'通常フォーム'}（自動判定）</span>`:'';
+  root.innerHTML=`<div class="analysis-import-main"><strong>${esc(analysisMeta.fileName||'回答ファイル')}</strong><span>読み込み ${analysisMeta.raw}件 → 採用 ${analysisMeta.participants}人</span>${modeChip}<span class="analysis-import-chip ok">同一4桁番号は最新回答のみ採用</span>${dup}${tests}${ignored}</div>${duplicateText}${rows.length<10?'<small class="sample-note">※ 現在の表示対象は10人未満です。1人の正誤で正答率が大きく動くため、テストデータでは数値の変化を確認する用途として見てください。</small>':''}`;
 }
 function renderHistogram(scores){
   const bins=Array(10).fill(0);scores.forEach(s=>bins[Math.min(9,Math.max(0,Math.floor(Number(s||0)/10)))]++);const m=Math.max(...bins,1);
@@ -1944,7 +1990,7 @@ function clearTeacherLocalOperationalData(schoolYear,resetEpoch){
   usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,users:[],issuedCodeIds:[]};
   allExamData={version:10,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,updatedAt:new Date().toISOString(),exams:[]};
   allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',schoolYear:year,resetEpoch:epoch,updatedAt:new Date().toISOString(),analyses:[]};
-  analysisRows=[];analysisExam=null;analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[]};annualSecrets=[];accessVault=[];
+  analysisRows=[];analysisExam=null;analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[],responseMode:''};annualSecrets=[];accessVault=[];
   publishRoster=[];editorRows=[];editorSectionTargets={};
   rosterRanges=[{start:'',end:''}];
   googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};previewMode='before';
@@ -2398,18 +2444,18 @@ const OPERATION_GUIDES={
   },
   'google-form-prefill':{
     title:'Googleフォーム「事前入力URL」の取得方法',
-    intro:'T-DX Labが氏名・4桁番号・各回答を正しい欄へ送るために、Googleフォームの「事前入力したリンク」を1回だけ取得します。',
+    intro:'T-DX Labが4桁番号・各回答を正しい欄へ送るために、Googleフォームの「事前入力したリンク」を1回だけ取得します。',
     warning:'重要：Googleフォーム右上の「送信」からコピーするURLではありません。必ず「︙」→「事前入力したリンクを取得」を使います。',
     steps:[
-      ['1','Googleフォームを編集画面で開く','回答先に使うフォームを開きます。項目は「氏名 → 4桁番号 → 各解答欄」の順がおすすめです。'],
+      ['1','Googleフォームを編集画面で開く','回答先に使うフォームを開きます。項目は「4桁番号 → 各解答欄」だけでOKです。氏名欄は不要です（既存フォームに氏名欄がある場合も任意で対応できます）。'],
       ['2','右上の「︙」を押す','メニューから「事前入力したリンクを取得」を選びます。'],
-      ['3','すべての項目に仮の値を入れる','氏名は「T-DXテスト」、4桁番号は「9999」など、判別しやすい値を入力します。解答欄も空欄にせず、すべて入力します。'],
+      ['3','すべての項目に仮の値を入れる','4桁番号は「9999」など判別しやすい値を入力します。解答欄も空欄にせず、すべて入力します。数字は 0〜9 でも ⓪〜⑨ でも構いません。氏名欄はなくてOKです。'],
       ['4','「リンクを取得」を押す','画面下部の「リンクを取得」を押し、表示されたリンクをコピーします。'],
       ['5','T-DX Labへ貼り付ける','この画面の「Googleフォームの事前入力URL」に貼り付け、「連携情報を解析」を押します。'],
-      ['6','解答欄を対応させる','「解答欄を順番に自動対応」を押し、氏名・4桁番号・各設問の対応を確認します。'],
+      ['6','解答欄を対応させる','「解答欄を順番に自動対応」を押し、4桁番号・各設問の対応を確認します。氏名は任意です。'],
       ['7','テスト送信して受信確認','「テスト送信」を押し、Googleフォームの「回答」タブに1件届いたことを確認して「受信を確認した」にチェックします。']
     ],
-    example:'仮入力例：氏名＝<code>T-DXテスト</code> ／ 4桁番号＝<code>9999</code> ／ 問1＝<code>0</code> ／ 問2＝<code>1</code> …。値の内容よりも、全項目を空欄にしないことが大切です。'
+    example:'仮入力例：4桁番号＝<code>9999</code> ／ 問1＝<code>0</code> ／ 問2＝<code>1</code> …。値の内容よりも、全項目を空欄にしないことが大切です。'
   },
   'publish-flow':{
     title:'試験を生徒へ公開する手順',
@@ -2426,7 +2472,7 @@ const OPERATION_GUIDES={
     title:'公開後にGoogleフォームを変更するとき',
     intro:'複製した試験で同じGoogleフォームを使うなら変更不要です。別のフォームへ切り替える場合だけ操作します。',
     steps:[
-      ['1','新しいフォームで事前入力URLを取得','氏名・4桁番号・全解答欄へ仮入力し、「事前入力したリンク」を取得します。'],
+      ['1','新しいフォームで事前入力URLを取得','4桁番号・全解答欄へ仮入力し（氏名欄がある場合は氏名も入力）、「事前入力したリンク」を取得します。'],
       ['2','「別のGoogleフォームへ変更する」を開く','取得した事前入力URLを貼り付けて変更します。'],
       ['3','テスト送信','変更後は受信確認がリセットされます。新しいフォームへテスト送信します。'],
       ['4','Googleフォームで受信確認','「回答」タブへ届いたことを確認してチェックを入れます。']
@@ -2442,7 +2488,7 @@ const OPERATION_GUIDES={
       ['STEP 3','「分析する」を押す','採点・得点分布・大問別・設問別・生徒別分析を作成します。同一4桁番号の重複は最新回答だけを採用します。'],
       ['STEP 4','必要なら生徒へ公開','内容を確認後、「生徒に分析を公開」を押すとクラス／全体の集計結果を生徒画面へ反映します。']
     ],
-    warning:'Excelの列は、Googleフォームの「タイムスタンプ・氏名・4桁番号・各解答欄」の並びをそのまま使ってください。'
+    warning:'Excelの列は、Googleフォームの回答Excelをそのまま使えます。氏名列はなくても構いません。丸数字（①など）も自動で0〜9へ変換して分析します。'
   },
   'analysis-publish':{
     title:'「生徒に分析を公開」とは？',

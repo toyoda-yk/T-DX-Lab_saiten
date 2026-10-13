@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.25.9';
+const APP_VERSION='1.26.0';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -195,7 +195,8 @@ function openExam(id){
   if(!eligible(currentExam,currentUser)){renderExamList();show('examListPanel');alert('この試験の公開期間は終了しました。');return}
   const linked=!!currentExam.formSubmission;
   $('examTitle').textContent=currentExam.title;$('examSubject').textContent=currentExam.subject;$('questionCount').textContent=currentExam.questions.length;
-  $('submitNote').textContent=linked?'提出時に氏名・4桁番号・解答をGoogleフォームへ自動送信します。Googleフォーム連携試験は全解答欄を回答してから提出してください。':'この試験はT-DX Lab内で即時採点します。';
+  const sendsName=!!currentExam.formSubmission?.nameEntry;
+  $('submitNote').textContent=linked?(sendsName?'提出時に氏名・4桁番号・解答をGoogleフォームへ自動送信します。全解答欄を回答してから提出してください。':'提出時に4桁番号・解答をGoogleフォームへ自動送信します。氏名はGoogleフォームへ送りません（速報PDF用にだけ使用します）。全解答欄を回答してから提出してください。'):'この試験はT-DX Lab内で即時採点します。';
   $('studentIdentityCard').classList.toggle('hidden',!linked);
   $('studentCodeReadonly').value=currentUser?.studentCode||'';
   $('studentName').value=currentStudentName||'';
@@ -210,7 +211,17 @@ function collectAnswers(){const a={};currentExam.questions.forEach(q=>{const x=d
 function updateProgress(){const n=Object.keys(collectAnswers()).length;$('answeredCount').textContent=n;$('answerProgress').style.width=`${100*n/currentExam.questions.length}%`}
 function validFormSubmissionConfig(){
   const f=currentExam?.formSubmission;if(!f)return false;
-  return f.provider==='google_forms'&&!!f.actionUrl&&!!f.nameEntry&&!!f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===currentExam.questions.length;
+  return f.provider==='google_forms'&&!!f.actionUrl&&!!f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===currentExam.questions.length&&f.questionEntries.every(x=>x?.entry);
+}
+function toGoogleFormChoiceValue(v,format='plain'){
+  const circled={'⓪':'0','①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9'};
+  let s=String(v??'').trim().replace(/[⓪①②③④⑤⑥⑦⑧⑨]/g,ch=>circled[ch]||ch).replace(/[０-９Ａ-Ｆａ-ｆ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
+  if(/^[A-Za-z]$/.test(s))s=s.toLowerCase();
+  if(format==='circled_digit'){
+    const m={'0':'⓪','1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨'};
+    return m[s]||s;
+  }
+  return s;
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
@@ -235,8 +246,8 @@ async function sendCurrentExamToGoogle(answers,name){
   if(!currentExam.formSubmission)return {sent:false,reason:'not_configured'};
   if(!validFormSubmissionConfig())throw new Error('Googleフォーム連携設定が不完全です。担当の先生に知らせてください。');
   const f=currentExam.formSubmission,fields={};
-  fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
-  for(const m of f.questionEntries){addGoogleField(fields,m.entry,answers[m.questionId]??answers[String(m.questionId)]??'')}
+  if(f.nameEntry&&name)fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
+  for(const m of f.questionEntries){const v=answers[m.questionId]??answers[String(m.questionId)]??'';addGoogleField(fields,m.entry,toGoogleFormChoiceValue(v,m.valueFormat||'plain'))}
   await postGoogleForm(f.actionUrl,fields);
   return {sent:true,attemptedAt:new Date().toISOString()};
 }
@@ -245,8 +256,9 @@ async function submitExam(){
   const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length,linked=!!currentExam.formSubmission;
   if(linked&&missing){alert(`未回答が${missing}個あります。Googleフォームへ確実に記録するため、すべての解答欄を回答してから提出してください。`);return}
   if(!linked&&missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;
-  let name='';
-  if(linked){name=$('studentName').value.trim();if(!name){alert('氏名を入力してください。');$('studentName').focus();return}currentStudentName=name}
+  let name=$('studentName')?.value.trim()||'';
+  if(linked&&currentExam.formSubmission?.nameRequired&&!name){alert('このGoogleフォームでは氏名が必須です。氏名を入力してください。');$('studentName').focus();return}
+  currentStudentName=name;
   const btn=$('submitBtn'),old=btn.textContent;btn.disabled=true;btn.textContent=linked?'Googleフォームへ送信中…':'採点中…';
   try{
     if(linked)lastFormSendState=await sendCurrentExamToGoogle(answers,name);else lastFormSendState={sent:false,reason:'not_configured'};
