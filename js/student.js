@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.26.2';
+const APP_VERSION='1.26.3';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -213,29 +213,40 @@ function validFormSubmissionConfig(){
   const f=currentExam?.formSubmission;if(!f)return false;
   return f.provider==='google_forms'&&!!f.actionUrl&&!!f.studentCodeEntry&&Array.isArray(f.questionEntries)&&f.questionEntries.length===currentExam.questions.length&&f.questionEntries.every(x=>x?.entry);
 }
-function toGoogleFormChoiceValue(v,format='plain'){
+function normalizeGoogleFormChoiceValueStudent(v){
   const circled={'⓪':'0','①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9'};
   let s=String(v??'').trim().replace(/[⓪①②③④⑤⑥⑦⑧⑨]/g,ch=>circled[ch]||ch).replace(/[０-９Ａ-Ｆａ-ｆ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
   if(/^[A-Za-z]$/.test(s))s=s.toLowerCase();
+  return s;
+}
+function toGoogleFormChoiceValue(v,format='plain'){
+  const s=normalizeGoogleFormChoiceValueStudent(v);
   if(format==='circled_digit'){
     const m={'0':'⓪','1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨'};
     return m[s]||s;
   }
+  if(format==='fullwidth_digit'||format==='fullwidth_letter')return String(s).replace(/[0-9A-Za-z]/g,ch=>String.fromCharCode(ch.charCodeAt(0)+0xFEE0));
   return s;
+}
+function googleFormMappedValueStudent(v,mapping={}){
+  const canonical=normalizeGoogleFormChoiceValueStudent(v);
+  const raw=String(mapping?.sampleValue??'').trim();
+  if(raw&&normalizeGoogleFormChoiceValueStudent(raw)===canonical)return raw;
+  return toGoogleFormChoiceValue(canonical,mapping?.valueFormat||'plain');
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
   if(!(key in fields)){fields[key]=value;return}
   if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
-function postGoogleForm(actionUrl,fields){
+function postGoogleForm(actionUrl,fields,pageHistory=''){
   return new Promise((resolve,reject)=>{
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
       const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
       Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
-      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      [['fvv','1'],['pageHistory',pageHistory||Array.from({length:21},(_,i)=>i).join(',')],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
       frame.onload=()=>finish();HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
@@ -247,8 +258,8 @@ async function sendCurrentExamToGoogle(answers,name){
   if(!validFormSubmissionConfig())throw new Error('Googleフォーム連携設定が不完全です。担当の先生に知らせてください。');
   const f=currentExam.formSubmission,fields={};
   if(f.nameEntry&&name)fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
-  for(const m of f.questionEntries){const v=answers[m.questionId]??answers[String(m.questionId)]??'';addGoogleField(fields,m.entry,toGoogleFormChoiceValue(v,m.valueFormat||'plain'))}
-  await postGoogleForm(f.actionUrl,fields);
+  for(const m of f.questionEntries){const v=answers[m.questionId]??answers[String(m.questionId)]??'';addGoogleField(fields,m.entry,googleFormMappedValueStudent(v,m))}
+  await postGoogleForm(f.actionUrl,fields,f.pageHistory);
   return {sent:true,attemptedAt:new Date().toISOString()};
 }
 async function submitExam(){

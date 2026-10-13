@@ -4,12 +4,12 @@ let publishRoster=[],annualSecrets=[],accessVault=[];
 let editorRows=[];
 let editorSectionTargets={};
 let rosterRanges=[];
-let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
+let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',pageHistory:'',testAttempted:false};
 let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.2';
+const APP_VERSION='1.26.3';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1282,19 +1282,49 @@ function normalizeGoogleFormChoiceValue(v){
   s=toHalfWidth(s).trim();if(/^[A-Za-z]$/.test(s))s=s.toLowerCase();return s;
 }
 function googleFormValueFormatFromSample(v){
-  return /[⓪①②③④⑤⑥⑦⑧⑨]/.test(String(v??''))?'circled_digit':'plain';
+  const raw=String(v??'').trim();
+  if(/[⓪①②③④⑤⑥⑦⑧⑨]/.test(raw))return 'circled_digit';
+  if(/[０-９]/.test(raw))return 'fullwidth_digit';
+  if(/[Ａ-Ｆａ-ｆ]/.test(raw))return 'fullwidth_letter';
+  return 'plain';
+}
+function toFullWidthAscii(s){
+  return String(s??'').replace(/[0-9A-Za-z]/g,ch=>String.fromCharCode(ch.charCodeAt(0)+0xFEE0));
 }
 function toGoogleFormChoiceValue(v,format='plain'){
-  const s=normalizedChoiceValue(v);
+  const s=normalizeGoogleFormChoiceValue(v);
   if(format==='circled_digit'){
     const m={'0':'⓪','1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨'};
     return m[s]||s;
   }
+  if(format==='fullwidth_digit'||format==='fullwidth_letter')return toFullWidthAscii(s);
   return s;
 }
 function googleEntryValueFormat(key){
   const samples=googleFormSetup.entries.filter(e=>e.key===key).map(e=>e.value);
-  return samples.some(v=>googleFormValueFormatFromSample(v)==='circled_digit')?'circled_digit':'plain';
+  const formats=samples.map(googleFormValueFormatFromSample);
+  if(formats.includes('circled_digit'))return 'circled_digit';
+  if(formats.includes('fullwidth_digit'))return 'fullwidth_digit';
+  if(formats.includes('fullwidth_letter'))return 'fullwidth_letter';
+  return 'plain';
+}
+function googleFormMappedValue(v,mapping={}){
+  const canonical=normalizeGoogleFormChoiceValue(v);
+  const raw=String(mapping?.sampleValue??'').trim();
+  // 事前入力URLに同じ選択肢の実値がある場合は、その文字列をそのまま送る。
+  // 自作フォームの丸数字・全角・微妙な表記差でGoogle側に黙って捨てられるのを防ぐ。
+  if(raw&&normalizeGoogleFormChoiceValue(raw)===canonical)return raw;
+  return toGoogleFormChoiceValue(canonical,mapping?.valueFormat||googleFormValueFormatFromSample(raw));
+}
+function googleFormPageHistoryFromUrl(raw){
+  try{
+    const u=new URL(cleanGoogleFormUrlInput(raw));
+    const ph=String(u.searchParams.get('pageHistory')||'').trim();
+    if(/^\d+(?:,\d+)*$/.test(ph))return ph;
+  }catch(_){}
+  // Googleフォームはセクションを使うと、pageHistory=0 だけでは後続セクションの回答を
+  // 受け取っても記録しないことがある。分岐なしの試験フォーム向けに広めに通す。
+  return Array.from({length:21},(_,i)=>i).join(',');
 }
 function detectGoogleIdentityEntries(entries){
   const code=entries.find(e=>/^\d{4}$/.test(toHalfWidth(String(e.value||'').trim())));
@@ -1310,7 +1340,7 @@ function analyzeGoogleFormLink(){
     const entries=[];
     for(const [key,value] of u.searchParams.entries())if(/^entry\.\d+$/.test(key))entries.push({key,value});
     if(entries.length<2)throw new Error('entry番号を十分に取得できませんでした。4桁番号と解答欄をすべて事前入力してからリンクを取得してください。');
-    googleFormSetup={entries,viewUrl:ep.viewUrl,actionUrl:ep.actionUrl,formKey:ep.formKey,testAttempted:false};
+    googleFormSetup={entries,viewUrl:ep.viewUrl,actionUrl:ep.actionUrl,formKey:ep.formKey,pageHistory:googleFormPageHistoryFromUrl(raw),testAttempted:false};
     $('formUrl').value=ep.viewUrl;
     const ids=detectGoogleIdentityEntries(entries);
     $('formNameEntrySelect').innerHTML=googleEntryOptions(ids.nameEntry,'送信しない（推奨）');
@@ -1328,7 +1358,7 @@ function renderGoogleFormAnswerTable(){
   const body=$('formAnswerMappingBody');if(!body)return;
   body.innerHTML=editorRows.map((r,i)=>`<tr data-form-map-row="${i+1}"><td><strong>${esc(r.label||`解答${i+1}`)}</strong><small>${esc(r.section||'')}</small></td><td><select class="form-answer-entry" data-q-index="${i+1}">${googleEntryOptions()}</select></td><td class="form-map-value">—</td></tr>`).join('');
   $('formMappingPanel').dataset.signature=currentEditorSignature();
-  body.querySelectorAll('.form-answer-entry').forEach(sel=>sel.onchange=()=>{updateGoogleMapValue(sel);renderGoogleFormStatus()});
+  body.querySelectorAll('.form-answer-entry').forEach(sel=>sel.onchange=()=>{const e=entryByKey(sel.value);sel.dataset.sampleValue=e?String(e.value??''):'';updateGoogleMapValue(sel);renderGoogleFormStatus()});
 }
 function updateGoogleMapValue(sel){
   const tr=sel.closest('tr'),e=entryByKey(sel.value);if(tr?.querySelector('.form-map-value'))tr.querySelector('.form-map-value').textContent=e?String(e.value||'(空欄)'):'—';
@@ -1339,13 +1369,13 @@ function autoMapGoogleFormAnswers(force=true){
   const name=$('formNameEntrySelect').value,code=$('formCodeEntrySelect').value;
   const candidates=googleFormSetup.entries.filter(e=>e.key!==name&&e.key!==code);
   const sels=[...document.querySelectorAll('.form-answer-entry')];
-  sels.forEach((sel,i)=>{if(force||!sel.value)sel.value=candidates[i]?.key||'';updateGoogleMapValue(sel)});
+  sels.forEach((sel,i)=>{if(force||!sel.value){const c=candidates[i];sel.value=c?.key||'';sel.dataset.sampleValue=c?String(c.value??''):'';}updateGoogleMapValue(sel)});
   renderGoogleFormStatus();
 }
 function googleFormMappingState(){
   const nameEntry=$('formNameEntrySelect')?.value||'',codeEntry=$('formCodeEntrySelect')?.value||'';
   const sels=[...document.querySelectorAll('.form-answer-entry')];
-  const answerEntries=sels.map((sel,i)=>({questionId:i+1,entry:sel.value||''}));
+  const answerEntries=sels.map((sel,i)=>{const sampleValue=String(sel.dataset.sampleValue??entryByKey(sel.value)?.value??'');return {questionId:i+1,entry:sel.value||'',sampleValue,valueFormat:googleFormValueFormatFromSample(sampleValue)};});
   const signatureOk=$('formMappingPanel')?.dataset.signature===currentEditorSignature();
   const mapped=answerEntries.filter(x=>x.entry).length;
 
@@ -1390,7 +1420,7 @@ function renderGoogleFormStatus(){
   const next=$('formNextStepMsg');if(next)next.classList.toggle('hidden',!(st.ok&&tested));
 }
 function resetGoogleFormLink(){
-  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',pageHistory:'',testAttempted:false};
   $('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
   if($('formNextStepMsg'))$('formNextStepMsg').classList.add('hidden');
   $('formLinkMsg').className='small muted';$('formLinkMsg').textContent='Googleフォーム連携設定をリセットしました。通常のGoogleフォームURL欄はそのまま残しています。';
@@ -1402,21 +1432,21 @@ function buildGoogleFormSubmissionConfig(questions){
   if(!st.ok)throw new Error('Googleフォーム連携の対応に未設定または不正な重複があります。連携情報を確認してください。');
   if(questions.length!==st.answerEntries.length)throw new Error('Googleフォームの解答対応数と現在の設問数が一致しません。自動対応をやり直してください。');
   const confirmed=!!$('formTestConfirmed').checked,now=new Date().toISOString();
-  return {provider:'google_forms',version:2,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:googleEntryValueFormat(x.entry)})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
+  return {provider:'google_forms',version:3,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',pageHistory:googleFormSetup.pageHistory||Array.from({length:21},(_,i)=>i).join(','),nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:x.valueFormat||googleEntryValueFormat(x.entry),sampleValue:x.sampleValue||''})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
   if(!(key in fields)){fields[key]=value;return}
   if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
-function postGoogleForm(actionUrl,fields){
+function postGoogleForm(actionUrl,fields,pageHistory=''){
   return new Promise((resolve,reject)=>{
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
       const frame=document.createElement('iframe');frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
       Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
-      [['fvv','1'],['pageHistory','0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
+      [['fvv','1'],['pageHistory',pageHistory||Array.from({length:21},(_,i)=>i).join(',')],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
       document.body.appendChild(form);
       let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
       frame.onload=()=>finish();
@@ -1430,12 +1460,14 @@ async function testGoogleFormSubmission(){
     const fields={};
     if(st.nameEntry)fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
     st.answerEntries.forEach((m,i)=>{
-      // 同じentryを共有する複数選択は、同名hidden inputを複数作って送信する。
-      const sample=String(editorRows[i]?.answer??'').trim()||normalizeGoogleFormChoiceValue(entryByKey(m.entry)?.value)||configuredChoices()[0]||'0';
-      addGoogleField(fields,m.entry,toGoogleFormChoiceValue(sample,googleEntryValueFormat(m.entry)));
+      // テスト送信では「事前入力URLに実際に入っていた値」を最優先でそのまま送る。
+      // これなら自作フォームの丸数字/全角/選択肢表記でも、Googleフォーム自身が受け入れる値で確認できる。
+      const rawSample=String(m.sampleValue??'').trim();
+      const fallback=String(editorRows[i]?.answer??'').trim()||configuredChoices()[0]||'0';
+      addGoogleField(fields,m.entry,rawSample||googleFormMappedValue(fallback,m));
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
-    await postGoogleForm(googleFormSetup.actionUrl,fields);googleFormSetup.testAttempted=true;
+    await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory);googleFormSetup.testAttempted=true;
     $('formTestMsg').className='success small';$('formTestMsg').textContent='テスト送信処理を実行しました。Googleフォームの「回答」タブを開き、1件追加されていることを確認したら「受信を確認した」にチェックしてください。';
   }catch(e){console.error(e);$('formTestMsg').className='error small';$('formTestMsg').textContent=e.message}finally{$('testGoogleFormBtn').disabled=false}
 }
@@ -1523,7 +1555,7 @@ function parsePrefilledGoogleFormForExam(raw,exam){
   if(ids.nameEntry&&ids.nameEntry===ids.codeEntry)throw new Error('氏名と4桁番号のentryが同じになっています。対応を確認してください。');
   const answers=entries.filter(e=>e.key!==ids.codeEntry&&(!ids.nameEntry||e.key!==ids.nameEntry));
   if(answers.length!==(exam.questions||[]).length)throw new Error(`Googleフォームの解答対応数が一致しません。現在 ${answers.length}件 / 必要 ${(exam.questions||[]).length}件です。チェックボックス問題は選択数ぶん同じentryが並んでいて正常です。すべての解答欄へ仮入力してリンクを取り直してください。`);
-  return {ep,entries,ids,answers};
+  return {ep,entries,ids,answers,pageHistory:googleFormPageHistoryFromUrl(raw)};
 }
 function replaceSelectedExamGoogleForm(){
   const exam=exams.find(e=>e.id===$('publishExamSelect')?.value),msg=$('publishFormReplaceMsg');
@@ -1532,7 +1564,7 @@ function replaceSelectedExamGoogleForm(){
     const raw=$('publishFormPrefillUrl')?.value.trim();if(!raw)throw new Error('事前入力したGoogleフォームのリンクを貼り付けてください。');
     const parsed=parsePrefilledGoogleFormForExam(raw,exam),now=new Date().toISOString();
     exam.googleFormUrl=parsed.ep.viewUrl;
-    exam.formSubmission={provider:'google_forms',version:2,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value)})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
+    exam.formSubmission={provider:'google_forms',version:3,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,pageHistory:parsed.pageHistory,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value),sampleValue:String(parsed.answers[i].value??'')})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
     exam.updatedAt=now;allExamData.exams=exams;
     $('publishFormPrefillUrl').value='';
     if(msg){msg.className='success small';msg.textContent=`Googleフォームを差し替えました。4桁番号・解答 ${(exam.questions||[]).length}件を対応しました。${parsed.ids.nameEntry?'氏名も送信します。':'氏名は送信しません。'} 次にテスト送信してください。`}
@@ -1568,12 +1600,12 @@ async function testSelectedExamGoogleForm(){
       if(!q)throw new Error(`Googleフォーム連携に対応する設問 ${m.questionId} が見つかりません。`);
       const sample=String(q.answer??q.options?.[0]??'').trim();
       if(sample==='')throw new Error(`${q.label||`設問${q.id}`} のテスト送信用回答を作れません。正答または選択肢を確認してください。`);
-      addGoogleField(fields,m.entry,toGoogleFormChoiceValue(sample,m.valueFormat||'plain'));
+      addGoogleField(fields,m.entry,String(m.sampleValue??'').trim()||googleFormMappedValue(sample,m));
     }
     btn.disabled=true;
     msg.className='small muted';
     msg.textContent=`「${exam.title}」のGoogleフォームへテスト送信しています…`;
-    await postGoogleForm(f.actionUrl,fields);
+    await postGoogleForm(f.actionUrl,fields,f.pageHistory);
     f.lastTestAttemptedAt=new Date().toISOString();exam.updatedAt=f.lastTestAttemptedAt;allExamData.exams=exams;
     msg.dataset.keep='1';msg.className='success small';
     msg.innerHTML=`<strong>テスト送信処理を実行しました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。Googleフォームの「回答」タブを開き、1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>※ ブラウザからGoogleフォーム側の受理結果までは確認できません。</span>`;
@@ -1637,7 +1669,7 @@ function restoreStoredGoogleFormToBuilder(exam,{asCopy=false}={}){
   const f=exam?.formSubmission;
   $('formPrefillUrl').value='';
   if(!f||!storedGoogleFormConfigValid(exam)){
-    googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',testAttempted:false};
+    googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',pageHistory:'',testAttempted:false};
     $('formUrl').value=storedGoogleFormViewUrl(exam)||'';
     $('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
     return;
@@ -1649,16 +1681,16 @@ function restoreStoredGoogleFormToBuilder(exam,{asCopy=false}={}){
   entries.push({key:f.studentCodeEntry,value:'9999'});
   (f.questionEntries||[]).forEach(m=>{
     const q=qMap.get(String(m.questionId));
-    entries.push({key:m.entry,value:toGoogleFormChoiceValue(q?.answer??'',m.valueFormat||'plain')});
+    entries.push({key:m.entry,value:String(m.sampleValue??'').trim()||toGoogleFormChoiceValue(q?.answer??'',m.valueFormat||'plain')});
   });
-  googleFormSetup={entries,viewUrl:f.viewUrl||storedGoogleFormViewUrl(exam),actionUrl:f.actionUrl,formKey,testAttempted:asCopy?false:!!f.lastTestAttemptedAt};
+  googleFormSetup={entries,viewUrl:f.viewUrl||storedGoogleFormViewUrl(exam),actionUrl:f.actionUrl,formKey,pageHistory:f.pageHistory||Array.from({length:21},(_,i)=>i).join(','),testAttempted:asCopy?false:!!f.lastTestAttemptedAt};
   $('formUrl').value=googleFormSetup.viewUrl||storedGoogleFormViewUrl(exam)||'';
   $('formNameEntrySelect').innerHTML=googleEntryOptions(f.nameEntry||'','送信しない（推奨）');
   $('formCodeEntrySelect').innerHTML=googleEntryOptions(f.studentCodeEntry||'');
   $('formMappingPanel').classList.remove('hidden');$('autoMapFormBtn').disabled=false;
   renderGoogleFormAnswerTable();
   const sels=[...document.querySelectorAll('.form-answer-entry')];
-  (f.questionEntries||[]).forEach((m,i)=>{if(sels[i]){sels[i].value=m.entry||'';updateGoogleMapValue(sels[i])}});
+  (f.questionEntries||[]).forEach((m,i)=>{if(sels[i]){sels[i].value=m.entry||'';sels[i].dataset.sampleValue=String(m.sampleValue??entries[i+(f.nameEntry?2:1)]?.value??'');updateGoogleMapValue(sels[i])}});
   $('formTestConfirmed').checked=asCopy?false:!!f.testConfirmed;
   renderGoogleFormStatus();
 }
@@ -1693,7 +1725,7 @@ function resetBuilderForNewExam(){
   $('useNumberChoices').checked=true;$('numberChoiceStart').value='0';$('numberChoiceEnd').value='9';$('useLetterChoices').checked=true;$('letterChoiceStart').value='a';$('letterChoiceEnd').value='f';$('useKanaChoices').checked=false;renderGlobalChoicePreview();
   editorRows=[];editorSectionTargets={};$('answerPdf').value='';$('pdfText').value='';$('answerTextInput').value='';
   $('examReviewPanel').classList.add('hidden');$('examEditorCards').innerHTML='';$('parseSummary').innerHTML='';$('sectionPointsSummary').innerHTML='';
-  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',testAttempted:false};$('formUrl').value='';$('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',pageHistory:'',testAttempted:false};$('formUrl').value='';$('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
   $('draftExamMsg').textContent='';$('examSourceMsg').className='small muted';$('examSourceMsg').textContent='新しい試験を作成できます。';
   const msg=$('registeredExamMsg');if(msg){msg.className='small muted';msg.textContent='新規作成モードに切り替えました。'}
 }
@@ -2140,7 +2172,7 @@ function clearTeacherLocalOperationalData(schoolYear,resetEpoch){
   analysisRows=[];analysisExam=null;analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[],responseMode:''};annualSecrets=[];accessVault=[];
   publishRoster=[];editorRows=[];editorSectionTargets={};
   rosterRanges=[{start:'',end:''}];
-  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};previewMode='before';
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',pageHistory:'',testAttempted:false};previewMode='before';
 }
 async function currentYearReset(){
   const currentYear=String(usersData.schoolYear||allExamData?.schoolYear||new Date().getFullYear());

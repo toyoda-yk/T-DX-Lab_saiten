@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.26.2" rel="stylesheet"/>
+<link href="css/style.css?v=1.26.3" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.26.2</span>
+<span class="tdx-version-pill">v1.26.3</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -286,7 +286,7 @@
 </div>
 <details class="compact-help-details">
 <summary>Googleフォーム側の推奨設定を見る</summary>
-<p>項目順は「4桁番号（必須）→ 解答欄」でOKです。氏名欄は不要です。事前入力リンク作成時は<strong>4桁番号とすべての解答欄に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
+<p>項目順は「4桁番号（必須）→ 解答欄」でOKです。氏名欄は不要です。事前入力リンク作成時は<strong>4桁番号とすべての解答欄に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。<strong>セクション区切りは利用できます。</strong> T-DX Lab側で複数セクション送信に対応します。</p>
 </details>
 <div class="prefill-important-note"><strong>通常の「送信」URLではありません。</strong><span>右上の「︙」→「事前入力したリンクを取得」で作ったURLを貼り付けます。</span></div><label class="google-prefill-label">Googleフォームの事前入力URL <textarea id="formPrefillUrl" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&amp;entry...." rows="3"></textarea>
 </label>
@@ -309,7 +309,7 @@
 <div class="google-form-test-zone">
 <div>
 <strong>テスト送信</strong>
-<span>現在の対応でGoogleフォームへテスト回答を1件送ります。送信後、Googleフォームの「回答」タブで受信を確認してください。</span>
+<span>事前入力URLで取得した実際の選択肢表記を使ってGoogleフォームへテスト回答を1件送ります。送信後、4桁番号だけでなく解答欄にも値が入ったことを確認してください。</span>
 </div>
 <div class="actions compact-actions">
 <button class="orange" id="testGoogleFormBtn" type="button">テスト送信（1件追加）</button>
@@ -483,8 +483,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.26.2"></script>
-<script src="js/teacher.js?v=1.26.2"></script>
+<script src="js/common.js?v=1.26.3"></script>
+<script src="js/teacher.js?v=1.26.3"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
