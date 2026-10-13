@@ -6,9 +6,10 @@ let editorSectionTargets={};
 let rosterRanges=[];
 let googleFormSetup={entries:[],viewUrl:'',actionUrl:'',testAttempted:false};
 let previewMode='before';
+let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.0';
+const APP_VERSION='1.26.2';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -194,7 +195,14 @@ async function init(){
 function refreshExamSelects(preferredPublishId=''){
   const opts=exams.map(e=>`<option value="${e.id}">${esc(e.title)}</option>`).join('');
   if($('analysisExam'))$('analysisExam').innerHTML=opts;
+  refreshBuilderExamSelector(editingExamId||preferredPublishId);
   refreshPublishSelectors(preferredPublishId);
+}
+function refreshBuilderExamSelector(preferredId=''){
+  const sel=$('builderExamSelect');if(!sel)return;
+  const current=preferredId||sel.value||'';
+  sel.innerHTML='<option value="">試験を選択してください</option>'+exams.map(e=>`<option value="${esc(e.id)}">${esc(e.subject||'')}｜${esc(e.title||'(無題)')}</option>`).join('');
+  if(exams.some(e=>e.id===current))sel.value=current;
 }
 function refreshPublishSelectors(preferredExamId=''){
   if(!$('publishSubjectSelect')||!$('publishExamSelect'))return;
@@ -247,6 +255,9 @@ function bind(){
   $('checkPointsBtn').onclick=checkPoints;
   $('saveDraftExamBtn').onclick=saveDraft;
   $('registerExamBtn').onclick=registerExam;
+  $('loadRegisteredExamBtn').onclick=()=>loadRegisteredExamToBuilder($('builderExamSelect')?.value||'');
+  $('newExamBuilderBtn').onclick=resetBuilderForNewExam;
+  $('duplicateLoadedExamBtn').onclick=()=>{if(editingExamId)loadRegisteredExamToBuilder(editingExamId,{asCopy:true})};
   $('analyzeFormLinkBtn').onclick=analyzeGoogleFormLink;
   $('autoMapFormBtn').onclick=autoMapGoogleFormAnswers;
   $('clearFormLinkBtn').onclick=resetGoogleFormLink;
@@ -332,6 +343,7 @@ function showSection(id){
   document.querySelectorAll('.adminSection').forEach(x=>x.classList.toggle('hidden',x.id!==id));
   document.querySelectorAll('.menuBtn').forEach(x=>x.classList.toggle('active-look',x.dataset.target===id));
   if(id==='studentManager'){renderRosterSummary();renderIndividualStudents()}
+  if(id==='examManager')refreshBuilderExamSelector(editingExamId);
   if(id==='qrManager')renderAccessVaultManager();
   if(id==='publishManager')loadPublishExam();
   requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}));
@@ -1574,6 +1586,117 @@ async function testSelectedExamGoogleForm(){
   }
 }
 
+
+function setBuilderEditMode(exam=null,asCopy=false){
+  const badge=$('examEditModeBadge'),btn=$('registerExamBtn'),dup=$('duplicateLoadedExamBtn');
+  if(asCopy){
+    editingExamId='';
+    if(badge){badge.textContent='複製して新規作成';badge.classList.remove('is-editing')}
+    if(btn)btn.textContent='複製した試験を新規登録（非公開）';
+    if(dup)dup.disabled=true;
+    return;
+  }
+  editingExamId=exam?.id||'';
+  if(badge){badge.textContent=exam?`編集中：${exam.title}`:'新規作成';badge.classList.toggle('is-editing',!!exam)}
+  if(btn)btn.textContent=exam?'登録内容を更新':'この内容で試験データに登録（非公開）';
+  if(dup)dup.disabled=!exam;
+  refreshBuilderExamSelector(editingExamId);
+}
+function applyChoiceConfigFromExam(exam){
+  const opts=(exam?.choiceConfig?.options||[]).map(x=>String(x));
+  const nums=opts.filter(x=>/^\d+$/.test(x)).map(Number).sort((a,b)=>a-b);
+  const letters=opts.filter(x=>/^[a-z]$/i.test(x)).map(x=>x.toLowerCase()).sort();
+  const kanaOrder=['ア','イ','ウ','エ','オ','カ','キ','ク','ケ','コ','サ','シ','ス','セ','ソ','タ','チ','ツ','テ','ト'];
+  const kana=opts.filter(x=>kanaOrder.includes(x)).sort((a,b)=>kanaOrder.indexOf(a)-kanaOrder.indexOf(b));
+  $('useNumberChoices').checked=!!nums.length;
+  if(nums.length){$('numberChoiceStart').value=String(nums[0]);$('numberChoiceEnd').value=String(nums[nums.length-1])}
+  $('useLetterChoices').checked=!!letters.length;
+  if(letters.length){$('letterChoiceStart').value=letters[0];$('letterChoiceEnd').value=letters[letters.length-1]}
+  $('useKanaChoices').checked=!!kana.length;
+  if(kana.length){$('kanaChoiceStart').value=kana[0];$('kanaChoiceEnd').value=kana[kana.length-1]}
+  if(!opts.length){$('useNumberChoices').checked=true;$('numberChoiceStart').value='0';$('numberChoiceEnd').value='9';$('useLetterChoices').checked=true;$('letterChoiceStart').value='a';$('letterChoiceEnd').value='f';$('useKanaChoices').checked=false}
+  renderGlobalChoicePreview();
+}
+function editorRowsFromStoredExam(exam){
+  const sectionMap=new Map((exam?.sections||[]).map(s=>[String(s.id),s]));
+  editorSectionTargets={};
+  (exam?.sections||[]).forEach(sec=>{editorSectionTargets[String(sec.name||sec.id)]=Number(sec.points||0)});
+  return (exam?.questions||[]).map(q=>{
+    const sec=sectionMap.get(String(q.section));
+    return {
+      section:String(sec?.name||q.section||'第1問'),
+      label:String(q.label||''),answer:String(q.answer??''),
+      points:['complete_item','unordered_complete_item'].includes(q.type)?'':String(q.points??''),
+      type:q.type||'normal',group:String(q.group||''),
+      groupPoints:['complete_item','unordered_complete_item'].includes(q.type)?String(q.groupPoints??''):'',
+      options:Array.isArray(q.options)?q.options.join(','):configuredOptionsCsv(),confidence:'確認済',sourceLine:'登録済み試験から読込'
+    };
+  });
+}
+function restoreStoredGoogleFormToBuilder(exam,{asCopy=false}={}){
+  const f=exam?.formSubmission;
+  $('formPrefillUrl').value='';
+  if(!f||!storedGoogleFormConfigValid(exam)){
+    googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',testAttempted:false};
+    $('formUrl').value=storedGoogleFormViewUrl(exam)||'';
+    $('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+    return;
+  }
+  let formKey='';try{formKey=googleFormEndpoints(f.viewUrl||f.actionUrl||exam.googleFormUrl).formKey}catch(_){}
+  const qMap=new Map((exam.questions||[]).map(q=>[String(q.id),q]));
+  const entries=[];
+  if(f.nameEntry)entries.push({key:f.nameEntry,value:'T-DXテスト'});
+  entries.push({key:f.studentCodeEntry,value:'9999'});
+  (f.questionEntries||[]).forEach(m=>{
+    const q=qMap.get(String(m.questionId));
+    entries.push({key:m.entry,value:toGoogleFormChoiceValue(q?.answer??'',m.valueFormat||'plain')});
+  });
+  googleFormSetup={entries,viewUrl:f.viewUrl||storedGoogleFormViewUrl(exam),actionUrl:f.actionUrl,formKey,testAttempted:asCopy?false:!!f.lastTestAttemptedAt};
+  $('formUrl').value=googleFormSetup.viewUrl||storedGoogleFormViewUrl(exam)||'';
+  $('formNameEntrySelect').innerHTML=googleEntryOptions(f.nameEntry||'','送信しない（推奨）');
+  $('formCodeEntrySelect').innerHTML=googleEntryOptions(f.studentCodeEntry||'');
+  $('formMappingPanel').classList.remove('hidden');$('autoMapFormBtn').disabled=false;
+  renderGoogleFormAnswerTable();
+  const sels=[...document.querySelectorAll('.form-answer-entry')];
+  (f.questionEntries||[]).forEach((m,i)=>{if(sels[i]){sels[i].value=m.entry||'';updateGoogleMapValue(sels[i])}});
+  $('formTestConfirmed').checked=asCopy?false:!!f.testConfirmed;
+  renderGoogleFormStatus();
+}
+function loadRegisteredExamToBuilder(id,{asCopy=false}={}){
+  const exam=exams.find(e=>e.id===id);
+  const msg=$('registeredExamMsg');
+  if(!exam){if(msg){msg.className='error small';msg.textContent='呼び出す試験を選択してください。'}return}
+  $('examName').value=asCopy?`${exam.title}【複製】`:exam.title||'';
+  $('examSubjectInput').value=exam.subject||'';$('examTotalPoints').value=Number(exam.totalPoints||100);
+  $('answerPdf').value='';$('pdfText').value='';$('answerTextInput').value='';
+  applyChoiceConfigFromExam(exam);
+  editorRows=editorRowsFromStoredExam(exam);
+  if(!editorRows.length)editorRows=[blankEditorRow()];
+  $('examReviewPanel').classList.remove('hidden');
+  document.querySelector('.pdf-review-workspace')?.classList.add('no-pdf-source');
+  if($('pdfPagePreview'))$('pdfPagePreview').innerHTML='<div class="notice small">登録済み試験を呼び出しています。元PDFは保存していないため、模範解答・採点設定を右側で確認してください。</div>';
+  renderEditor();
+  restoreStoredGoogleFormToBuilder(exam,{asCopy});
+  setBuilderEditMode(exam,asCopy);
+  if(asCopy){
+    if(msg){msg.className='success small';msg.textContent=`「${exam.title}」の内容を複製しました。元試験は変更されません。必要な箇所を直して新規登録してください。`}
+  }else{
+    if(msg){msg.className='success small';msg.textContent=`「${exam.title}」を呼び出しました。模範解答・採点設定・Googleフォーム連携を修正して「登録内容を更新」を押せます。`}
+  }
+  $('examSourceMsg').className='success small';$('examSourceMsg').textContent=`登録済み試験から ${(exam.questions||[]).length}解答欄を復元しました。元PDFを読み直す必要はありません。`;
+  $('examReviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resetBuilderForNewExam(){
+  if(editingExamId&&!confirm('編集中の試験から離れて、新しい試験作成へ切り替えますか？\n保存していない変更は失われます。'))return;
+  setBuilderEditMode(null,false);
+  $('builderExamSelect').value='';$('examName').value='';$('examSubjectInput').value='';$('examTotalPoints').value='100';
+  $('useNumberChoices').checked=true;$('numberChoiceStart').value='0';$('numberChoiceEnd').value='9';$('useLetterChoices').checked=true;$('letterChoiceStart').value='a';$('letterChoiceEnd').value='f';$('useKanaChoices').checked=false;renderGlobalChoicePreview();
+  editorRows=[];editorSectionTargets={};$('answerPdf').value='';$('pdfText').value='';$('answerTextInput').value='';
+  $('examReviewPanel').classList.add('hidden');$('examEditorCards').innerHTML='';$('parseSummary').innerHTML='';$('sectionPointsSummary').innerHTML='';
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',testAttempted:false};$('formUrl').value='';$('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+  $('draftExamMsg').textContent='';$('examSourceMsg').className='small muted';$('examSourceMsg').textContent='新しい試験を作成できます。';
+  const msg=$('registeredExamMsg');if(msg){msg.className='small muted';msg.textContent='新規作成モードに切り替えました。'}
+}
 function makeExamId(){let id;do{id=`exam_${new Date().toISOString().slice(0,10).replace(/-/g,'')}_${TDX.randomCode(6).toLowerCase()}`}while(exams.some(e=>e.id===id));return id}
 function buildExamFromEditor(){
   const title=$('examName').value.trim(),subject=$('examSubjectInput').value.trim(),googleFormUrl=$('formUrl').value.trim(),target=Number($('examTotalPoints').value)||100;
@@ -1595,23 +1718,47 @@ function buildExamFromEditor(){
 function saveDraft(){
   try{const draft={title:$('examName').value.trim(),subject:$('examSubjectInput').value.trim(),totalPoints:$('examTotalPoints').value,googleFormUrl:$('formUrl').value.trim(),googleFormPrefillUrl:$('formPrefillUrl').value.trim(),pdfText:$('pdfText').value,pastedAnswerText:$('answerTextInput').value,choiceConfig:{numbers:$('useNumberChoices').checked,numberStart:$('numberChoiceStart').value,numberEnd:$('numberChoiceEnd').value,letters:$('useLetterChoices').checked,letterStart:$('letterChoiceStart').value,letterEnd:$('letterChoiceEnd').value,kana:$('useKanaChoices').checked,kanaStart:$('kanaChoiceStart').value,kanaEnd:$('kanaChoiceEnd').value},sectionTargets:editorSectionTargets,editorRows,createdAt:new Date().toISOString()};localStorage.setItem('tdxDraftExam',JSON.stringify(draft));$('draftExamMsg').className='success small';$('draftExamMsg').textContent='編集内容をこのブラウザに保存しました。'}catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
 }
-function registerExam(){
+async function registerExam(){
+  const btn=$('registerExamBtn'),oldText=btn?.textContent||'';
   try{
-    const exam=buildExamFromEditor(),total=rowPointTotal();
+    const built=buildExamFromEditor(),total=rowPointTotal();
     const sectionErrors=Object.entries(editorSectionTargets).filter(([sec,expected])=>Math.abs(sectionActualPoints(sec)-Number(expected))>.0001);
     const warnings=[];
-    if(Math.abs(total-exam.totalPoints)>0.0001)warnings.push(`合計配点：${total}点 / 満点設定：${exam.totalPoints}点`);
+    if(Math.abs(total-built.totalPoints)>0.0001)warnings.push(`合計配点：${total}点 / 満点設定：${built.totalPoints}点`);
     if(sectionErrors.length)warnings.push(`大問別配点の不一致：${sectionErrors.map(([sec,expected])=>`${sec} ${sectionActualPoints(sec)}/${expected}点`).join('、')}`);
     if(editorRows.some(r=>r.confidence==='要確認'))warnings.push(`要確認の解答欄：${editorRows.filter(r=>r.confidence==='要確認').length}件`);
-    if(exam.formSubmission&&!exam.formSubmission.testConfirmed)warnings.push('Googleフォームのテスト送信は設定済みですが、受信確認のチェックがまだありません');
-    if(warnings.length&&!confirm(`公開前に確認したい項目があります。\n\n${warnings.join('\n')}\n\nこのまま非公開の試験データとして登録しますか？`))return;
-    exams.push(exam);allExamData.exams=exams;refreshExamSelects(exam.id);
-    auditEvent('試験登録',exam.title,`教科：${exam.subject} / ${exam.questions.length}解答欄 / 非公開で登録`);
-    const formStatus=exam.formSubmission?' / Googleフォーム連携済み':' / Googleフォーム連携なし';
-    $('draftExamMsg').className='success small';$('draftExamMsg').innerHTML=`<strong>✓ 模範解答・採点設定の登録が完了しました。</strong><br>試験：${esc(exam.title)} / 試験ID：<code>${esc(exam.id)}</code>${formStatus}<br><span class="publish-next-warning">⚠ まだ生徒には公開されていません。</span><div class="actions compact-actions"><button type="button" id="goPublishFromRegister" class="orange">受験者・公開設定へ進む</button></div>`;
+    if(built.formSubmission&&!built.formSubmission.testConfirmed)warnings.push('Googleフォーム連携は設定済みですが、受信確認のチェックがまだありません');
+    if(warnings.length&&!confirm(`登録前に確認したい項目があります。\n\n${warnings.join('\n')}\n\nこのまま保存しますか？`))return;
+    if(btn){btn.disabled=true;btn.textContent=editingExamId?'更新中…':'登録中…'}
+
+    let exam=built,isUpdate=false;
+    if(editingExamId){
+      const idx=exams.findIndex(e=>e.id===editingExamId);if(idx<0)throw new Error('編集元の試験が見つかりません。試験を呼び出し直してください。');
+      const old=exams[idx];
+      if(examStoredStatus(old)==='published'&&!confirm(`「${old.title}」は公開設定済みです。\n\n模範解答・採点設定・Googleフォーム連携を更新すると、生徒用データにも反映されます。続けますか？`))return;
+      exam={...built,id:old.id,createdAt:old.createdAt||built.createdAt,updatedAt:new Date().toISOString(),schoolYear:old.schoolYear||built.schoolYear,status:old.status,published:old.published,access:old.access||built.access,publishWindow:old.publishWindow||null,clonedFrom:old.clonedFrom||undefined};
+      exams[idx]=exam;isUpdate=true;
+    }else{
+      exams.push(exam);
+    }
+    allExamData.exams=exams;
+    refreshExamSelects(exam.id);setBuilderEditMode(exam,false);
     $('publishSubjectSelect').value=exam.subject;refreshPublishSelectors(exam.id);loadPublishExam();renderExamExportSummary();
-    requestAnimationFrame(()=>{const b=$('goPublishFromRegister');if(b)b.onclick=()=>{showSection('publishManager');$('publishSubjectSelect').value=exam.subject;refreshPublishSelectors(exam.id);loadPublishExam()}});
+    $('draftExamMsg').className='notice small';$('draftExamMsg').textContent=isUpdate?'登録内容を更新し、生徒用試験データへ反映しています…':'試験を非公開で登録し、登録済み試験として保存しています…';
+    try{
+      await syncExamsToPublicData({operation:isUpdate?'試験更新':'試験登録',target:exam.title,detail:`教科：${exam.subject} / ${exam.questions.length}解答欄 / ${examStoredStatus(exam)==='published'?'公開設定維持':'非公開'}`});
+      const formStatus=exam.formSubmission?' / Googleフォーム連携済み':' / Googleフォーム連携なし';
+      $('draftExamMsg').className='success small';
+      $('draftExamMsg').innerHTML=isUpdate
+        ?`<strong>✓ 「${esc(exam.title)}」の登録内容を更新しました。</strong><br>模範解答・採点設定・Googleフォーム連携${examStoredStatus(exam)==='published'?'・現在の公開設定':''}を保持しています。${formStatus}`
+        :`<strong>✓ 模範解答・採点設定の登録が完了しました。</strong><br>試験：${esc(exam.title)} / 試験ID：<code>${esc(exam.id)}</code>${formStatus}<br><span class="publish-next-warning">⚠ まだ生徒には公開されていません。</span><div class="actions compact-actions"><button type="button" id="goPublishFromRegister" class="orange">受験者・公開設定へ進む</button></div>`;
+      const msg=$('registeredExamMsg');if(msg){msg.className='success small';msg.textContent=`「${exam.title}」は登録済み試験からいつでも呼び出して再編集できます。`}
+      requestAnimationFrame(()=>{const b=$('goPublishFromRegister');if(b)b.onclick=()=>{showSection('publishManager');$('publishSubjectSelect').value=exam.subject;refreshPublishSelectors(exam.id);loadPublishExam()}});
+    }catch(syncErr){
+      console.error(syncErr);$('draftExamMsg').className='error small';$('draftExamMsg').innerHTML=`<strong>画面内では保存しましたが、登録済み試験データへの反映に失敗しました。</strong><br>${esc(syncErr.message||syncErr)}<br>ページを閉じる前に再度「登録内容を更新」を押してください。`;
+    }
   }catch(e){$('draftExamMsg').className='error small';$('draftExamMsg').textContent=e.message}
+  finally{if(btn){btn.disabled=false;btn.textContent=editingExamId?'登録内容を更新':'この内容で試験データに登録（非公開）'}}
 }
 
 async function readRows(file){

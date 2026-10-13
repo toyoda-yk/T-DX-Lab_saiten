@@ -1103,3 +1103,13 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .audit-result{display:inline-flex;padding:3px 9px;border-radius:999px;font-size:.78rem;font-weight:800}
 .audit-result.ok{background:#e8f7ef;color:#18734a}
 .audit-result.ng{background:#fff0f0;color:#b63b3b}
+
+/* v1.26.2 registered exam loader */
+.registered-exam-loader{margin:14px 0 18px;padding:16px 18px;border:1px solid #cfe0f6;border-radius:18px;background:linear-gradient(135deg,#f8fbff,#eef6ff)}
+.registered-exam-loader-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.registered-exam-loader-head h3{margin:2px 0 4px}
+.registered-exam-loader-controls{display:grid;grid-template-columns:minmax(280px,1fr) auto;gap:12px;align-items:end}
+.registered-exam-loader-controls label{margin:0}
+.edit-mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;background:#e8f1ff;color:#1859a7;font-weight:800;font-size:.86rem;white-space:nowrap}
+.edit-mode-badge.is-editing{background:#fff0d9;color:#b55c00}
+@media(max-width:780px){.registered-exam-loader-controls{grid-template-columns:1fr}.registered-exam-loader-head{flex-direction:column}.registered-exam-loader-controls .actions{justify-content:flex-start}}

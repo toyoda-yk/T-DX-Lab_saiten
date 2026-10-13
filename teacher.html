@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.26.1" rel="stylesheet"/>
+<link href="css/style.css?v=1.26.2" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.26.1</span>
+<span class="tdx-version-pill">v1.26.2</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -173,6 +173,21 @@
 <div class="builder-step"><b>STEP 3</b><span>Googleフォーム連携</span></div>
 <div class="builder-step"><b>STEP 4</b><span>非公開で登録</span></div>
 </div>
+<div class="registered-exam-loader">
+  <div class="registered-exam-loader-head">
+    <div><span class="section-eyebrow">LOAD REGISTERED EXAM</span><h3>登録済み試験を呼び出す</h3><p class="muted small">試験管理に残っている試験を、模範解答・採点設定・Googleフォーム連携ごと編集画面へ戻せます。</p></div>
+    <span class="edit-mode-badge" id="examEditModeBadge">新規作成</span>
+  </div>
+  <div class="registered-exam-loader-controls">
+    <label>登録済み試験<select id="builderExamSelect"><option value="">試験を選択してください</option></select></label>
+    <div class="actions compact-actions">
+      <button class="teacher-action" id="loadRegisteredExamBtn" type="button">呼び出す</button>
+      <button class="secondary glass-btn" id="newExamBuilderBtn" type="button">＋ 新しい試験</button>
+      <button class="secondary glass-btn" id="duplicateLoadedExamBtn" type="button" disabled>複製して新規作成</button>
+    </div>
+  </div>
+  <div class="small muted" id="registeredExamMsg">既存試験を修正するときだけ使います。新しい試験はそのまま下へ進んでください。</div>
+</div>
 <div class="exam-builder-layout-v113">
 <div class="exam-basics-grid">
 <label class="exam-name-field">試験名<input id="examName" placeholder="例：2026年度 第1回 共通テスト模試"/></label>
@@ -262,7 +277,7 @@
 <div>
 <span class="section-eyebrow">GOOGLE FORM LINK</span>
 <h3>Googleフォーム連携</h3>
-<p class="muted small">事前入力リンクを使って、氏名・4桁番号・解答欄の送信先を1回だけ登録します。</p>
+<p class="muted small">事前入力リンクを使って、4桁番号・解答欄の送信先を登録します。氏名欄は不要です。</p>
 </div>
 
 <div class="guide-head-actions"><span class="google-form-standard-badge">1フォームにつき1回</span><button class="operation-guide-btn strong-guide" data-guide="google-form-prefill" type="button">？ 事前入力URLの取得方法</button></div></div>
@@ -271,7 +286,7 @@
 </div>
 <details class="compact-help-details">
 <summary>Googleフォーム側の推奨設定を見る</summary>
-<p>項目順は「氏名（必須）→ 4桁番号（必須）→ 解答欄」。事前入力リンク作成時は<strong>全項目に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
+<p>項目順は「4桁番号（必須）→ 解答欄」でOKです。氏名欄は不要です。事前入力リンク作成時は<strong>4桁番号とすべての解答欄に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。</p>
 </details>
 <div class="prefill-important-note"><strong>通常の「送信」URLではありません。</strong><span>右上の「︙」→「事前入力したリンクを取得」で作ったURLを貼り付けます。</span></div><label class="google-prefill-label">Googleフォームの事前入力URL <textarea id="formPrefillUrl" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&amp;entry...." rows="3"></textarea>
 </label>
@@ -468,8 +483,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.26.1"></script>
-<script src="js/teacher.js?v=1.26.1"></script>
+<script src="js/common.js?v=1.26.2"></script>
+<script src="js/teacher.js?v=1.26.2"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
