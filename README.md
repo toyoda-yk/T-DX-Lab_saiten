@@ -1,4 +1,4 @@
-T-DX Lab☆問題演習システム v1.25.5 STEP GUIDE / ADMIN SIMPLE
+T-DX Lab☆問題演習システム v1.25.6 CACHE FIX / STEP GUIDE / ADMIN SIMPLE
 
 主な変更
 - 一般教員画面を STEP 表示に統一
@@ -16,3 +16,8 @@ GAS
 
 SAFE版
 - 現在の data/users.json / data/exams.json / data/analysis.json は同梱していません。
+
+
+## v1.25.6
+- 画面上のバージョン表示と CSS/JS のキャッシュ識別子を統一
+- v1.25.5 の STEP ガイド・管理者画面整理を確実に読み込むよう修正
