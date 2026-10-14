@@ -3,7 +3,7 @@
   "systemName": "T-DX Lab☆問題演習システム",
   "schoolYear": "2026",
   "resetEpoch": "c7926e5b-803d-4795-aff7-07c6c8642cf4",
-  "updatedAt": "2026-10-14T01:28:05.390Z",
+  "updatedAt": "2026-10-14T01:45:08.384Z",
   "exams": [
     {
       "id": "exam_20261013_v9zftc",
@@ -385,11 +385,11 @@
           }
         ],
         "nameRequired": false,
-        "testConfirmed": false,
-        "lastTestAttemptedAt": "2026-10-14T01:27:56.045Z",
-        "verifiedAt": null,
-        "verificationSource": "builder",
-        "configuredAt": "2026-10-14T01:27:56.045Z"
+        "testConfirmed": true,
+        "lastTestAttemptedAt": "2026-10-14T01:44:59.748Z",
+        "verifiedAt": "2026-10-14T01:44:59.748Z",
+        "verificationSource": "builder_confirmation",
+        "configuredAt": "2026-10-14T01:44:59.748Z"
       },
       "choiceConfig": {
         "options": [
@@ -1505,7 +1505,7 @@
         }
       ],
       "createdAt": "2026-10-13T13:48:43.991Z",
-      "updatedAt": "2026-10-14T01:27:58.450Z",
+      "updatedAt": "2026-10-14T01:45:01.081Z",
       "publishWindow": {
         "startAt": "2026-10-13T13:50:00.000Z",
         "endAt": "2026-10-17T13:50:00.000Z",
