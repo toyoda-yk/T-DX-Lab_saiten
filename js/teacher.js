@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.0';
+const APP_VERSION='1.27.1';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1500,8 +1500,13 @@ function buildGoogleFormSubmissionConfig(questions){
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
-  if(!(key in fields)){fields[key]=value;return}
-  if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
+  const v=String(value??'');
+  if(!(key in fields)){fields[key]=v;return}
+  const arr=Array.isArray(fields[key])?fields[key]:[fields[key]];
+  // 同一チェックボックスentryへ同じ値を重複送信しない。
+  // 「同じ英数字はまとめて選択」のGoogleフォーム仕様に合わせる。
+  if(!arr.some(x=>String(x)===v))arr.push(v);
+  fields[key]=arr.length===1?arr[0]:arr;
 }
 function buildGoogleFormAutoSubmitUrl(actionUrl,fields,pageHistory=''){
   const action=googleFormEndpoints(actionUrl).actionUrl;
@@ -1571,11 +1576,11 @@ async function testGoogleFormSubmission(){
     const fields={};
     if(st.nameEntry)fields[st.nameEntry]='T-DXテスト';fields[st.codeEntry]='9999';
     st.answerEntries.forEach((m,i)=>{
-      // テスト送信では「事前入力URLに実際に入っていた値」を最優先でそのまま送る。
-      // これなら自作フォームの丸数字/全角/選択肢表記でも、Googleフォーム自身が受け入れる値で確認できる。
-      const rawSample=String(m.sampleValue??'').trim();
+      // v1.27.1: 生徒と同じ変換経路をテストする。
+      // 事前入力URLのsampleValueをそのまま再送すると、先生テストだけ成功して
+      // 生徒の実回答変換の不具合を見逃すため、T-DX側の正答をGoogleフォーム値へ変換して送る。
       const fallback=String(editorRows[i]?.answer??'').trim()||configuredChoices()[0]||'0';
-      addGoogleField(fields,m.entry,rawSample||googleFormMappedValue(fallback,m));
+      addGoogleField(fields,m.entry,googleFormMappedValue(fallback,m));
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory,{visible:true});googleFormSetup.testAttempted=true;
@@ -1711,7 +1716,8 @@ async function testSelectedExamGoogleForm(){
       if(!q)throw new Error(`Googleフォーム連携に対応する設問 ${m.questionId} が見つかりません。`);
       const sample=String(q.answer??q.options?.[0]??'').trim();
       if(sample==='')throw new Error(`${q.label||`設問${q.id}`} のテスト送信用回答を作れません。正答または選択肢を確認してください。`);
-      addGoogleField(fields,m.entry,String(m.sampleValue??'').trim()||googleFormMappedValue(sample,m));
+      // 生徒送信と同じ値変換を通す。sampleValueの丸ごと再送はしない。
+      addGoogleField(fields,m.entry,googleFormMappedValue(sample,m));
     }
     btn.disabled=true;
     msg.className='small muted';

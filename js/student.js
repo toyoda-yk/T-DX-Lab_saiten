@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.27.0';
+const APP_VERSION='1.27.1';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -247,8 +247,13 @@ function googleFormMappedValueStudent(v,mapping={}){
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
-  if(!(key in fields)){fields[key]=value;return}
-  if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
+  const v=String(value??'');
+  if(!(key in fields)){fields[key]=v;return}
+  const arr=Array.isArray(fields[key])?fields[key]:[fields[key]];
+  // Googleフォームのチェックボックスでは同じ選択肢を2回選べない。
+  // T-DXの完答グループに同じ数字が複数回現れても、同一entryには1回だけ送る。
+  if(!arr.some(x=>String(x)===v))arr.push(v);
+  fields[key]=arr.length===1?arr[0]:arr;
 }
 function buildGoogleFormAutoSubmitUrlStudent(actionUrl,fields,pageHistory=''){
   const u=new URL(actionUrl);
@@ -296,17 +301,46 @@ function postGoogleForm(actionUrl,fields,pageHistory=''){
     }
   });
 }
+async function refreshCurrentExamSubmissionConfig(){
+  if(!currentExam?.id)throw new Error('試験情報を確認できません。');
+  const latest=await fetchJsonWithMeta('data/exams.json');
+  const fresh=(latest.data?.exams||[]).find(e=>String(e.id)===String(currentExam.id));
+  if(!fresh)throw new Error('最新の試験データが見つかりません。先生に確認してください。');
+  const oldQs=currentExam.questions||[],newQs=fresh.questions||[];
+  const sameShape=oldQs.length===newQs.length&&oldQs.every((q,i)=>String(q.id)===String(newQs[i]?.id)&&String(q.label||'')===String(newQs[i]?.label||''));
+  if(!sameShape)throw new Error('試験内容が更新されています。いったん試験一覧へ戻り、もう一度開いてください。');
+  // 回答画面を開いた後に先生がGoogleフォーム連携を更新しても、提出直前に最新版だけ取り直す。
+  currentExam.formSubmission=fresh.formSubmission||null;
+  currentExam.googleFormUrl=fresh.googleFormUrl||'';
+  currentExam.status=fresh.status;
+  currentExam.published=fresh.published;
+  currentExam.publishWindow=fresh.publishWindow||null;
+  currentExam.access=fresh.access||currentExam.access;
+  currentExam.updatedAt=fresh.updatedAt||currentExam.updatedAt;
+  const idx=exams.findIndex(e=>String(e.id)===String(currentExam.id));
+  if(idx>=0)exams[idx]={...exams[idx],formSubmission:currentExam.formSubmission,googleFormUrl:currentExam.googleFormUrl,status:currentExam.status,published:currentExam.published,publishWindow:currentExam.publishWindow,access:currentExam.access,updatedAt:currentExam.updatedAt};
+  dataVersionMeta.exams=latest.data?.updatedAt||latest.lastModified||dataVersionMeta.exams;
+  updateVersionStatus();
+  return currentExam.formSubmission;
+}
 async function sendCurrentExamToGoogle(answers,name){
   if(!currentExam.formSubmission)return {sent:false,reason:'not_configured'};
   if(!validFormSubmissionConfig())throw new Error('Googleフォーム連携設定が不完全です。担当の先生に知らせてください。');
   const f=currentExam.formSubmission,fields={};
-  if(f.nameEntry&&name)fields[f.nameEntry]=name;fields[f.studentCodeEntry]=currentUser.studentCode;
-  for(const m of f.questionEntries){const v=answers[m.questionId]??answers[String(m.questionId)]??'';addGoogleField(fields,m.entry,googleFormMappedValueStudent(v,m))}
+  if(f.nameEntry&&name)fields[f.nameEntry]=name;
+  fields[f.studentCodeEntry]=currentUser.studentCode;
+  for(const m of f.questionEntries){
+    const v=answers[m.questionId]??answers[String(m.questionId)]??'';
+    if(String(v).trim()==='')throw new Error(`解答データが空です（設問ID ${m.questionId}）。いったん試験を開き直してください。`);
+    addGoogleField(fields,m.entry,googleFormMappedValueStudent(v,m));
+  }
   await postGoogleForm(f.actionUrl,fields,f.pageHistory);
-  return {sent:true,attemptedAt:new Date().toISOString()};
+  return {sent:true,attemptedAt:new Date().toISOString(),entryCount:Object.keys(fields).length};
 }
 async function submitExam(){
   if(!eligible(currentExam,currentUser)){alert('この試験の公開期間は終了しました。回答は送信できません。');renderExamList();show('examListPanel');return}
+  // 先生側で連携設定を更新した直後でも、古いタブの設定で送らないよう提出時に最新版を確認する。
+  try{await refreshCurrentExamSubmissionConfig()}catch(e){console.error(e);alert(`最新の試験設定を確認できませんでした。\n${e.message||e}\n\nページを再読み込みして、もう一度試してください。`);return}
   const answers=collectAnswers(),missing=currentExam.questions.length-Object.keys(answers).length,linked=!!currentExam.formSubmission;
   if(linked&&missing){alert(`未回答が${missing}個あります。Googleフォームへ確実に記録するため、すべての解答欄を回答してから提出してください。`);return}
   if(!linked&&missing&&!confirm(`未回答が${missing}個あります。このまま提出しますか？`))return;
