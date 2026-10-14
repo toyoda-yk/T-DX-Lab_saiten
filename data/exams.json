@@ -3,7 +3,7 @@
   "systemName": "T-DX Lab☆問題演習システム",
   "schoolYear": "2026",
   "resetEpoch": "c7926e5b-803d-4795-aff7-07c6c8642cf4",
-  "updatedAt": "2026-10-13T14:39:46.179Z",
+  "updatedAt": "2026-10-14T00:41:47.620Z",
   "exams": [
     {
       "id": "exam_20261013_v9zftc",
@@ -16,319 +16,380 @@
       "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/viewform",
       "formSubmission": {
         "provider": "google_forms",
-        "version": 2,
+        "version": 3,
         "actionUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/formResponse",
         "viewUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/viewform",
+        "pageHistory": "0",
         "nameEntry": "",
         "studentCodeEntry": "entry.900253126",
         "questionEntries": [
           {
             "questionId": 1,
             "entry": "entry.172369067",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 2,
             "entry": "entry.172369067",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 3,
             "entry": "entry.66112331",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 4,
             "entry": "entry.286663739",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 5,
             "entry": "entry.286663739",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑤"
           },
           {
             "questionId": 6,
             "entry": "entry.791664047",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 7,
             "entry": "entry.791664047",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑥"
           },
           {
             "questionId": 8,
             "entry": "entry.791664047",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑧"
           },
           {
             "questionId": 9,
             "entry": "entry.791664047",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑨"
           },
           {
             "questionId": 10,
             "entry": "entry.756757868",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 11,
             "entry": "entry.596033171",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 12,
             "entry": "entry.307138594",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 13,
             "entry": "entry.1613975038",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑤"
           },
           {
             "questionId": 14,
             "entry": "entry.1956560157",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 15,
             "entry": "entry.1574337495",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 16,
             "entry": "entry.1913182187",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 17,
             "entry": "entry.1913182187",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 18,
             "entry": "entry.999864699",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 19,
             "entry": "entry.999864699",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 20,
             "entry": "entry.999864699",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑥"
           },
           {
             "questionId": 21,
             "entry": "entry.2039250302",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 22,
             "entry": "entry.1856893283",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 23,
             "entry": "entry.996475563",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 24,
             "entry": "entry.770409115",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑤"
           },
           {
             "questionId": 25,
             "entry": "entry.1269190588",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 26,
             "entry": "entry.904725788",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 27,
             "entry": "entry.239796395",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 28,
             "entry": "entry.353558764",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 29,
             "entry": "entry.1476900268",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 30,
             "entry": "entry.1476900268",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 31,
             "entry": "entry.2048147644",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 32,
             "entry": "entry.885160659",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 33,
             "entry": "entry.386341749",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑤"
           },
           {
             "questionId": 34,
             "entry": "entry.386341749",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑦"
           },
           {
             "questionId": 35,
             "entry": "entry.386341749",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⑧"
           },
           {
             "questionId": 36,
             "entry": "entry.602433647",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 37,
             "entry": "entry.262029574",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 38,
             "entry": "entry.704037551",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 39,
             "entry": "entry.704037551",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 40,
             "entry": "entry.1878725122",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 41,
             "entry": "entry.1208739347",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 42,
             "entry": "entry.1817092078",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 43,
             "entry": "entry.1582622082",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 44,
             "entry": "entry.1509598042",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 45,
             "entry": "entry.1175918537",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 46,
             "entry": "entry.157385244",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 47,
             "entry": "entry.1133307583",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 48,
             "entry": "entry.2127632426",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 49,
             "entry": "entry.25174560",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "②"
           },
           {
             "questionId": 50,
             "entry": "entry.707403918",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 51,
             "entry": "entry.1783888797",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 52,
             "entry": "entry.1783888797",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 53,
             "entry": "entry.2065281486",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "④"
           },
           {
             "questionId": 54,
             "entry": "entry.1693440411",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 55,
             "entry": "entry.1693440411",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 56,
             "entry": "entry.987802736",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           },
           {
             "questionId": 57,
             "entry": "entry.437636459",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 58,
             "entry": "entry.293265148",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "⓪"
           },
           {
             "questionId": 59,
             "entry": "entry.1975577003",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "①"
           },
           {
             "questionId": 60,
             "entry": "entry.1856199956",
-            "valueFormat": "circled_digit"
+            "valueFormat": "circled_digit",
+            "sampleValue": "③"
           }
         ],
         "nameRequired": false,
         "testConfirmed": true,
-        "lastTestAttemptedAt": "2026-10-13T14:39:37.470Z",
-        "verifiedAt": "2026-10-13T14:39:37.470Z",
+        "lastTestAttemptedAt": "2026-10-14T00:41:36.869Z",
+        "verifiedAt": "2026-10-14T00:41:36.869Z",
         "verificationSource": "builder_confirmation",
-        "configuredAt": "2026-10-13T14:39:37.470Z"
+        "configuredAt": "2026-10-14T00:41:36.869Z"
       },
       "choiceConfig": {
         "options": [
@@ -1444,7 +1505,7 @@
         }
       ],
       "createdAt": "2026-10-13T13:48:43.991Z",
-      "updatedAt": "2026-10-13T14:39:39.653Z",
+      "updatedAt": "2026-10-14T00:41:39.216Z",
       "publishWindow": {
         "startAt": "2026-10-13T13:50:00.000Z",
         "endAt": "2026-10-17T13:50:00.000Z",
