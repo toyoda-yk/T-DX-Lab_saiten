@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.26.5" rel="stylesheet"/>
+<link href="css/style.css?v=1.26.6" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.26.5</span>
+<span class="tdx-version-pill">v1.26.6</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -302,6 +302,7 @@
 <label>氏名を送る項目（任意・通常は送信なし）<select id="formNameEntrySelect"></select></label>
 <label>4桁番号を送る項目<select id="formCodeEntrySelect"></select></label>
 </div>
+<div class="notice small google-page-count-note"><label><strong>Googleフォームのページ数</strong> <input id="formPageCount" inputmode="numeric" min="1" max="30" type="number" value="1"/></label><span>通常は1のままでOK。Googleフォーム下部に「1/5ページ」のように表示される場合は、そのページ数（例：5）を入力してください。事前入力URLから判定できた場合は自動設定します。</span></div>
 <details class="google-answer-map-details" open="">
 <summary>解答欄の対応を確認する</summary>
 <div class="table-shell google-map-table-shell"><table><thead><tr><th>T-DX Lab</th><th>Googleフォーム entry</th><th>事前入力値</th></tr></thead><tbody id="formAnswerMappingBody"></tbody></table></div>
@@ -483,8 +484,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.26.5"></script>
-<script src="js/teacher.js?v=1.26.5"></script>
+<script src="js/common.js?v=1.26.6"></script>
+<script src="js/teacher.js?v=1.26.6"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

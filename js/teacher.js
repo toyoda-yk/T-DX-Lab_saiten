@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.5';
+const APP_VERSION='1.26.6';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -263,6 +263,7 @@ function bind(){
   $('clearFormLinkBtn').onclick=resetGoogleFormLink;
   $('formNameEntrySelect').onchange=()=>{autoMapGoogleFormAnswers(true);renderGoogleFormStatus()};
   $('formCodeEntrySelect').onchange=()=>{autoMapGoogleFormAnswers(true);renderGoogleFormStatus()};
+  if($('formPageCount'))$('formPageCount').onchange=syncGoogleFormPageCount;
   $('testGoogleFormBtn').onclick=testGoogleFormSubmission;
   $('formTestConfirmed').onchange=renderGoogleFormStatus;
 
@@ -1323,9 +1324,24 @@ function googleFormPageHistoryFromUrl(raw){
     if(/^\d+(?:,\d+)*$/.test(ph))return ph;
   }catch(_){}
   // pageHistory は実在するセクション番号だけを指定する必要がある。
-  // 存在しない番号まで推測して送ると、Googleフォームが回答全体を受理しない場合があるため、
-  // 事前入力URLに明示されていない場合は安全な単一セクション「0」を使う。
+  // URLから取得できない場合は一旦1ページ扱い。複数ページは下のページ数入力で補正する。
   return '0';
+}
+function googleFormPageCountFromHistory(pageHistory='0'){
+  const nums=String(pageHistory||'0').split(',').map(x=>Number(x)).filter(Number.isInteger);
+  return nums.length?Math.max(...nums)+1:1;
+}
+function googleFormHistoryFromPageCount(count){
+  const n=Math.max(1,Math.min(30,Number(count)||1));
+  return Array.from({length:n},(_,i)=>i).join(',');
+}
+function syncGoogleFormPageCount(){
+  const input=$('formPageCount');if(!input)return;
+  const n=Math.max(1,Math.min(30,Number(input.value)||1));input.value=String(n);
+  googleFormSetup.pageHistory=googleFormHistoryFromPageCount(n);googleFormSetup.testAttempted=false;
+  if($('formTestConfirmed'))$('formTestConfirmed').checked=false;
+  if($('formTestMsg')){$('formTestMsg').className='notice small';$('formTestMsg').textContent=n>1?`複数ページ（${n}ページ）として送信します。テスト送信をやり直し、全ページの解答が記録されることを確認してください。`:'1ページとして送信します。';}
+  renderGoogleFormStatus();
 }
 function detectGoogleIdentityEntries(entries){
   const code=entries.find(e=>/^\d{4}$/.test(toHalfWidth(String(e.value||'').trim())));
@@ -1341,7 +1357,9 @@ function analyzeGoogleFormLink(){
     const entries=[];
     for(const [key,value] of u.searchParams.entries())if(/^entry\.\d+$/.test(key))entries.push({key,value});
     if(entries.length<2)throw new Error('entry番号を十分に取得できませんでした。4桁番号と解答欄をすべて事前入力してからリンクを取得してください。');
-    googleFormSetup={entries,viewUrl:ep.viewUrl,actionUrl:ep.actionUrl,formKey:ep.formKey,pageHistory:googleFormPageHistoryFromUrl(raw),testAttempted:false};
+    const parsedPageHistory=googleFormPageHistoryFromUrl(raw);
+    googleFormSetup={entries,viewUrl:ep.viewUrl,actionUrl:ep.actionUrl,formKey:ep.formKey,pageHistory:parsedPageHistory,testAttempted:false};
+    if($('formPageCount'))$('formPageCount').value=String(googleFormPageCountFromHistory(parsedPageHistory));
     $('formUrl').value=ep.viewUrl;
     const ids=detectGoogleIdentityEntries(entries);
     $('formNameEntrySelect').innerHTML=googleEntryOptions(ids.nameEntry,'送信しない（推奨）');
@@ -1351,8 +1369,9 @@ function analyzeGoogleFormLink(){
     $('formTestConfirmed').checked=false;
     renderGoogleFormAnswerTable();
     autoMapGoogleFormAnswers(true);
+    const explicitPageHistory=(()=>{try{return new URL(cleanGoogleFormUrlInput(raw)).searchParams.has('pageHistory')}catch(_){return false}})();
     $('formLinkMsg').className='success small';
-    $('formLinkMsg').textContent=`entry番号を ${entries.length}件 取得しました。GoogleフォームURLも設定しました。4桁番号・解答欄の対応を確認してください。氏名項目は任意です。`;
+    $('formLinkMsg').textContent=`entry番号を ${entries.length}件 取得しました。GoogleフォームURLも設定しました。4桁番号・解答欄の対応を確認してください。氏名項目は任意です。${explicitPageHistory?` ページ構成も自動取得しました（${googleFormPageCountFromHistory(parsedPageHistory)}ページ）。`:' 複数ページのフォームは「Googleフォームのページ数」も確認してください。'}`;
   }catch(e){console.error(e);$('formLinkMsg').className='error small';$('formLinkMsg').textContent=e.message}
 }
 function renderGoogleFormAnswerTable(){
@@ -1422,7 +1441,7 @@ function renderGoogleFormStatus(){
 }
 function resetGoogleFormLink(){
   googleFormSetup={entries:[],viewUrl:'',actionUrl:'',pageHistory:'',testAttempted:false};
-  $('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+  $('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';if($('formPageCount'))$('formPageCount').value='1';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
   if($('formNextStepMsg'))$('formNextStepMsg').classList.add('hidden');
   $('formLinkMsg').className='small muted';$('formLinkMsg').textContent='Googleフォーム連携設定をリセットしました。通常のGoogleフォームURL欄はそのまま残しています。';
 }
@@ -1432,44 +1451,56 @@ function buildGoogleFormSubmissionConfig(questions){
   const st=googleFormMappingState();
   if(!st.ok)throw new Error('Googleフォーム連携の対応に未設定または不正な重複があります。連携情報を確認してください。');
   if(questions.length!==st.answerEntries.length)throw new Error('Googleフォームの解答対応数と現在の設問数が一致しません。自動対応をやり直してください。');
+  if($('formPageCount'))googleFormSetup.pageHistory=googleFormHistoryFromPageCount($('formPageCount').value);
   const confirmed=!!$('formTestConfirmed').checked,now=new Date().toISOString();
-  return {provider:'google_forms',version:3,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',pageHistory:googleFormSetup.pageHistory||'0',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:x.valueFormat||googleEntryValueFormat(x.entry),sampleValue:x.sampleValue||''})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
+  return {provider:'google_forms',version:4,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',pageHistory:googleFormSetup.pageHistory||'0',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:x.valueFormat||googleEntryValueFormat(x.entry),sampleValue:x.sampleValue||''})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
   if(!(key in fields)){fields[key]=value;return}
   if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
-function buildGoogleFormResponseUrl(actionUrl,fields,pageHistory=''){
-  const u=new URL(actionUrl);
-  // 事前入力リンクと同じ query 形式で formResponse を開く。
-  // Googleフォームは近年、単純な外部POSTを200で返しつつ回答として記録しないケースがあるため、
-  // T-DXでは「実際のフォーム遷移」に近い GET 送信を標準にする。
-  Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>u.searchParams.append(k,String(item??'')))});
-  u.searchParams.set('fvv','1');
-  if(String(pageHistory||'').trim())u.searchParams.set('pageHistory',String(pageHistory).trim());
-  u.searchParams.set('usp','pp_url');
-  u.searchParams.set('submit','Submit');
-  return u.toString();
+function appendHiddenGoogleInput(form,name,value){
+  const input=document.createElement('input');
+  input.type='hidden';input.name=name;input.value=String(value??'');form.appendChild(input);
 }
 function postGoogleForm(actionUrl,fields,pageHistory='',options={}){
   return new Promise((resolve,reject)=>{
+    let frame=null,form=null,targetWindow=null,settled=false;
+    const removeNodes=(delay=0)=>setTimeout(()=>{try{form?.remove()}catch(_){}try{frame?.remove()}catch(_){}},delay);
+    const finish=(payload={})=>{if(settled)return;settled=true;resolve(payload)};
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
-      const url=buildGoogleFormResponseUrl(actionUrl,fields,pageHistory);
+      const action=googleFormEndpoints(actionUrl).actionUrl;
+      const targetName=`tdx_google_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       if(options.visible){
-        const w=window.open(url,'_blank');
-        if(!w)throw new Error('Googleフォームの確認画面を開けませんでした。ブラウザのポップアップを許可して、もう一度テスト送信してください。');
-        try{w.opener=null}catch(_){}
-        resolve({visible:true,url});
-        return;
+        targetWindow=window.open('about:blank',targetName);
+        if(!targetWindow)throw new Error('Googleフォームの確認画面を開けませんでした。ブラウザのポップアップを許可して、もう一度テスト送信してください。');
+      }else{
+        frame=document.createElement('iframe');
+        frame.name=targetName;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
       }
-      const frame=document.createElement('iframe');
-      frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),300);resolve({visible:false,url})};
-      frame.onload=()=>finish();frame.src=url;setTimeout(finish,3500);
-    }catch(e){reject(e)}
+      form=document.createElement('form');
+      form.method='POST';form.action=action;form.target=targetName;form.acceptCharset='UTF-8';form.style.display='none';
+      Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>appendHiddenGoogleInput(form,k,item))});
+      appendHiddenGoogleInput(form,'fvv','1');
+      appendHiddenGoogleInput(form,'draftResponse','[]');
+      if(String(pageHistory||'').trim())appendHiddenGoogleInput(form,'pageHistory',String(pageHistory).trim());
+      appendHiddenGoogleInput(form,'submit','Submit');
+      document.body.appendChild(form);
+      // name="submit" が form.submit を上書きしても確実にネイティブPOSTする。
+      HTMLFormElement.prototype.submit.call(form);
+      if(options.visible){
+        // POST開始後はフォーム要素だけ片付ける。別タブはGoogle側の完了/エラー画面をそのまま残す。
+        removeNodes(1500);setTimeout(()=>finish({visible:true,method:'POST'}),700);
+      }else{
+        // cross-origin のため保存結果は直接読めない。送信先iframeは十分残して通信を完了させ、UIは先に進める。
+        removeNodes(10000);setTimeout(()=>finish({visible:false,method:'POST'}),1200);
+      }
+    }catch(e){
+      try{targetWindow?.close()}catch(_){}
+      removeNodes(0);reject(e)
+    }
   });
 }
 async function testGoogleFormSubmission(){
@@ -1486,7 +1517,7 @@ async function testGoogleFormSubmission(){
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory,{visible:true});googleFormSetup.testAttempted=true;
-    $('formTestMsg').className='notice small';$('formTestMsg').innerHTML='<strong>Googleフォームを別タブで開きました。</strong> Google側に「回答を記録しました」などの完了画面が出ることを確認し、さらに「回答」タブで9999が1件追加されたら「受信を確認した」にチェックしてください。エラーや入力画面が出た場合は、フォーム側の必須項目・回答受付設定を確認してください。';
+    $('formTestMsg').className='notice small';$('formTestMsg').innerHTML='<strong>生徒と同じPOST方式でテスト回答を送信しました。</strong> 別タブが「回答を記録しました」などの完了画面になり、さらに「回答」タブで9999が1件追加されて解答欄にも値が入っていれば成功です。入力画面に戻る・エラーになる場合は、必須項目・回答受付設定・セクション設定を確認してください。';
   }catch(e){console.error(e);$('formTestMsg').className='error small';$('formTestMsg').textContent=e.message}finally{$('testGoogleFormBtn').disabled=false}
 }
 
@@ -1582,7 +1613,7 @@ function replaceSelectedExamGoogleForm(){
     const raw=$('publishFormPrefillUrl')?.value.trim();if(!raw)throw new Error('事前入力したGoogleフォームのリンクを貼り付けてください。');
     const parsed=parsePrefilledGoogleFormForExam(raw,exam),now=new Date().toISOString();
     exam.googleFormUrl=parsed.ep.viewUrl;
-    exam.formSubmission={provider:'google_forms',version:3,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,pageHistory:parsed.pageHistory,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value),sampleValue:String(parsed.answers[i].value??'')})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
+    exam.formSubmission={provider:'google_forms',version:4,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,pageHistory:parsed.pageHistory,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value),sampleValue:String(parsed.answers[i].value??'')})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
     exam.updatedAt=now;allExamData.exams=exams;
     $('publishFormPrefillUrl').value='';
     if(msg){msg.className='success small';msg.textContent=`Googleフォームを差し替えました。4桁番号・解答 ${(exam.questions||[]).length}件を対応しました。${parsed.ids.nameEntry?'氏名も送信します。':'氏名は送信しません。'} 次にテスト送信してください。`}
@@ -1626,7 +1657,7 @@ async function testSelectedExamGoogleForm(){
     await postGoogleForm(f.actionUrl,fields,f.pageHistory,{visible:true});
     f.lastTestAttemptedAt=new Date().toISOString();exam.updatedAt=f.lastTestAttemptedAt;allExamData.exams=exams;
     msg.dataset.keep='1';msg.className='notice small';
-    msg.innerHTML=`<strong>Googleフォームを別タブで開きました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。Google側の完了画面を確認し、さらに「回答」タブで1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>入力画面やエラーが出た場合は、必須項目・回答受付・ログイン制限を確認してください。</span>`;
+    msg.innerHTML=`<strong>生徒と同じPOST方式でテスト回答を送信しました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。別タブが完了画面になり、Googleフォームの「回答」で1件追加されて解答欄にも値が入ったら、右の「受信を確認した」にチェックしてください。<br><span>入力画面やエラーが出た場合は、必須項目・回答受付・ログイン制限・セクション設定を確認してください。</span>`;
     renderPublishGoogleFormPanel(exam);
   }catch(e){
     console.error(e);
@@ -1689,7 +1720,7 @@ function restoreStoredGoogleFormToBuilder(exam,{asCopy=false}={}){
   if(!f||!storedGoogleFormConfigValid(exam)){
     googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',pageHistory:'',testAttempted:false};
     $('formUrl').value=storedGoogleFormViewUrl(exam)||'';
-    $('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+    $('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';if($('formPageCount'))$('formPageCount').value='1';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
     return;
   }
   let formKey='';try{formKey=googleFormEndpoints(f.viewUrl||f.actionUrl||exam.googleFormUrl).formKey}catch(_){}
@@ -1702,6 +1733,7 @@ function restoreStoredGoogleFormToBuilder(exam,{asCopy=false}={}){
     entries.push({key:m.entry,value:String(m.sampleValue??'').trim()||toGoogleFormChoiceValue(q?.answer??'',m.valueFormat||'plain')});
   });
   googleFormSetup={entries,viewUrl:f.viewUrl||storedGoogleFormViewUrl(exam),actionUrl:f.actionUrl,formKey,pageHistory:f.pageHistory||'0',testAttempted:asCopy?false:!!f.lastTestAttemptedAt};
+  if($('formPageCount'))$('formPageCount').value=String(googleFormPageCountFromHistory(googleFormSetup.pageHistory));
   $('formUrl').value=googleFormSetup.viewUrl||storedGoogleFormViewUrl(exam)||'';
   $('formNameEntrySelect').innerHTML=googleEntryOptions(f.nameEntry||'','送信しない（推奨）');
   $('formCodeEntrySelect').innerHTML=googleEntryOptions(f.studentCodeEntry||'');
@@ -1743,7 +1775,7 @@ function resetBuilderForNewExam(){
   $('useNumberChoices').checked=true;$('numberChoiceStart').value='0';$('numberChoiceEnd').value='9';$('useLetterChoices').checked=true;$('letterChoiceStart').value='a';$('letterChoiceEnd').value='f';$('useKanaChoices').checked=false;renderGlobalChoicePreview();
   editorRows=[];editorSectionTargets={};$('answerPdf').value='';$('pdfText').value='';$('answerTextInput').value='';
   $('examReviewPanel').classList.add('hidden');$('examEditorCards').innerHTML='';$('parseSummary').innerHTML='';$('sectionPointsSummary').innerHTML='';
-  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',pageHistory:'',testAttempted:false};$('formUrl').value='';$('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
+  googleFormSetup={entries:[],viewUrl:'',actionUrl:'',formKey:'',pageHistory:'',testAttempted:false};$('formUrl').value='';$('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';if($('formPageCount'))$('formPageCount').value='1';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
   $('draftExamMsg').textContent='';$('examSourceMsg').className='small muted';$('examSourceMsg').textContent='新しい試験を作成できます。';
   const msg=$('registeredExamMsg');if(msg){msg.className='small muted';msg.textContent='新規作成モードに切り替えました。'}
 }
