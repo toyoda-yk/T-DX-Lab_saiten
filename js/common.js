@@ -46,6 +46,31 @@ window.TDX = (() => {
     }
     return {total,sectionScores,detail};
   }
+
+  const RAW_ANSWER_PREFIX='TDXRAW1|';
+  function buildAnswerPayload(exam,answers){
+    const qs=Array.isArray(exam?.questions)?exam.questions:[];
+    const payload={examId:String(exam?.id||''),answers:qs.map(q=>String(answers?.[q.id]??answers?.[String(q.id)]??''))};
+    return RAW_ANSWER_PREFIX+JSON.stringify(payload);
+  }
+  function isAnswerPayload(value){return String(value??'').trim().startsWith(RAW_ANSWER_PREFIX)}
+  function parseAnswerPayload(value,exam=null){
+    const text=String(value??'').trim();
+    if(!text.startsWith(RAW_ANSWER_PREFIX))return null;
+    try{
+      const payload=JSON.parse(text.slice(RAW_ANSWER_PREFIX.length));
+      if(!payload||!Array.isArray(payload.answers))return {ok:false,reason:'invalid'};
+      const expectedId=String(exam?.id||'');
+      const actualId=String(payload.examId||'');
+      if(expectedId&&actualId&&expectedId!==actualId)return {ok:false,reason:'exam_mismatch',examId:actualId};
+      const qs=Array.isArray(exam?.questions)?exam.questions:[];
+      if(qs.length&&payload.answers.length!==qs.length)return {ok:false,reason:'count_mismatch',count:payload.answers.length};
+      const answers={};
+      if(qs.length)qs.forEach((q,i)=>answers[q.id]=String(payload.answers[i]??''));
+      return {ok:true,examId:actualId,values:payload.answers.map(v=>String(v??'')),answers};
+    }catch(_){return {ok:false,reason:'invalid'}}
+  }
+
   const ANALYSIS_GAS_URL='https://script.google.com/a/macros/oen.ed.jp/s/AKfycbykmZ-YUHPDy4tSgYWaWRZoNc7BjIh0QmyBFftRd2ksN6MllX2lf2xLQNEHRS33CMey/exec';
   function gasUrl(params={}){
     const u=new URL(ANALYSIS_GAS_URL);
@@ -74,5 +99,5 @@ window.TDX = (() => {
       try{return await gasJsonp(params,timeout)}catch(jsonpError){throw new Error(`${jsonpError.message}（通常接続: ${fetchError.message||fetchError}）`)}
     }
   }
-  return {sha256Hex,randomCode,makeVerifier,verify,download,csvParse,scoreExam,ANALYSIS_GAS_URL,gasUrl,gasJson};
+  return {sha256Hex,randomCode,makeVerifier,verify,download,csvParse,scoreExam,RAW_ANSWER_PREFIX,buildAnswerPayload,isAnswerPayload,parseAnswerPayload,ANALYSIS_GAS_URL,gasUrl,gasJson};
 })();

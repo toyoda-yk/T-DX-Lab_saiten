@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.27.2';
+const APP_VERSION='1.27.3';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -334,6 +334,9 @@ async function sendCurrentExamToGoogle(answers,name){
     if(String(v).trim()==='')throw new Error(`解答データが空です（設問ID ${m.questionId}）。いったん試験を開き直してください。`);
     addGoogleField(fields,m.entry,googleFormMappedValueStudent(v,m));
   }
+  // 1つのGoogleフォーム項目に複数のT-DX解答欄をまとめた場合でも、
+  // 元の並び順・同じ値の重複回数を失わないよう、専用の記述式entryへ原本を保存する。
+  if(f.rawAnswerEntry)fields[f.rawAnswerEntry]=TDX.buildAnswerPayload(currentExam,answers);
   await postGoogleForm(f.actionUrl,fields,f.pageHistory);
   return {sent:true,attemptedAt:new Date().toISOString(),entryCount:Object.keys(fields).length};
 }

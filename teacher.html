@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.27.2" rel="stylesheet"/>
+<link href="css/style.css?v=1.27.3" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.27.2</span>
+<span class="tdx-version-pill">v1.27.3</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -286,7 +286,7 @@
 </div>
 <details class="compact-help-details">
 <summary>Googleフォーム側の推奨設定を見る</summary>
-<p>項目順は「4桁番号（必須）→ 解答欄」でOKです。氏名欄は不要です。事前入力リンク作成時は<strong>4桁番号とすべての解答欄に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。<strong>セクション区切りは利用できます。</strong> T-DX Lab側で複数セクション送信に対応します。</p>
+<p>項目順は「4桁番号（必須）→ 解答欄」でOKです。氏名欄は不要です。事前入力リンク作成時は<strong>4桁番号とすべての解答欄に値を入れてください</strong>。メールアドレス収集・ファイルアップロード・ログイン必須・分岐は使わない構成を推奨します。<strong>セクション区切りは利用できます。</strong> T-DX Lab側で複数セクション送信に対応します。<br><strong>複数のT-DX解答欄をGoogleフォームの1つのチェックボックスにまとめる場合</strong>は、記述式または段落の質問「T-DX連携用データ（自動入力・編集不要）」を1つ追加し、事前入力リンク作成時だけ <code>TDXDATA</code> と入力してください。T-DXが自動検出し、分析用の元回答を保存します。</p>
 </details>
 <div class="prefill-important-note"><strong>通常の「送信」URLではありません。</strong><span>右上の「︙」→「事前入力したリンクを取得」で作ったURLを貼り付けます。</span></div><label class="google-prefill-label">Googleフォームの事前入力URL <textarea id="formPrefillUrl" placeholder="https://docs.google.com/forms/d/e/.../viewform?usp=pp_url&amp;entry...." rows="3"></textarea>
 </label>
@@ -301,7 +301,9 @@
 <div class="google-identity-map">
 <label>氏名を送る項目（任意・通常は送信なし）<select id="formNameEntrySelect"></select></label>
 <label>4桁番号を送る項目<select id="formCodeEntrySelect"></select></label>
+<label>T-DX分析用データ（共有解答欄がある場合）<select id="formRawEntrySelect"></select></label>
 </div>
+<div class="notice small"><strong>分析を生徒画面の採点と完全一致させるための保険です。</strong> 1問1entryのフォームでは不要です。複数解答を1つのチェックボックス設問にまとめたフォームでは、Googleフォームに記述式/段落の「T-DX連携用データ」を追加し、事前入力時に <code>TDXDATA</code> と入れてください。生徒にはGoogleフォーム画面を見せないため、この欄はT-DXが自動入力します。</div>
 <div class="notice small google-page-count-note"><label><strong>Googleフォームのページ数</strong> <input id="formPageCount" inputmode="numeric" min="1" max="30" type="number" value="1"/></label><span>通常は1のままでOK。Googleフォーム下部に「1/5ページ」のように表示される場合は、そのページ数（例：5）を入力してください。事前入力URLから判定できた場合は自動設定します。</span></div>
 <details class="google-answer-map-details" open="">
 <summary>解答欄の対応を確認する</summary>
@@ -352,7 +354,7 @@
 <i>›</i><div><b>STEP 4</b><span>生徒に分析を公開</span></div>
 </div>
 <div class="grid two admin-form-grid analysis-upload-grid">
-<div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input accept=".xlsx,.xls,.csv" id="responseFile" type="file"/><div class="actions"><button class="teacher-action" id="analyzeBtn">分析する</button></div></div>
+<div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input accept=".xlsx,.xls,.csv" id="responseFile" type="file"/><div class="actions"><button class="teacher-action" id="analyzeBtn">分析する</button><button class="secondary glass-btn" id="resetAnalysisBtn" type="button">分析をリセット</button></div></div>
 <div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><button class="text-guide-btn" data-guide="analysis-publish" type="button">？ 公開するとどうなる？</button><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。</p><button class="teacher-action" id="publishStudentAnalysisBtn" type="button">生徒に分析を公開</button><div aria-live="polite" class="small muted" id="analysisPublishMsg">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
 </div>
 <div class="hidden analysis-console" id="analysisOutput">
@@ -484,8 +486,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.27.2"></script>
-<script src="js/teacher.js?v=1.27.2"></script>
+<script src="js/common.js?v=1.27.3"></script>
+<script src="js/teacher.js?v=1.27.3"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
