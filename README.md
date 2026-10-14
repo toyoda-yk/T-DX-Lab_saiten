@@ -1,15 +1,24 @@
+# T-DX Lab v1.27.2 ANALYSIS COLUMN / CHECKBOX FIX SAFE
 
-## v1.27.1 STUDENT LIVE SYNC FIX
+## v1.27.2 修正
+- Googleフォーム回答シートに残った旧「氏名・名前」列を分析対象から完全除外し、設問列のずれを防止。
+- 1つのGoogleフォーム・チェックボックス設問を複数のT-DX解答欄へ戻す処理を改善。
+- 同一正答が複数欄にある場合（例: 9,6,6,9）も、Googleフォーム側で重複選択が1回にまとまっていてもT-DX欄へ復元。
+- 9999除外、最新回答採用、クイズ/通常フォーム自動判定など既存仕様は維持。
+- GAS変更不要。dataフォルダはSAFE版に含めません。
+
+
+## v1.27.2 STUDENT LIVE SYNC FIX
 - 生徒が提出する直前に `data/exams.json` を `no-store` で再取得し、最新のGoogleフォーム連携設定（entry / pageHistory / valueFormat / sampleValue）だけを取り直します。先生が連携を修正した後に、生徒タブが古い設定を保持したまま送信する問題を防ぎます。
 - Googleフォームの同一entryへ同じ値を重複送信しないようにしました。完答グループで同じ数字が複数回出る場合でも、チェックボックスには1回だけ送ります。
 - 先生のテスト送信も、事前入力URLの値をそのまま再送するのではなく、生徒と同じ「T-DXの回答→Googleフォーム表記変換」を通すようにしました。今後はテスト送信が成功すれば、生徒送信と同じ変換経路まで確認できます。
-# T-DX Lab v1.27.1 Googleフォーム SUBMIT COLLISION FIX SAFE版
+# T-DX Lab v1.27.2 Googleフォーム SUBMIT COLLISION FIX SAFE版
 
 ## 今回の修正
 
 - v1.26.7 の送信処理を再点検し、`postGoogleForm()` という名前にもかかわらず実際には `formResponse` を **GETで開いていた**不具合を修正しました。
 - これが「回答件数と4桁番号は増えるが、解答欄が空になる」主因と考えられます。
-- v1.27.1 では、Googleフォーム本体と同じように HTML `<form method="POST">` を作成し、`entry.*` を POST 本文として送信します。
+- v1.27.2 では、Googleフォーム本体と同じように HTML `<form method="POST">` を作成し、`entry.*` を POST 本文として送信します。
 - 複数選択は同じ `entry.*` 名の hidden input を複数作成して送信します。
 - 複数セクションでは、設定した `pageHistory=0,1,...` もPOST本文へ含めます。
 - 先生のテスト送信は別タブへPOSTし、Google側の完了画面を目視確認できます。生徒の本番送信は同じPOST処理を非表示iframeへ送ります。
@@ -19,7 +28,7 @@
 
 SAFE版です。既存の `data/exams.json` / `data/users.json` / `data/analysis.json` は同梱していません。GitHubへコード類を上書きしてください。
 
-GASは既存のv1.4のままで変更不要です。更新後、トップ画面が v1.27.1 になったことを確認してください。
+GASは既存のv1.4のままで変更不要です。更新後、トップ画面が v1.27.2 になったことを確認してください。
 
 ## 確認手順
 
@@ -34,14 +43,14 @@ GASは既存のv1.4のままで変更不要です。更新後、トップ画面�
 
 先生のテスト送信と生徒の本番送信は同じPOSTロジックを使用します。テストで解答欄まで保存できれば、生徒側も同じ経路で記録されます。
 
-## v1.27.1 修正
+## v1.27.2 修正
 - v1.26.8 の `form.submit is not a function` を修正しました。
 - Googleフォームへ送る hidden input の `name="submit"` が、ブラウザ上で `form.submit()` メソッドを上書きしてしまう名前衝突が原因でした。
 - 先生側テスト送信・生徒側本番送信の両方で、ネイティブの `HTMLFormElement.prototype.submit` を明示的に呼び出します。
 - Googleフォーム連携設定、既存試験データ、GAS v1.4 はそのまま利用できます。
 
 
-## v1.27.1 STUDENT FORM SYNC FIX
+## v1.27.2 STUDENT FORM SYNC FIX
 - 生徒送信の選択肢変換を先生テストと同じロジックに統一しました。`valueFormat` が古い試験データで欠けていても、事前入力URL由来の `sampleValue` から丸数字・全角数字・全角英字を推定します。
 - 登録済み試験を編集中にテスト送信し、［Googleフォームで受信を確認した］をチェックすると、確認済みのGoogleフォーム連携設定だけを `exams.json` へ自動同期します。先生テストだけ新設定・生徒画面だけ旧設定になる食い違いを防ぎます。
 - Googleフォーム連携設定の内部バージョンを6へ更新しました。

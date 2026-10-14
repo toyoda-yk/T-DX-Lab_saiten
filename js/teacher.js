@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.1';
+const APP_VERSION='1.27.2';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1929,7 +1929,12 @@ function detectGoogleResponseMode(headers){
 function isGoogleResponseMetaHeader(h){
   const n=normalizeHeader(h).toLowerCase();
   if(!n)return false;
-  return n.includes('タイムスタンプ')||n==='timestamp'||n==='スコア'||n==='score'||n.includes('メールアドレス')||n.includes('emailaddress')||n==='email';
+  // Googleフォーム連携シートは、フォームから削除した古い氏名列などが残ることがある。
+  // それらを回答列として数えると、以降の設問が1列ずつずれて「未回答」や誤採点になるため、
+  // すべての氏名/名前系列をメタ列として除外する（nameIndexで1列だけ除外する方式では不足）。
+  return n.includes('タイムスタンプ')||n==='timestamp'||n==='スコア'||n==='score'||
+    n.includes('メールアドレス')||n.includes('emailaddress')||n==='email'||
+    n.includes('氏名')||n.includes('名前');
 }
 function googleResponseAnswerValues(exam,row,headers,identityIndexes=[]){
   const uniqueCount=uniqueFormAnswerEntries(exam).length;
@@ -1995,12 +2000,28 @@ function answersFromGoogleResponseRow(exam,row,headers,identityIndexes=[]){
     const raw=byEntry.get(entry)??'';
     if(items.length===1){answers[items[0].q.id]=normalizeGoogleFormChoiceValue(raw);continue}
     const selected=splitGoogleCheckboxCell(raw);
-    // 同一entry共有＝Googleフォームの複数選択。順序を持たないため、
-    // 正答集合と一致する場合はT-DX内部の各欄へ正答順に復元し、完答判定を正しく保つ。
     const targets=items.map(x=>normalizeGoogleFormChoiceValue(x.q.answer));
-    const a=[...selected].sort(),b=[...targets].sort();
-    const same=a.length===b.length&&a.every((v,i)=>v===b[i]);
-    const restored=same?targets:selected;
+    // 同一entry共有＝Googleフォームのチェックボックス回答。
+    // 送信した値の並びは基本そのまま使うが、Googleフォームでは同じ選択肢を2回選べないため、
+    // T-DX側で「9,6,6,9」のように同じ正答が複数欄に現れる場合は、回答セルが「9,6」になる。
+    // その場合は、選択済みの正答値を対応する全スロットへ展開して、未回答扱いを防ぐ。
+    const selectedUnique=[...new Set(selected)];
+    const targetSet=new Set(targets);
+    const hasDuplicateTargets=new Set(targets).size<targets.length;
+    let restored;
+    if(hasDuplicateTargets){
+      restored=Array(items.length).fill('');
+      const selectedSet=new Set(selectedUnique);
+      // 正答と同じ値が選ばれていれば、その値を持つ全スロットへ復元する。
+      targets.forEach((t,i)=>{if(t&&selectedSet.has(t))restored[i]=t});
+      // 正答に存在しない誤答も詳細画面で消えないよう、空きスロットへ順に残す。
+      const extras=selectedUnique.filter(v=>!targetSet.has(v));
+      let k=0;
+      for(const v of extras){while(k<restored.length&&restored[k])k++;if(k<restored.length)restored[k++]=v}
+    }else{
+      // 重複正答がないグループは、Googleフォームのセルに保存された順で各欄へ戻す。
+      restored=selected;
+    }
     items.forEach((x,i)=>answers[x.q.id]=String(restored[i]??'').trim());
   }
   return answers;
