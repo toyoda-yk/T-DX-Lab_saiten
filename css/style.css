@@ -1120,7 +1120,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .google-page-count-note input{width:86px;min-height:38px}
 .google-page-count-note span{flex:1;min-width:260px}
 
-/* v1.27.4 Google Form compatibility auto-check */
+/* v1.27.5 Google Form marker detection hardening */
 .google-identity-map.two-items{grid-template-columns:repeat(2,minmax(0,1fr))}
 .form-compatibility-check{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0;padding:14px 15px;border-radius:15px;border:1px solid #d9e6f4;background:#f8fbff}
 .form-compatibility-check>div{display:flex;flex-direction:column;gap:4px;min-width:0}.form-compatibility-check strong{font-size:13px;color:#24466f}.form-compatibility-check span{font-size:12px;line-height:1.6;color:#60738a}

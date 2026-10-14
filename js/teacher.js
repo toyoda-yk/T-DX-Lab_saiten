@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.4';
+const APP_VERSION='1.27.5';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1271,11 +1271,21 @@ function googleFormEndpoints(raw){
 }
 function googleFormEntryLabel(e,i){
   const v=String(e?.value??'');
-  const short=v.length>24?`${v.slice(0,24)}…`:v;
+  const marker=isRawAnswerMarker(v)?'TDXDATA（分析用データ）':'';
+  const short=marker||(v.length>24?`${v.slice(0,24)}…`:v);
   return `${i+1}. ${e.key}${short?` （${short}）`:''}`;
 }
 function googleEntryOptions(selected='',emptyLabel='選択してください'){
   return `<option value="">${esc(emptyLabel)}</option>`+googleFormSetup.entries.map((e,i)=>`<option value="${esc(e.key)}" ${e.key===selected?'selected':''}>${esc(googleFormEntryLabel(e,i))}</option>`).join('');
+}
+function googleAnswerEntryOptions(selected=''){
+  const name=$('formNameEntrySelect')?.value||'';
+  const code=$('formCodeEntrySelect')?.value||'';
+  const raw=$('formRawEntrySelect')?.value||'';
+  const blocked=new Set([name,code,raw].filter(Boolean));
+  return `<option value="">選択してください</option>`+googleFormSetup.entries
+    .filter(e=>!blocked.has(e.key)&&!isRawAnswerMarker(e.value))
+    .map((e,i)=>`<option value="${esc(e.key)}" ${e.key===selected?'selected':''}>${esc(googleFormEntryLabel(e,googleFormSetup.entries.indexOf(e)))}</option>`).join('');
 }
 function currentEditorSignature(){return editorRows.map(r=>`${r.section}|${r.label}`).join('||')}
 function entryByKey(key){return googleFormSetup.entries.find(e=>e.key===key)||null}
@@ -1345,8 +1355,17 @@ function syncGoogleFormPageCount(){
   if($('formTestMsg')){$('formTestMsg').className='notice small';$('formTestMsg').textContent=n>1?`複数ページ（${n}ページ）として送信します。テスト送信をやり直し、全ページの解答が記録されることを確認してください。`:'1ページとして送信します。';}
   renderGoogleFormStatus();
 }
+function normalizeRawAnswerMarker(value){
+  let s=String(value??'').trim();
+  // ガイド文などからコピーしたときに <code>TDXDATA</code> や
+  // &lt;code&gt;TDXDATA&lt;/code&gt; が入力されても同じマーカーとして扱う。
+  s=s.replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'");
+  s=s.replace(/<[^>]*>/g,'');
+  s=toHalfWidth(s).trim().replace(/[\s_\-`'"「」『』【】()（）［］\[\]]+/g,'').toUpperCase();
+  return s;
+}
 function isRawAnswerMarker(value){
-  const s=toHalfWidth(String(value??'')).trim().replace(/[\s_-]+/g,'').toUpperCase();
+  const s=normalizeRawAnswerMarker(value);
   return ['TDXDATA','TDXRAW','TDXANSWER','TDXANSWERS'].includes(s);
 }
 function detectGoogleIdentityEntries(entries){
@@ -1387,7 +1406,7 @@ function analyzeGoogleFormLink(){
 }
 function renderGoogleFormAnswerTable(){
   const body=$('formAnswerMappingBody');if(!body)return;
-  body.innerHTML=editorRows.map((r,i)=>`<tr data-form-map-row="${i+1}"><td><strong>${esc(r.label||`解答${i+1}`)}</strong><small>${esc(r.section||'')}</small></td><td><select class="form-answer-entry" data-q-index="${i+1}">${googleEntryOptions()}</select></td><td class="form-map-value">—</td></tr>`).join('');
+  body.innerHTML=editorRows.map((r,i)=>`<tr data-form-map-row="${i+1}"><td><strong>${esc(r.label||`解答${i+1}`)}</strong><small>${esc(r.section||'')}</small></td><td><select class="form-answer-entry" data-q-index="${i+1}">${googleAnswerEntryOptions()}</select></td><td class="form-map-value">—</td></tr>`).join('');
   $('formMappingPanel').dataset.signature=currentEditorSignature();
   body.querySelectorAll('.form-answer-entry').forEach(sel=>sel.onchange=()=>{const e=entryByKey(sel.value);sel.dataset.sampleValue=e?String(e.value??''):'';updateGoogleMapValue(sel);renderGoogleFormStatus()});
 }
@@ -1398,7 +1417,7 @@ function autoMapGoogleFormAnswers(force=true){
   if(!googleFormSetup.entries.length||$('formMappingPanel').classList.contains('hidden'))return;
   if($('formMappingPanel').dataset.signature!==currentEditorSignature())renderGoogleFormAnswerTable();
   const name=$('formNameEntrySelect').value,code=$('formCodeEntrySelect').value,raw=$('formRawEntrySelect')?.value||'';
-  const candidates=googleFormSetup.entries.filter(e=>e.key!==name&&e.key!==code&&e.key!==raw);
+  const candidates=googleFormSetup.entries.filter(e=>e.key!==name&&e.key!==code&&e.key!==raw&&!isRawAnswerMarker(e.value));
   const sels=[...document.querySelectorAll('.form-answer-entry')];
   sels.forEach((sel,i)=>{if(force||!sel.value){const c=candidates[i];sel.value=c?.key||'';sel.dataset.sampleValue=c?String(c.value??''):'';}updateGoogleMapValue(sel)});
   renderGoogleFormStatus();
@@ -1439,7 +1458,8 @@ function assessSharedGoogleFormEntries(rows,answerEntries){
   };
 }
 function googleFormMappingState(){
-  const nameEntry=$('formNameEntrySelect')?.value||'',codeEntry=$('formCodeEntrySelect')?.value||'',rawEntry=$('formRawEntrySelect')?.value||'';
+  const detectedIds=detectGoogleIdentityEntries(googleFormSetup.entries||[]);
+  const nameEntry=$('formNameEntrySelect')?.value||'',codeEntry=$('formCodeEntrySelect')?.value||detectedIds.codeEntry||'',rawEntry=$('formRawEntrySelect')?.value||detectedIds.rawEntry||'';
   const sels=[...document.querySelectorAll('.form-answer-entry')];
   const answerEntries=sels.map((sel,i)=>{const sampleValue=String(sel.dataset.sampleValue??entryByKey(sel.value)?.value??'');return {questionId:i+1,entry:sel.value||'',sampleValue,valueFormat:googleFormValueFormatFromSample(sampleValue)};});
   const signatureOk=$('formMappingPanel')?.dataset.signature===currentEditorSignature();
@@ -2891,8 +2911,8 @@ const OPERATION_GUIDES={
     warning:'追加するのは1問だけです。生徒が入力する欄ではなく、T-DXが元の回答を自動保存するための欄です。',
     steps:[
       ['1','Googleフォームに1問追加','一番最後に「記述式」または「段落」を1問追加します。質問名は「T-DX分析用データ」など分かりやすい名前でOKです。'],
-      ['2','もう一度「事前入力したリンクを取得」','4桁番号とすべての解答欄を仮入力し、今追加した欄だけ <code>TDXDATA</code> と入力します。'],
-      ['3','新しい事前入力URLをT-DXへ貼る','「連携情報を解析」を押します。T-DXが <code>TDXDATA</code> を自動検出するので、entryを一覧から選ぶ必要はありません。'],
+      ['2','もう一度「事前入力したリンクを取得」','4桁番号とすべての解答欄を仮入力し、今追加した欄だけ「TDXDATA」と入力します。'],
+      ['3','新しい事前入力URLをT-DXへ貼る','「連携情報を解析」を押します。T-DXが「TDXDATA」を自動検出するので、entryを一覧から選ぶ必要はありません。'],
       ['4','「分析用データ欄を確認しました ✓」を確認','この表示になれば設定完了です。その後は通常どおりテスト送信へ進みます。']
     ],
     example:'必要になる例：<strong>カ・キ・ク・ケ</strong>を1つのチェックボックスにまとめ、各位置に意味がある問題／<strong>9・6・6・9</strong>のように同じ答えを複数回使える問題。<br>不要な例：<strong>正しいものを2つ選びなさい</strong>のような順不同の複数選択。'
