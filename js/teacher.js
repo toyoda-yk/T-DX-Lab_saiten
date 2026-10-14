@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.5';
+const APP_VERSION='1.27.6';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -2558,11 +2558,18 @@ function renderQuestionRates(rows){
   body.innerHTML=stats.length?stats.map(x=>`<tr class="question-rate-row ${x.level}"><td><span class="question-section-mini">${esc(x.section)}</span></td><td><strong>${esc(x.label)}</strong>${x.typeLabel?`<small>${esc(x.typeLabel)}</small>`:''}${x.subMetric?`<small class="analysis-submetric">${esc(x.subMetric)}</small>`:''}</td><td><code>${esc(x.answerLabel)}</code></td><td>${esc(x.pointLabel)}</td><td><div class="rate-cell"><strong>${x.pct.toFixed(1)}%</strong><small class="analysis-metric-label">${esc(x.metricLabel)}</small><div class="mini-rate"><span style="width:${x.pct.toFixed(1)}%"></span></div></div></td><td><div class="analysis-status-cell"><strong>${esc(x.statusMain)}</strong>${x.statusSub?`<small>${esc(x.statusSub)}</small>`:''}</div></td><td><span class="analysis-level ${x.level}">${x.levelLabel}</span></td></tr>`).join(''):'<tr><td colspan="7" class="muted">条件に該当する設問はありません。</td></tr>';
 }
 function studentCorrectMarkCount(row){
+  // 生徒画面/PDFと同じ判定に統一する。
+  // 完答グループは「一部だけ一致」していても正答マークに数えず、
+  // グループ全体が成立したときだけ、そのグループの全解答欄を正答として数える。
   let count=0;analysisQuestionUnits().forEach(unit=>{
-    if(unit.type==='normal')count+=String(row.answers[unit.members[0].id]??'')===String(unit.members[0].answer??'')?1:0;
-    else if(unit.type==='unordered_item')count+=unit.members.map(q=>rowDetailFor(row,q)).filter(d=>d?.correct).length;
-    else if(unit.type==='complete_item')count+=unit.members.filter(q=>String(row.answers[q.id]??'')===String(q.answer??'')).length;
-    else if(unit.type==='unordered_complete_item')count+=multisetIntersectionCount(unit.members.map(q=>row.answers[q.id]??''),unit.members.map(q=>q.answer??''));
+    if(unit.type==='normal'){
+      if(rowDetailFor(row,unit.members[0])?.correct)count+=1;
+    }else if(unit.type==='unordered_item'){
+      count+=unit.members.map(q=>rowDetailFor(row,q)).filter(d=>d?.correct).length;
+    }else if(unit.type==='complete_item'||unit.type==='unordered_complete_item'){
+      const full=!!rowDetailFor(row,unit.members[0])?.correct;
+      if(full)count+=unit.members.length;
+    }
   });return count;
 }
 function renderStudentAnalysis(rows){
