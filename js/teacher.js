@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.3';
+const APP_VERSION='1.27.4';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1403,6 +1403,41 @@ function autoMapGoogleFormAnswers(force=true){
   sels.forEach((sel,i)=>{if(force||!sel.value){const c=candidates[i];sel.value=c?.key||'';sel.dataset.sampleValue=c?String(c.value??''):'';}updateGoogleMapValue(sel)});
   renderGoogleFormStatus();
 }
+function assessSharedGoogleFormEntries(rows,answerEntries){
+  const entryRows=new Map();
+  answerEntries.forEach((m,i)=>{if(m?.entry)(entryRows.get(m.entry)||entryRows.set(m.entry,[]).get(m.entry)).push(i)});
+  const invalidDuplicates=[],sharedEntries=[];
+  for(const [entry,idxs] of entryRows){
+    if(idxs.length<2)continue;
+    const members=idxs.map(i=>rows[i]).filter(Boolean);
+    const group=members[0]?.group||'';
+    const sameGroup=members.length===idxs.length&&!!group&&members.every(r=>r?.group===group);
+    if(!sameGroup){invalidDuplicates.push(entry);continue}
+    const type=String(members[0]?.type||'normal');
+    const sameType=members.every(r=>String(r?.type||'normal')===type);
+    const targets=members.map(r=>normalizeGoogleFormChoiceValue(r?.answer??''));
+    const targetsReady=targets.every(Boolean);
+    const hasDuplicateTargets=new Set(targets).size<targets.length;
+    // 「2つ選びなさい」のような順不同グループは、Googleフォームの1つの
+    // チェックボックス設問にまとめても、選択集合だけで正確に採点できる。
+    // 一方、順番に意味がある完答や、同じ答えを複数回使うグループは、
+    // チェックボックスだけでは位置・重複回数が失われるためT-DX原本が必要。
+    const unorderedType=['unordered_item','unordered_complete_item'].includes(type);
+    const safeWithoutRaw=sameType&&unorderedType&&targetsReady&&!hasDuplicateTargets;
+    let reason='ordered';
+    if(!sameType)reason='mixed';
+    else if(!targetsReady)reason='unset';
+    else if(hasDuplicateTargets)reason='duplicate-values';
+    else if(unorderedType)reason='unordered-safe';
+    sharedEntries.push({entry,group,count:idxs.length,rows:idxs,members,type,safeWithoutRaw,needsRaw:!safeWithoutRaw,reason});
+  }
+  return {
+    invalidDuplicates,
+    sharedEntries,
+    safeSharedEntries:sharedEntries.filter(x=>x.safeWithoutRaw),
+    riskySharedEntries:sharedEntries.filter(x=>x.needsRaw)
+  };
+}
 function googleFormMappingState(){
   const nameEntry=$('formNameEntrySelect')?.value||'',codeEntry=$('formCodeEntrySelect')?.value||'',rawEntry=$('formRawEntrySelect')?.value||'';
   const sels=[...document.querySelectorAll('.form-answer-entry')];
@@ -1410,46 +1445,53 @@ function googleFormMappingState(){
   const signatureOk=$('formMappingPanel')?.dataset.signature===currentEditorSignature();
   const mapped=answerEntries.filter(x=>x.entry).length;
 
-  // Googleフォームのチェックボックス設問では、1つのentryに複数の値を送るのが正しい。
-  // T-DX側で同一グループに属する解答欄だけは、同じentryの共有を正式に許可する。
-  const entryRows=new Map();
-  answerEntries.forEach((m,i)=>{if(m.entry)(entryRows.get(m.entry)||entryRows.set(m.entry,[]).get(m.entry)).push(i)});
-  const invalidDuplicates=[];const sharedEntries=[];
-  for(const [entry,idxs] of entryRows){
-    if(idxs.length<2)continue;
-    const rows=idxs.map(i=>editorRows[i]);
-    const group=rows[0]?.group||'';
-    const sameGroup=!!group&&rows.every(r=>r?.group===group);
-    if(sameGroup)sharedEntries.push({entry,group,count:idxs.length,rows:idxs});
-    else invalidDuplicates.push(entry);
-  }
-  // 氏名・4桁番号と解答欄が同じentryになるのは常に不正。
+  const shared=assessSharedGoogleFormEntries(editorRows,answerEntries);
+  // 氏名・4桁番号・分析原本と解答欄が同じentryになるのは常に不正。
   const identityConflict=answerEntries.filter(x=>x.entry&&(x.entry===nameEntry||x.entry===codeEntry||x.entry===rawEntry)).map(x=>x.entry);
   if(nameEntry&&codeEntry&&nameEntry===codeEntry)identityConflict.push(nameEntry);
   if(rawEntry&&(rawEntry===codeEntry||rawEntry===nameEntry))identityConflict.push(rawEntry);
-  const dups=[...new Set([...invalidDuplicates,...identityConflict])];
+  const dups=[...new Set([...shared.invalidDuplicates,...identityConflict])];
   const used=[nameEntry,codeEntry,rawEntry,...answerEntries.map(x=>x.entry)].filter(Boolean);
   const unused=googleFormSetup.entries.filter((e,i)=>!used.includes(e.key));
-  const needsRaw=sharedEntries.length>0;
+  const needsRaw=shared.riskySharedEntries.length>0;
   const losslessOk=!needsRaw||!!rawEntry;
   const ok=!!googleFormSetup.actionUrl&&!!codeEntry&&(!nameEntry||nameEntry!==codeEntry)&&mapped===editorRows.length&&!dups.length&&signatureOk&&losslessOk;
-  return {ok,nameEntry,codeEntry,rawEntry,answerEntries,mapped,dups,sharedEntries,unused,signatureOk,needsRaw,losslessOk};
+  return {ok,nameEntry,codeEntry,rawEntry,answerEntries,mapped,dups,sharedEntries:shared.sharedEntries,safeSharedEntries:shared.safeSharedEntries,riskySharedEntries:shared.riskySharedEntries,unused,signatureOk,needsRaw,losslessOk};
 }
 function renderGoogleFormStatus(){
   const root=$('formMappingKpis');if(!root||$('formMappingPanel').classList.contains('hidden'))return;
   const st=googleFormMappingState(),entryCount=googleFormSetup.entries.length,tested=$('formTestConfirmed')?.checked;
-  root.innerHTML=`<div class="kpi"><div class="muted small">取得entry</div><div class="value">${entryCount}</div></div><div class="kpi"><div class="muted small">氏名（任意）</div><div class="value">${st.nameEntry?'✓':'送信なし'}</div></div><div class="kpi ${st.codeEntry?'':'kpi-warn'}"><div class="muted small">4桁番号</div><div class="value">${st.codeEntry?'✓':'—'}</div></div><div class="kpi ${st.mapped===editorRows.length?'':'kpi-warn'}"><div class="muted small">解答対応</div><div class="value">${st.mapped}/${editorRows.length}</div></div><div class="kpi ${st.needsRaw&&!st.rawEntry?'kpi-warn':''}"><div class="muted small">分析原本</div><div class="value">${st.rawEntry?'✓':st.needsRaw?'必要':'不要'}</div></div>`;
+  root.innerHTML=`<div class="kpi"><div class="muted small">取得entry</div><div class="value">${entryCount}</div></div><div class="kpi"><div class="muted small">氏名（任意）</div><div class="value">${st.nameEntry?'✓':'送信なし'}</div></div><div class="kpi ${st.codeEntry?'':'kpi-warn'}"><div class="muted small">4桁番号</div><div class="value">${st.codeEntry?'✓':'—'}</div></div><div class="kpi ${st.mapped===editorRows.length?'':'kpi-warn'}"><div class="muted small">解答対応</div><div class="value">${st.mapped}/${editorRows.length}</div></div><div class="kpi ${st.needsRaw&&!st.rawEntry?'kpi-warn':''}"><div class="muted small">分析用データ</div><div class="value">${st.rawEntry?'✓':st.needsRaw?'追加必要':'追加不要'}</div></div>`;
+
+  const compat=$('formCompatibilityCheck');
+  if(compat){
+    if(st.needsRaw&&!st.rawEntry){
+      compat.className='form-compatibility-check needs-setup';
+      compat.innerHTML=`<div><strong>複数解答をまとめた設問を検出しました</strong><span>この形式では、回答の順番や同じ選択肢を使った回数がGoogleフォームだけでは残りません。正確な分析のため、分析用データ欄を1問だけ追加してください。</span></div><button type="button" class="operation-guide-btn strong-guide" data-guide="google-form-analysis-data">設定方法を見る</button>`;
+    }else if(st.rawEntry){
+      compat.className='form-compatibility-check ready';
+      compat.innerHTML='<div><strong>分析用データ欄を確認しました ✓</strong><span>T-DXが元の回答を自動保存します。先生や生徒がこの欄へ入力する必要はありません。</span></div>';
+    }else if(st.safeSharedEntries?.length){
+      compat.className='form-compatibility-check ready';
+      compat.innerHTML=`<div><strong>Googleフォーム連携チェック ✓</strong><span>「2つ選びなさい」などの順不同の複数選択を検出しました。この形式はそのまま利用できます。追加設定は不要です。</span></div>`;
+    }else{
+      compat.className='form-compatibility-check ready';
+      compat.innerHTML='<div><strong>Googleフォーム連携チェック ✓</strong><span>通常形式です。そのまま利用できます。</span></div>';
+    }
+  }
+
   let msg=[];
   if(!st.signatureOk)msg.push('設問構成が変更されています。自動対応をやり直してください。');
-  if(st.dups.length)msg.push('別の設問グループで同じentryが重複しています。対応を確認してください。');
-  if(st.sharedEntries?.length)msg.push(`複数選択 ${st.sharedEntries.length}設問：同じentryをグループ内で共有しています。`);
-  if(st.needsRaw&&!st.rawEntry)msg.push('このフォームは1つのGoogleフォーム設問に複数のT-DX解答欄をまとめています。Excelだけでは解答の順番・重複回数が失われるため、Googleフォームに記述式/段落の「T-DX連携用データ」を1問追加し、事前入力値を TDXDATA にしてリンクを取り直してください。');
-  if(st.rawEntry)msg.push('T-DX分析原本：元回答を1列にロスレス保存します。');
+  if(st.dups.length)msg.push('別の設問グループで同じ送信先が重複しています。解答欄の対応を確認してください。');
+  if(st.safeSharedEntries?.length)msg.push(`順不同の複数選択 ${st.safeSharedEntries.length}設問は追加設定なしで利用できます。`);
+  if(st.riskySharedEntries?.length)msg.push(`順番・重複回数を保持する必要がある複数解答 ${st.riskySharedEntries.length}設問を検出しました。`);
+  if(st.needsRaw&&!st.rawEntry)msg.push('上の「設定方法を見る」に沿って分析用データ欄を追加し、新しい事前入力URLを解析してください。');
+  if(st.rawEntry)msg.push('T-DX分析用データを自動検出しました。元回答を1列に保存します。');
   if(st.mapped<editorRows.length){
     const shortage=editorRows.length-st.mapped;
     msg.push(`Googleフォームの解答欄が ${shortage}件不足しています。事前入力リンクを作るときに、すべての解答欄へ値を入れたか確認してリンクを取り直してください。`);
   }
-  if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。T-DXからは送られません。Googleフォーム側で必須になっている項目が含まれる場合は、必須を解除するか連携対象を見直してください。`);
+  if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。Googleフォーム側で必須になっている項目があれば、必須を解除するか連携対象を見直してください。`);
   if(st.ok)msg.push(`連携設定OK：4桁番号・解答 ${st.mapped}件を送信できます。${st.nameEntry?' 氏名も送信します。':' 氏名はGoogleフォームへ送りません。'}${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
   $('formLinkMsg').className=(st.ok?'success':'error')+' small';
   $('formLinkMsg').textContent=msg.join(' ')||(st.ok?'連携設定OKです。':'連携項目を確認してください。');
@@ -1692,10 +1734,10 @@ function parsePrefilledGoogleFormForExam(raw,exam){
   if(ids.nameEntry&&ids.nameEntry===ids.codeEntry)throw new Error('氏名と4桁番号のentryが同じになっています。対応を確認してください。');
   const answers=entries.filter(e=>e.key!==ids.codeEntry&&(!ids.nameEntry||e.key!==ids.nameEntry)&&(!ids.rawEntry||e.key!==ids.rawEntry));
   if(answers.length!==(exam.questions||[]).length)throw new Error(`Googleフォームの解答対応数が一致しません。現在 ${answers.length}件 / 必要 ${(exam.questions||[]).length}件です。チェックボックス問題は選択数ぶん同じentryが並んでいて正常です。すべての解答欄へ仮入力してリンクを取り直してください。`);
-  const counts=new Map();answers.forEach(e=>counts.set(e.key,(counts.get(e.key)||0)+1));
-  const hasShared=[...counts.values()].some(n=>n>1);
-  if(hasShared&&!ids.rawEntry)throw new Error('このGoogleフォームは複数のT-DX解答欄を1つのチェックボックス項目にまとめています。正確な分析には記述式/段落の「T-DX連携用データ」を1問追加し、事前入力値を TDXDATA にしてリンクを取り直してください。');
-  return {ep,entries,ids,answers,pageHistory:googleFormPageHistoryFromUrl(raw)};
+  const assessment=assessSharedGoogleFormEntries(exam.questions||[],answers.map((e,i)=>({questionId:exam.questions?.[i]?.id,entry:e.key,sampleValue:e.value}))); 
+  if(assessment.invalidDuplicates.length)throw new Error('別の設問グループで同じGoogleフォーム項目が重複しています。解答欄の対応を確認してください。');
+  if(assessment.riskySharedEntries.length&&!ids.rawEntry)throw new Error('このフォームには、回答の順番または同じ選択肢を使った回数がGoogleフォームだけでは残らない設問があります。「T-DX分析用データ」の記述式/段落を1問追加し、事前入力時に TDXDATA と入れてリンクを取り直してください。※「2つ選びなさい」など順不同の複数選択だけなら追加不要です。');
+  return {ep,entries,ids,answers,assessment,pageHistory:googleFormPageHistoryFromUrl(raw)};
 }
 function replaceSelectedExamGoogleForm(){
   const exam=exams.find(e=>e.id===$('publishExamSelect')?.value),msg=$('publishFormReplaceMsg');
@@ -2017,9 +2059,9 @@ function splitGoogleCheckboxCell(value){
   return s.split(/\s*[,，、;；\n]+\s*/).map(x=>normalizeGoogleFormChoiceValue(x)).filter(Boolean);
 }
 function sharedFormEntryCount(exam){
-  const counts=new Map();
-  for(const m of exam?.formSubmission?.questionEntries||[])if(m?.entry)counts.set(m.entry,(counts.get(m.entry)||0)+1);
-  return [...counts.values()].filter(n=>n>1).length;
+  const maps=exam?.formSubmission?.questionEntries||[];
+  if(!maps.length)return 0;
+  return assessSharedGoogleFormEntries(exam?.questions||[],maps).riskySharedEntries.length;
 }
 function rawAnswersFromGoogleResponseRow(exam,row){
   for(const cell of row||[]){
@@ -2831,18 +2873,29 @@ const OPERATION_GUIDES={
   },
   'google-form-prefill':{
     title:'Googleフォーム「事前入力URL」の取得方法',
-    intro:'T-DX Labが4桁番号・各回答を正しい欄へ送るために、Googleフォームの「事前入力したリンク」を1回だけ取得します。',
+    intro:'T-DX Labが4桁番号・各回答を正しい欄へ送るために、Googleフォームの「事前入力したリンク」を取得します。フォームの種類はT-DXが解析後に自動判定します。',
     warning:'重要：Googleフォーム右上の「送信」からコピーするURLではありません。必ず「︙」→「事前入力したリンクを取得」を使います。',
     steps:[
-      ['1','Googleフォームを編集画面で開く','回答先に使うフォームを開きます。項目は「4桁番号 → 各解答欄」だけでOKです。氏名欄は不要です（既存フォームに氏名欄がある場合も任意で対応できます）。'],
-      ['2','右上の「︙」を押す','メニューから「事前入力したリンクを取得」を選びます。'],
-      ['3','すべての項目に仮の値を入れる','4桁番号は「9999」など判別しやすい値を入力します。解答欄も空欄にせず、すべて入力します。数字は 0〜9 でも ⓪〜⑨ でも構いません。氏名欄はなくてOKです。複数のT-DX解答欄を1つのチェックボックスにまとめるフォームでは、記述式/段落の「T-DX連携用データ」を追加し、この欄だけ TDXDATA と入力します。'],
-      ['4','「リンクを取得」を押す','画面下部の「リンクを取得」を押し、表示されたリンクをコピーします。'],
-      ['5','T-DX Labへ貼り付ける','この画面の「Googleフォームの事前入力URL」に貼り付け、「連携情報を解析」を押します。'],
-      ['6','解答欄を対応させる','「解答欄を順番に自動対応」を押し、4桁番号・各設問の対応を確認します。氏名は任意です。'],
-      ['7','テスト送信して受信確認','「テスト送信」を押し、Googleフォームの「回答」タブに1件届いたことを確認して「受信を確認した」にチェックします。']
+      ['1','Googleフォームを編集画面で開く','項目は「4桁番号 → 各解答欄」でOKです。氏名欄は不要です。通常フォーム／クイズ形式のどちらでも利用できます。'],
+      ['2','「︙」→「事前入力したリンクを取得」','4桁番号は9999など判別しやすい値にし、すべての解答欄にも仮の値を入れます。'],
+      ['3','リンクをT-DXへ貼って解析','「連携情報を解析」を押すと、通常形式・順不同の複数選択・追加設定が必要な形式をT-DXが自動判定します。'],
+      ['4','「そのまま利用できます」と出た場合','追加作業はありません。「2つ選びなさい」など順不同のチェックボックス問題も、そのままでOKです。'],
+      ['5','「分析用データ欄を追加」と出た場合だけ','画面の「設定方法を見る」を押し、Googleフォームに記述式/段落を1問追加します。先生が必要かどうかを判断する必要はありません。'],
+      ['6','テスト送信して受信確認','Googleフォームの「回答」タブに9999が1件届き、解答欄にも値が入ったことを確認して「受信を確認した」にチェックします。']
     ],
-    example:'仮入力例：4桁番号＝<code>9999</code> ／ 問1＝<code>0</code> ／ 問2＝<code>1</code> …。共有チェックボックスがある場合は、追加した「T-DX連携用データ」＝<code>TDXDATA</code>。この目印をT-DXが自動検出します。'
+    example:'ポイント：<strong>順不同の複数選択</strong>（例：正しいものを2つ選ぶ）は追加設定不要です。<strong>カ・キ・ク・ケの位置に意味がある／同じ答えを複数回使う</strong>場合だけ、T-DXが追加設定を案内します。'
+  },
+  'google-form-analysis-data':{
+    title:'「分析用データ欄を追加」と表示されたとき',
+    intro:'この作業が必要なフォームだけ、T-DXが自動で案内します。「2つ選びなさい」など順不同の複数選択では通常表示されません。',
+    warning:'追加するのは1問だけです。生徒が入力する欄ではなく、T-DXが元の回答を自動保存するための欄です。',
+    steps:[
+      ['1','Googleフォームに1問追加','一番最後に「記述式」または「段落」を1問追加します。質問名は「T-DX分析用データ」など分かりやすい名前でOKです。'],
+      ['2','もう一度「事前入力したリンクを取得」','4桁番号とすべての解答欄を仮入力し、今追加した欄だけ <code>TDXDATA</code> と入力します。'],
+      ['3','新しい事前入力URLをT-DXへ貼る','「連携情報を解析」を押します。T-DXが <code>TDXDATA</code> を自動検出するので、entryを一覧から選ぶ必要はありません。'],
+      ['4','「分析用データ欄を確認しました ✓」を確認','この表示になれば設定完了です。その後は通常どおりテスト送信へ進みます。']
+    ],
+    example:'必要になる例：<strong>カ・キ・ク・ケ</strong>を1つのチェックボックスにまとめ、各位置に意味がある問題／<strong>9・6・6・9</strong>のように同じ答えを複数回使える問題。<br>不要な例：<strong>正しいものを2つ選びなさい</strong>のような順不同の複数選択。'
   },
   'publish-flow':{
     title:'試験を生徒へ公開する手順',
