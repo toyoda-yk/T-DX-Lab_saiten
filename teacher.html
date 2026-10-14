@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.26.4" rel="stylesheet"/>
+<link href="css/style.css?v=1.26.5" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.26.4</span>
+<span class="tdx-version-pill">v1.26.5</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -309,10 +309,10 @@
 <div class="google-form-test-zone">
 <div>
 <strong>テスト送信</strong>
-<span>事前入力URLで取得した実際の選択肢表記を使ってGoogleフォームへテスト回答を1件送ります。送信後、4桁番号だけでなく解答欄にも値が入ったことを確認してください。</span>
+<span>事前入力URLで取得した実際の選択肢表記を使ってテスト回答を送ります。Googleフォームの結果を別タブで開くので、完了画面と「回答」タブの両方で確認できます。</span>
 </div>
 <div class="actions compact-actions">
-<button class="orange" id="testGoogleFormBtn" type="button">テスト送信（1件追加）</button>
+<button class="orange" id="testGoogleFormBtn" type="button">テスト送信・Google側で確認</button>
 <label class="test-confirm-check"><input id="formTestConfirmed" type="checkbox"/> Googleフォームで受信を確認した</label>
 </div>
 </div>
@@ -412,7 +412,7 @@
 <div aria-live="polite" class="small muted" id="publishFormTestMsg"></div>
 <details class="publish-form-change" id="publishFormChangeDetails">
 <summary>別のGoogleフォームへ変更する</summary>
-<p><strong>複製元と同じGoogleフォームを使う場合は変更不要です。</strong> 別のフォームへ変更する場合は、新しいGoogleフォームで「氏名・4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けてください。差し替えると受信確認は未確認に戻ります。</p>
+<p><strong>複製元と同じGoogleフォームを使う場合は変更不要です。</strong> 別のフォームへ変更する場合は、新しいGoogleフォームで「4桁番号・全解答欄」をすべて事前入力して取得したリンクを貼り付けてください。氏名欄は不要です。差し替えると受信確認は未確認に戻ります。</p>
 <textarea id="publishFormPrefillUrl" placeholder="新しいGoogleフォームの事前入力URLを貼り付け" rows="3"></textarea>
 <div class="actions compact-actions"><button class="secondary glass-btn" id="replacePublishedGoogleFormBtn" type="button">このGoogleフォームへ変更</button></div>
 <div aria-live="polite" class="small muted" id="publishFormReplaceMsg"></div>
@@ -483,8 +483,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.26.4"></script>
-<script src="js/teacher.js?v=1.26.4"></script>
+<script src="js/common.js?v=1.26.5"></script>
+<script src="js/teacher.js?v=1.26.5"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.26.4';
+const APP_VERSION='1.26.5';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -239,17 +239,23 @@ function addGoogleField(fields,key,value){
   if(!(key in fields)){fields[key]=value;return}
   if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
+function buildGoogleFormResponseUrlStudent(actionUrl,fields,pageHistory=''){
+  const u=new URL(actionUrl);
+  Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>u.searchParams.append(k,String(item??'')))});
+  u.searchParams.set('fvv','1');
+  if(String(pageHistory||'').trim())u.searchParams.set('pageHistory',String(pageHistory).trim());
+  u.searchParams.set('usp','pp_url');
+  u.searchParams.set('submit','Submit');
+  return u.toString();
+}
 function postGoogleForm(actionUrl,fields,pageHistory=''){
   return new Promise((resolve,reject)=>{
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
+      const url=buildGoogleFormResponseUrlStudent(actionUrl,fields,pageHistory);
       const frame=document.createElement('iframe');frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-      const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
-      Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
-      [['fvv','1'],['pageHistory',pageHistory||'0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
-      document.body.appendChild(form);
-      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
-      frame.onload=()=>finish();HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
+      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),300);resolve()};
+      frame.onload=()=>finish();frame.src=url;setTimeout(finish,3500);
     }catch(e){reject(e)}
   });
 }

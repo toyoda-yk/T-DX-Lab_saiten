@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.4';
+const APP_VERSION='1.26.5';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1414,7 +1414,7 @@ function renderGoogleFormStatus(){
     const shortage=editorRows.length-st.mapped;
     msg.push(`Googleフォームの解答欄が ${shortage}件不足しています。事前入力リンクを作るときに、すべての解答欄へ値を入れたか確認してリンクを取り直してください。`);
   }
-  if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。必須項目の場合は送信できないため、テスト送信で必ず確認してください。`);
+  if(st.unused?.length)msg.push(`未使用のGoogleフォーム項目が ${st.unused.length}件あります。T-DXからは送られません。Googleフォーム側で必須になっている項目が含まれる場合は、必須を解除するか連携対象を見直してください。`);
   if(st.ok)msg.push(`連携設定OK：4桁番号・解答 ${st.mapped}件を送信できます。${st.nameEntry?' 氏名も送信します。':' 氏名はGoogleフォームへ送りません。'}${tested?' テスト受信確認済みです。':' テスト送信後にGoogleフォーム側で受信を確認してください。'}`);
   $('formLinkMsg').className=(st.ok?'success':'error')+' small';
   $('formLinkMsg').textContent=msg.join(' ')||(st.ok?'連携設定OKです。':'連携項目を確認してください。');
@@ -1440,18 +1440,35 @@ function addGoogleField(fields,key,value){
   if(!(key in fields)){fields[key]=value;return}
   if(Array.isArray(fields[key]))fields[key].push(value);else fields[key]=[fields[key],value];
 }
-function postGoogleForm(actionUrl,fields,pageHistory=''){
+function buildGoogleFormResponseUrl(actionUrl,fields,pageHistory=''){
+  const u=new URL(actionUrl);
+  // 事前入力リンクと同じ query 形式で formResponse を開く。
+  // Googleフォームは近年、単純な外部POSTを200で返しつつ回答として記録しないケースがあるため、
+  // T-DXでは「実際のフォーム遷移」に近い GET 送信を標準にする。
+  Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>u.searchParams.append(k,String(item??'')))});
+  u.searchParams.set('fvv','1');
+  if(String(pageHistory||'').trim())u.searchParams.set('pageHistory',String(pageHistory).trim());
+  u.searchParams.set('usp','pp_url');
+  u.searchParams.set('submit','Submit');
+  return u.toString();
+}
+function postGoogleForm(actionUrl,fields,pageHistory='',options={}){
   return new Promise((resolve,reject)=>{
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
-      const frame=document.createElement('iframe');frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-      const form=document.createElement('form');form.method='POST';form.action=actionUrl;form.target=frame.name;form.style.display='none';form.acceptCharset='UTF-8';
-      Object.entries(fields).forEach(([k,v])=>{(Array.isArray(v)?v:[v]).forEach(item=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(item??'');form.appendChild(input)})});
-      [['fvv','1'],['pageHistory',pageHistory||'0'],['submit','Submit']].forEach(([k,v])=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=v;form.appendChild(input)});
-      document.body.appendChild(form);
-      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),150);resolve()};
-      frame.onload=()=>finish();
-      HTMLFormElement.prototype.submit.call(form);form.remove();setTimeout(finish,2500);
+      const url=buildGoogleFormResponseUrl(actionUrl,fields,pageHistory);
+      if(options.visible){
+        const w=window.open(url,'_blank');
+        if(!w)throw new Error('Googleフォームの確認画面を開けませんでした。ブラウザのポップアップを許可して、もう一度テスト送信してください。');
+        try{w.opener=null}catch(_){}
+        resolve({visible:true,url});
+        return;
+      }
+      const frame=document.createElement('iframe');
+      frame.name=`tdx_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
+      let done=false;const finish=()=>{if(done)return;done=true;setTimeout(()=>frame.remove(),300);resolve({visible:false,url})};
+      frame.onload=()=>finish();frame.src=url;setTimeout(finish,3500);
     }catch(e){reject(e)}
   });
 }
@@ -1468,8 +1485,8 @@ async function testGoogleFormSubmission(){
       addGoogleField(fields,m.entry,rawSample||googleFormMappedValue(fallback,m));
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
-    await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory);googleFormSetup.testAttempted=true;
-    $('formTestMsg').className='success small';$('formTestMsg').textContent='テスト送信処理を実行しました。Googleフォームの「回答」タブを開き、1件追加されていることを確認したら「受信を確認した」にチェックしてください。';
+    await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory,{visible:true});googleFormSetup.testAttempted=true;
+    $('formTestMsg').className='notice small';$('formTestMsg').innerHTML='<strong>Googleフォームを別タブで開きました。</strong> Google側に「回答を記録しました」などの完了画面が出ることを確認し、さらに「回答」タブで9999が1件追加されたら「受信を確認した」にチェックしてください。エラーや入力画面が出た場合は、フォーム側の必須項目・回答受付設定を確認してください。';
   }catch(e){console.error(e);$('formTestMsg').className='error small';$('formTestMsg').textContent=e.message}finally{$('testGoogleFormBtn').disabled=false}
 }
 
@@ -1606,10 +1623,10 @@ async function testSelectedExamGoogleForm(){
     btn.disabled=true;
     msg.className='small muted';
     msg.textContent=`「${exam.title}」のGoogleフォームへテスト送信しています…`;
-    await postGoogleForm(f.actionUrl,fields,f.pageHistory);
+    await postGoogleForm(f.actionUrl,fields,f.pageHistory,{visible:true});
     f.lastTestAttemptedAt=new Date().toISOString();exam.updatedAt=f.lastTestAttemptedAt;allExamData.exams=exams;
-    msg.dataset.keep='1';msg.className='success small';
-    msg.innerHTML=`<strong>テスト送信処理を実行しました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。Googleフォームの「回答」タブを開き、1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>※ ブラウザからGoogleフォーム側の受理結果までは確認できません。</span>`;
+    msg.dataset.keep='1';msg.className='notice small';
+    msg.innerHTML=`<strong>Googleフォームを別タブで開きました。</strong> ${f.nameEntry?'氏名「T-DXテスト」・':''}4桁番号「${esc(code)}」で送っています。Google側の完了画面を確認し、さらに「回答」タブで1件追加されたら右の「受信を確認した」にチェックしてください。<br><span>入力画面やエラーが出た場合は、必須項目・回答受付・ログイン制限を確認してください。</span>`;
     renderPublishGoogleFormPanel(exam);
   }catch(e){
     console.error(e);
