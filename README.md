@@ -1,10 +1,10 @@
-# T-DX Lab v1.26.8 Googleフォーム REAL POST FIX SAFE版
+# T-DX Lab v1.26.9 Googleフォーム SUBMIT COLLISION FIX SAFE版
 
 ## 今回の修正
 
 - v1.26.7 の送信処理を再点検し、`postGoogleForm()` という名前にもかかわらず実際には `formResponse` を **GETで開いていた**不具合を修正しました。
 - これが「回答件数と4桁番号は増えるが、解答欄が空になる」主因と考えられます。
-- v1.26.8 では、Googleフォーム本体と同じように HTML `<form method="POST">` を作成し、`entry.*` を POST 本文として送信します。
+- v1.26.9 では、Googleフォーム本体と同じように HTML `<form method="POST">` を作成し、`entry.*` を POST 本文として送信します。
 - 複数選択は同じ `entry.*` 名の hidden input を複数作成して送信します。
 - 複数セクションでは、設定した `pageHistory=0,1,...` もPOST本文へ含めます。
 - 先生のテスト送信は別タブへPOSTし、Google側の完了画面を目視確認できます。生徒の本番送信は同じPOST処理を非表示iframeへ送ります。
@@ -14,7 +14,7 @@
 
 SAFE版です。既存の `data/exams.json` / `data/users.json` / `data/analysis.json` は同梱していません。GitHubへコード類を上書きしてください。
 
-GASは既存のv1.4のままで変更不要です。更新後、トップ画面が v1.26.8 になったことを確認してください。
+GASは既存のv1.4のままで変更不要です。更新後、トップ画面が v1.26.9 になったことを確認してください。
 
 ## 確認手順
 
@@ -28,3 +28,9 @@ GASは既存のv1.4のままで変更不要です。更新後、トップ画面�
 ## 補足
 
 先生のテスト送信と生徒の本番送信は同じPOSTロジックを使用します。テストで解答欄まで保存できれば、生徒側も同じ経路で記録されます。
+
+## v1.26.9 修正
+- v1.26.8 の `form.submit is not a function` を修正しました。
+- Googleフォームへ送る hidden input の `name="submit"` が、ブラウザ上で `form.submit()` メソッドを上書きしてしまう名前衝突が原因でした。
+- 先生側テスト送信・生徒側本番送信の両方で、ネイティブの `HTMLFormElement.prototype.submit` を明示的に呼び出します。
+- Googleフォーム連携設定、既存試験データ、GAS v1.4 はそのまま利用できます。

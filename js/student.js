@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.26.8';
+const APP_VERSION='1.26.9';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -271,7 +271,9 @@ function postGoogleForm(actionUrl,fields,pageHistory=''){
       if(String(pageHistory||'').trim())appendGoogleFormHiddenStudent(form,'pageHistory',String(pageHistory).trim());
       appendGoogleFormHiddenStudent(form,'submit','Submit');
       document.body.appendChild(form);
-      form.submit();
+      // hidden input name="submit" creates a named form property and can mask
+      // HTMLFormElement.submit(). Invoke the native method explicitly.
+      HTMLFormElement.prototype.submit.call(form);
 
       setTimeout(()=>{try{form?.remove()}catch(_){}},1500);
       setTimeout(()=>{try{frame?.remove()}catch(_){}},12000);

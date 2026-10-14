@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.8';
+const APP_VERSION='1.26.9';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1505,7 +1505,9 @@ function postGoogleForm(actionUrl,fields,pageHistory='',options={}){
       if(String(pageHistory||'').trim())appendHiddenField(form,'pageHistory',String(pageHistory).trim());
       appendHiddenField(form,'submit','Submit');
       document.body.appendChild(form);
-      form.submit();
+      // hidden input name="submit" creates a named form property and can mask
+      // HTMLFormElement.submit(). Invoke the native method explicitly.
+      HTMLFormElement.prototype.submit.call(form);
 
       // cross-origin のため完了本文はT-DXから読めない。先生テストは別タブで目視確認、
       // 生徒送信は同じPOST処理を非表示iframeへ送る。
