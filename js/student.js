@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.26.9';
+const APP_VERSION='1.27.0';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -228,11 +228,22 @@ function toGoogleFormChoiceValue(v,format='plain'){
   if(format==='fullwidth_digit'||format==='fullwidth_letter')return String(s).replace(/[0-9A-Za-z]/g,ch=>String.fromCharCode(ch.charCodeAt(0)+0xFEE0));
   return s;
 }
+function googleFormValueFormatFromSampleStudent(v){
+  const raw=String(v??'').trim();
+  if(/[⓪①②③④⑤⑥⑦⑧⑨]/.test(raw))return 'circled_digit';
+  if(/[０-９]/.test(raw))return 'fullwidth_digit';
+  if(/[Ａ-Ｆａ-ｆ]/.test(raw))return 'fullwidth_letter';
+  return 'plain';
+}
 function googleFormMappedValueStudent(v,mapping={}){
   const canonical=normalizeGoogleFormChoiceValueStudent(v);
   const raw=String(mapping?.sampleValue??'').trim();
+  // 先生側のテスト送信と同じ規則で値を作る。
+  // 旧設定などで valueFormat が未保存でも、事前入力URL由来の sampleValue から
+  // 丸数字・全角数字・全角英字を推定して、生徒回答をGoogleフォームの実値へ変換する。
   if(raw&&normalizeGoogleFormChoiceValueStudent(raw)===canonical)return raw;
-  return toGoogleFormChoiceValue(canonical,mapping?.valueFormat||'plain');
+  const format=mapping?.valueFormat||googleFormValueFormatFromSampleStudent(raw);
+  return toGoogleFormChoiceValue(canonical,format);
 }
 function addGoogleField(fields,key,value){
   if(!key)return;

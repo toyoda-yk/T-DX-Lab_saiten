@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.9';
+const APP_VERSION='1.27.0';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -265,7 +265,7 @@ function bind(){
   $('formCodeEntrySelect').onchange=()=>{autoMapGoogleFormAnswers(true);renderGoogleFormStatus()};
   if($('formPageCount'))$('formPageCount').onchange=syncGoogleFormPageCount;
   $('testGoogleFormBtn').onclick=testGoogleFormSubmission;
-  $('formTestConfirmed').onchange=renderGoogleFormStatus;
+  $('formTestConfirmed').onchange=handleBuilderFormReceiptConfirmation;
 
   $('analyzeBtn').onclick=analyzeFile;
   $('publishStudentAnalysisBtn').onclick=publishStudentAnalysisToGas;
@@ -1439,6 +1439,49 @@ function renderGoogleFormStatus(){
   $('formLinkMsg').textContent=msg.join(' ')||(st.ok?'連携設定OKです。':'連携項目を確認してください。');
   const next=$('formNextStepMsg');if(next)next.classList.toggle('hidden',!(st.ok&&tested));
 }
+async function handleBuilderFormReceiptConfirmation(){
+  renderGoogleFormStatus();
+  const box=$('formTestConfirmed');
+  if(!box?.checked)return;
+  if(!googleFormSetup.testAttempted){
+    box.checked=false;
+    renderGoogleFormStatus();
+    alert('先にテスト送信を行い、Googleフォームの回答欄に解答まで入ったことを確認してください。');
+    return;
+  }
+  // 既存試験を呼び出して編集中の場合は、確認済みのGoogleフォーム連携設定だけを
+  // その場で公開データへ同期する。これにより、先生テストは新設定なのに
+  // 生徒画面だけ古い formSubmission を読む食い違いを防ぐ。
+  if(!editingExamId)return;
+  const exam=exams.find(e=>e.id===editingExamId);
+  if(!exam)return;
+  const sameStructure=(exam.questions||[]).length===editorRows.length && (exam.questions||[]).every((q,i)=>String(q.label||'')===String(editorRows[i]?.label||''));
+  if(!sameStructure){
+    const msg=$('formTestMsg');
+    if(msg){msg.className='notice small';msg.textContent='受信確認済みです。設問構成も変更されているため、［登録内容を更新］を押して生徒用データへ反映してください。';}
+    return;
+  }
+  try{
+    const cfg=buildGoogleFormSubmissionConfig(exam.questions||[]);
+    if(!cfg)throw new Error('Googleフォーム連携設定を作成できませんでした。');
+    cfg.testConfirmed=true;
+    cfg.verifiedAt=new Date().toISOString();
+    cfg.verificationSource='builder_confirmation_auto_sync';
+    exam.formSubmission=cfg;
+    exam.googleFormUrl=googleFormSetup.viewUrl||exam.googleFormUrl||'';
+    exam.updatedAt=new Date().toISOString();
+    allExamData.exams=exams;
+    const msg=$('formTestMsg');
+    if(msg){msg.className='small muted';msg.textContent='受信確認済み。生徒画面用のGoogleフォーム設定へ同期しています…';}
+    await syncExamsToPublicData({operation:'Googleフォーム連携確認',target:exam.title,detail:'先生テストで受信確認済みのentry・値形式を生徒用試験データへ同期'});
+    if(msg){msg.className='success small';msg.innerHTML='<strong>✓ 受信確認済みのGoogleフォーム設定を生徒画面用データへ同期しました。</strong> 生徒は次回読み込みから、このテストと同じentry・数字表記で送信します。';}
+  }catch(e){
+    console.error(e);
+    const msg=$('formTestMsg');
+    if(msg){msg.className='error small';msg.textContent=`受信確認はできましたが、生徒画面用設定の同期に失敗しました：${e.message||e} ［登録内容を更新］を押して再反映してください。`;}
+  }
+}
+
 function resetGoogleFormLink(){
   googleFormSetup={entries:[],viewUrl:'',actionUrl:'',pageHistory:'',testAttempted:false};
   $('formPrefillUrl').value='';$('formMappingPanel').classList.add('hidden');$('formAnswerMappingBody').innerHTML='';$('formNameEntrySelect').innerHTML='';$('formCodeEntrySelect').innerHTML='';if($('formPageCount'))$('formPageCount').value='1';$('formTestConfirmed').checked=false;$('autoMapFormBtn').disabled=true;
@@ -1453,7 +1496,7 @@ function buildGoogleFormSubmissionConfig(questions){
   if(questions.length!==st.answerEntries.length)throw new Error('Googleフォームの解答対応数と現在の設問数が一致しません。自動対応をやり直してください。');
   if($('formPageCount'))googleFormSetup.pageHistory=googleFormHistoryFromPageCount($('formPageCount').value);
   const confirmed=!!$('formTestConfirmed').checked,now=new Date().toISOString();
-  return {provider:'google_forms',version:5,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',pageHistory:googleFormSetup.pageHistory||'0',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:x.valueFormat||googleEntryValueFormat(x.entry),sampleValue:x.sampleValue||''})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
+  return {provider:'google_forms',version:6,actionUrl:googleFormSetup.actionUrl,viewUrl:googleFormSetup.viewUrl||'',pageHistory:googleFormSetup.pageHistory||'0',nameEntry:st.nameEntry,studentCodeEntry:st.codeEntry,questionEntries:st.answerEntries.map((x,i)=>({questionId:questions[i].id,entry:x.entry,valueFormat:x.valueFormat||googleEntryValueFormat(x.entry),sampleValue:x.sampleValue||''})),nameRequired:!!st.nameEntry,testConfirmed:confirmed,lastTestAttemptedAt:googleFormSetup.testAttempted?now:null,verifiedAt:confirmed?now:null,verificationSource:confirmed?'builder_confirmation':'builder',configuredAt:now};
 }
 function addGoogleField(fields,key,value){
   if(!key)return;
@@ -1632,7 +1675,7 @@ function replaceSelectedExamGoogleForm(){
     const raw=$('publishFormPrefillUrl')?.value.trim();if(!raw)throw new Error('事前入力したGoogleフォームのリンクを貼り付けてください。');
     const parsed=parsePrefilledGoogleFormForExam(raw,exam),now=new Date().toISOString();
     exam.googleFormUrl=parsed.ep.viewUrl;
-    exam.formSubmission={provider:'google_forms',version:5,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,pageHistory:parsed.pageHistory,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value),sampleValue:String(parsed.answers[i].value??'')})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
+    exam.formSubmission={provider:'google_forms',version:6,actionUrl:parsed.ep.actionUrl,viewUrl:parsed.ep.viewUrl,pageHistory:parsed.pageHistory,nameEntry:parsed.ids.nameEntry,studentCodeEntry:parsed.ids.codeEntry,questionEntries:(exam.questions||[]).map((q,i)=>({questionId:q.id,entry:parsed.answers[i].key,valueFormat:googleFormValueFormatFromSample(parsed.answers[i].value),sampleValue:String(parsed.answers[i].value??'')})),nameRequired:!!parsed.ids.nameEntry,testConfirmed:false,lastTestAttemptedAt:null,verifiedAt:null,verificationSource:'reconfigured',configuredAt:now};
     exam.updatedAt=now;allExamData.exams=exams;
     $('publishFormPrefillUrl').value='';
     if(msg){msg.className='success small';msg.textContent=`Googleフォームを差し替えました。4桁番号・解答 ${(exam.questions||[]).length}件を対応しました。${parsed.ids.nameEntry?'氏名も送信します。':'氏名は送信しません。'} 次にテスト送信してください。`}
