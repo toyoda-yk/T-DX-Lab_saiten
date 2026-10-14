@@ -3,7 +3,7 @@
   "systemName": "T-DX Lab☆問題演習システム",
   "schoolYear": "2026",
   "resetEpoch": "c7926e5b-803d-4795-aff7-07c6c8642cf4",
-  "updatedAt": "2026-10-14T00:41:47.620Z",
+  "updatedAt": "2026-10-14T01:28:05.390Z",
   "exams": [
     {
       "id": "exam_20261013_v9zftc",
@@ -16,10 +16,10 @@
       "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/viewform",
       "formSubmission": {
         "provider": "google_forms",
-        "version": 3,
+        "version": 6,
         "actionUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/formResponse",
         "viewUrl": "https://docs.google.com/forms/d/e/1FAIpQLScC3aZVtC27_n-B4lcI_pq6P7bmysEeOkTfTLSsesuisXpgBw/viewform",
-        "pageHistory": "0",
+        "pageHistory": "0,1,2,3,4",
         "nameEntry": "",
         "studentCodeEntry": "entry.900253126",
         "questionEntries": [
@@ -385,11 +385,11 @@
           }
         ],
         "nameRequired": false,
-        "testConfirmed": true,
-        "lastTestAttemptedAt": "2026-10-14T00:41:36.869Z",
-        "verifiedAt": "2026-10-14T00:41:36.869Z",
-        "verificationSource": "builder_confirmation",
-        "configuredAt": "2026-10-14T00:41:36.869Z"
+        "testConfirmed": false,
+        "lastTestAttemptedAt": "2026-10-14T01:27:56.045Z",
+        "verifiedAt": null,
+        "verificationSource": "builder",
+        "configuredAt": "2026-10-14T01:27:56.045Z"
       },
       "choiceConfig": {
         "options": [
@@ -1505,7 +1505,7 @@
         }
       ],
       "createdAt": "2026-10-13T13:48:43.991Z",
-      "updatedAt": "2026-10-14T00:41:39.216Z",
+      "updatedAt": "2026-10-14T01:27:58.450Z",
       "publishWindow": {
         "startAt": "2026-10-13T13:50:00.000Z",
         "endAt": "2026-10-17T13:50:00.000Z",
