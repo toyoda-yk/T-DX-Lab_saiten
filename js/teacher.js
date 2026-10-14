@@ -9,7 +9,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.26.7';
+const APP_VERSION='1.26.8';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -1473,28 +1473,51 @@ function buildGoogleFormAutoSubmitUrl(actionUrl,fields,pageHistory=''){
   u.searchParams.set('submit','Submit');
   return u.toString();
 }
+function appendHiddenField(form,name,value){
+  const input=document.createElement('input');
+  input.type='hidden';input.name=name;input.value=String(value??'');form.appendChild(input);
+}
 function postGoogleForm(actionUrl,fields,pageHistory='',options={}){
   return new Promise((resolve,reject)=>{
+    let form=null,frame=null,popup=null;
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
-      const url=buildGoogleFormAutoSubmitUrl(actionUrl,fields,pageHistory);
+      const action=googleFormEndpoints(actionUrl).actionUrl;
+      const targetName=`tdx_google_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      // v1.26.7までは関数名に反して formResponse をGETで開いていた。
+      // 4桁番号だけ記録され、後続セクションのentryが落ちる原因になるため、
+      // Googleフォームと同じ HTML form のPOSTとして送信する。
       if(options.visible){
-        const w=window.open(url,'_blank');
-        if(!w)throw new Error('Googleフォームの確認画面を開けませんでした。ブラウザのポップアップを許可して、もう一度テスト送信してください。');
-        try{w.opener=null}catch(_){}
-        resolve({visible:true,method:'GET_FORM_RESPONSE',url});
-        return;
+        popup=window.open('about:blank',targetName);
+        if(!popup)throw new Error('Googleフォームの確認画面を開けませんでした。ブラウザのポップアップを許可して、もう一度テスト送信してください。');
+      }else{
+        frame=document.createElement('iframe');
+        frame.name=targetName;frame.style.display='none';frame.setAttribute('aria-hidden','true');
+        document.body.appendChild(frame);
       }
-      const frame=document.createElement('iframe');
-      frame.name=`tdx_google_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-      let settled=false;
-      const finish=()=>{if(settled)return;settled=true;setTimeout(()=>{try{frame.remove()}catch(_){}},10000);resolve({visible:false,method:'GET_FORM_RESPONSE',url})};
-      // cross-origin のため内容は読めない。読み込み開始後は通信完了の余裕を残す。
-      frame.onload=()=>setTimeout(finish,700);
-      frame.src=url;
-      setTimeout(finish,3500);
-    }catch(e){reject(e)}
+
+      form=document.createElement('form');
+      form.method='POST';form.action=action;form.target=targetName;form.acceptCharset='UTF-8';form.style.display='none';
+      Object.entries(fields||{}).forEach(([key,value])=>{
+        (Array.isArray(value)?value:[value]).forEach(v=>appendHiddenField(form,key,v));
+      });
+      if(String(pageHistory||'').trim())appendHiddenField(form,'pageHistory',String(pageHistory).trim());
+      appendHiddenField(form,'submit','Submit');
+      document.body.appendChild(form);
+      form.submit();
+
+      // cross-origin のため完了本文はT-DXから読めない。先生テストは別タブで目視確認、
+      // 生徒送信は同じPOST処理を非表示iframeへ送る。
+      setTimeout(()=>{try{form?.remove()}catch(_){}},1500);
+      if(frame)setTimeout(()=>{try{frame.remove()}catch(_){}},12000);
+      resolve({visible:!!options.visible,method:'POST_FORM_RESPONSE',action});
+    }catch(e){
+      try{form?.remove()}catch(_){}
+      try{frame?.remove()}catch(_){}
+      try{if(popup&&!popup.closed)popup.close()}catch(_){}
+      reject(e);
+    }
   });
 }
 async function testGoogleFormSubmission(){
@@ -1511,7 +1534,7 @@ async function testGoogleFormSubmission(){
     });
     $('testGoogleFormBtn').disabled=true;$('formTestMsg').className='small muted';$('formTestMsg').textContent='Googleフォームへテスト送信しています…';
     await postGoogleForm(googleFormSetup.actionUrl,fields,googleFormSetup.pageHistory,{visible:true});googleFormSetup.testAttempted=true;
-    $('formTestMsg').className='notice small';$('formTestMsg').innerHTML='<strong>生徒と同じ formResponse 送信方式でテスト回答を送信しました。</strong> 別タブがそのまま「回答を記録しました」などの完了画面になり、さらに「回答」タブで9999が1件追加されて解答欄にも値が入っていれば成功です。入力画面が出た場合は、そのまま送信せずT-DX側の設定を確認してください。';
+    $('formTestMsg').className='notice small';$('formTestMsg').innerHTML='<strong>生徒と同じ formResponse へのPOST方式でテスト回答を送信しました。</strong> 別タブがそのまま「回答を記録しました」などの完了画面になり、さらに「回答」タブで9999が1件追加されて解答欄にも値が入っていれば成功です。入力画面が出た場合は、そのまま送信せずT-DX側の設定を確認してください。';
   }catch(e){console.error(e);$('formTestMsg').className='error small';$('formTestMsg').textContent=e.message}finally{$('testGoogleFormBtn').disabled=false}
 }
 

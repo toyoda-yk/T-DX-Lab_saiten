@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.26.7';
+const APP_VERSION='1.26.8';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -248,20 +248,39 @@ function buildGoogleFormAutoSubmitUrlStudent(actionUrl,fields,pageHistory=''){
   u.searchParams.set('submit','Submit');
   return u.toString();
 }
+function appendGoogleFormHiddenStudent(form,name,value){
+  const input=document.createElement('input');
+  input.type='hidden';input.name=name;input.value=String(value??'');form.appendChild(input);
+}
 function postGoogleForm(actionUrl,fields,pageHistory=''){
   return new Promise((resolve,reject)=>{
+    let form=null,frame=null;
     try{
       if(!navigator.onLine)throw new Error('ネットワークに接続されていません。');
-      const url=buildGoogleFormAutoSubmitUrlStudent(actionUrl,fields,pageHistory);
-      const frame=document.createElement('iframe');
-      frame.name=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
-      let settled=false;
-      const finish=()=>{if(settled)return;settled=true;setTimeout(()=>{try{frame.remove()}catch(_){}},10000);resolve({method:'GET_FORM_RESPONSE'})};
-      frame.onload=()=>setTimeout(finish,700);
-      frame.src=url;
-      setTimeout(finish,3500);
-    }catch(e){reject(e)}
+      const action=new URL(actionUrl).toString();
+      const targetName=`tdx_student_form_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      frame=document.createElement('iframe');
+      frame.name=targetName;frame.style.display='none';frame.setAttribute('aria-hidden','true');document.body.appendChild(frame);
+
+      // GETのURL遷移ではなく、Googleフォーム本体と同じPOSTで送る。
+      form=document.createElement('form');
+      form.method='POST';form.action=action;form.target=targetName;form.acceptCharset='UTF-8';form.style.display='none';
+      Object.entries(fields||{}).forEach(([key,value])=>{
+        (Array.isArray(value)?value:[value]).forEach(v=>appendGoogleFormHiddenStudent(form,key,v));
+      });
+      if(String(pageHistory||'').trim())appendGoogleFormHiddenStudent(form,'pageHistory',String(pageHistory).trim());
+      appendGoogleFormHiddenStudent(form,'submit','Submit');
+      document.body.appendChild(form);
+      form.submit();
+
+      setTimeout(()=>{try{form?.remove()}catch(_){}},1500);
+      setTimeout(()=>{try{frame?.remove()}catch(_){}},12000);
+      resolve({method:'POST_FORM_RESPONSE'});
+    }catch(e){
+      try{form?.remove()}catch(_){}
+      try{frame?.remove()}catch(_){}
+      reject(e);
+    }
   });
 }
 async function sendCurrentExamToGoogle(answers,name){
