@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.27.6" rel="stylesheet"/>
+<link href="css/style.css?v=1.27.7" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.27.6</span>
+<span class="tdx-version-pill">v1.27.7</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -331,17 +331,22 @@
 </section>
 </section>
 <section class="future-panel adminSection teacher-tone-qr hidden" id="qrManager">
-<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>紛失・汚損した生徒のQRカードを1人ずつ再印刷します。</p></div><div class="admin-symbol">QR</div><button class="operation-guide-btn" data-guide="qr-reprint" type="button">？ QR再印刷ガイド</button></div><div class="screen-step-strip two-step-strip">
+<div class="admin-section-hero compact-admin-hero"><div><span class="section-eyebrow">QR CARD REPRINT</span><h2>QRカード再印刷</h2><p>1人だけでも、複数人・クラス単位でも、同じ年間QRカードを再印刷できます。</p></div><div class="admin-symbol">QR</div><button class="operation-guide-btn" data-guide="qr-reprint" type="button">？ QR再印刷ガイド</button></div><div class="screen-step-strip qr-reprint-steps">
 <div><b>STEP 1</b><span>クラス・4桁番号で生徒を探す</span></div>
-<i>›</i><div><b>STEP 2</b><span>QRカードを再印刷</span></div>
+<i>›</i><div><b>STEP 2</b><span>個別／複数を選ぶ</span></div>
+<i>›</i><div><b>STEP 3</b><span>QRカードPDFを作成</span></div>
 </div>
-<div class="qr-safety-strip"><strong>QRを再印刷</strong><span>再印刷してもアクセスキーは変わりません。</span></div>
+<div class="qr-safety-strip"><strong>QRを再印刷</strong><span>個別・一括のどちらでもアクセスキーは変わりません。</span></div>
 <div class="qr-general-tools">
 <label>クラス<select class="compact-select" id="accessVaultClassFilter"><option value="">全クラス</option></select></label>
 <label>4桁番号で検索<input id="qrStudentSearch" inputmode="numeric" maxlength="4" placeholder="例：3305"/></label>
 <div class="qr-cache-status" id="qrCacheStatus"><span>CHECK</span> 再印刷準備を確認しています。</div>
 </div>
-<p class="master-note">クラスまたは4桁番号で生徒を探し、再印刷してください。別ファイルの読み込みは不要です。</p>
+<div class="qr-bulk-tools">
+<div class="qr-selection-summary"><strong>一括再印刷</strong><span id="qrSelectionStatus">0人選択</span><small>クラスで絞って「表示中をすべて選択」が便利です。</small></div>
+<div class="actions qr-bulk-actions"><button class="teacher-action secondary" id="selectVisibleQrBtn" type="button">表示中をすべて選択</button><button class="teacher-action secondary" disabled id="clearQrSelectionBtn" type="button">選択解除</button><button class="teacher-action" disabled id="reprintSelectedCardsBtn" type="button">選択したQRをまとめて再印刷</button></div>
+</div>
+<p class="master-note">1人だけなら一覧右端の「QRを再印刷」。複数人ならチェックを付けて一括再印刷します。PDFは1ページに2枚ずつ配置されます。</p>
 <div class="grid three roster-summary" id="accessVaultSummary"></div>
 <div class="annual-code-preview" id="accessVaultManager"><div class="notice small">登録済み生徒のQR再印刷可否を表示します。</div></div>
 <div class="small muted" id="qrMsg"></div>
@@ -486,8 +491,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.27.6"></script>
-<script src="js/teacher.js?v=1.27.6"></script>
+<script src="js/common.js?v=1.27.7"></script>
+<script src="js/teacher.js?v=1.27.7"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

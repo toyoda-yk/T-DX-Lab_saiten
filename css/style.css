@@ -1127,3 +1127,15 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .form-compatibility-check.ready{background:#f1fbf6;border-color:#ccebd9}.form-compatibility-check.ready strong{color:#167451}
 .form-compatibility-check.needs-setup{background:#fff8ea;border-color:#f0d39a}.form-compatibility-check.needs-setup strong{color:#8a5a00}.form-compatibility-check.needs-setup .operation-guide-btn{white-space:nowrap;flex:0 0 auto}
 @media(max-width:900px){.google-identity-map.two-items{grid-template-columns:1fr}.form-compatibility-check{align-items:stretch;flex-direction:column}.form-compatibility-check.needs-setup .operation-guide-btn{width:100%}}
+
+
+/* v1.27.7 QR reprint: individual + multi/class batch */
+.qr-bulk-tools{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 12px;padding:12px 14px;border:1px solid #cfe3f8;border-radius:15px;background:linear-gradient(135deg,#f5faff,#eef7ff)}
+.qr-selection-summary{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.qr-selection-summary strong{color:#174f8f}.qr-selection-summary span{font-weight:900;color:#0f3c70;padding:4px 9px;border-radius:999px;background:#fff;border:1px solid #cfe3f8}.qr-selection-summary small{width:100%;color:#64748b;line-height:1.45}
+.qr-bulk-actions{margin:0;justify-content:flex-end;flex-wrap:wrap}.qr-bulk-actions button{margin:0}.qr-select-col{width:56px;text-align:center!important}.qr-reprint-check{width:18px;height:18px;accent-color:#2378d6;cursor:pointer}.qr-reprint-check:disabled{cursor:not-allowed;opacity:.35}
+@media(max-width:850px){.qr-bulk-tools{align-items:stretch;flex-direction:column}.qr-bulk-actions{justify-content:stretch}.qr-bulk-actions button{flex:1}}
+@media(max-width:620px){.qr-bulk-actions{flex-direction:column}.qr-bulk-actions button{width:100%}.qr-select-col{width:44px}}
+
+.qr-reprint-steps{grid-template-columns:1fr auto 1fr auto 1fr}
+.qr-bulk-actions .teacher-action.secondary{background:#e9eef5!important;color:#1f2937!important;box-shadow:none!important}
+@media(max-width:900px){.qr-reprint-steps{grid-template-columns:1fr}}

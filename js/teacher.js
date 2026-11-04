@@ -1,6 +1,7 @@
 const $=id=>document.getElementById(id);
 let exams=[],usersData={version:7,systemName:'T-DX Lab☆問題演習システム',schoolYear:String(new Date().getFullYear()),resetEpoch:'',users:[],issuedCodeIds:[]},analysisRows=[],analysisExam=null,analysisMeta={raw:0,valid:0,participants:0,duplicates:0,tests:0,ignored:0,fileName:'',duplicateCodes:[],responseMode:'',rawPayloadUsed:0,rawPayloadMissing:0,rawPayloadMismatch:0,sharedFallbackRows:0},allExamData=null,allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',updatedAt:null,analyses:[]};
 let publishRoster=[],annualSecrets=[],accessVault=[];
+const qrReprintSelection=new Set();
 let editorRows=[];
 let editorSectionTargets={};
 let rosterRanges=[];
@@ -9,7 +10,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.6';
+const APP_VERSION='1.27.7';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -220,7 +221,7 @@ function refreshPublishSelectors(preferredExamId=''){
 }
 function bind(){
   $('adminLoginBtn').onclick=adminLogin;
-  $('adminLogoutBtn').onclick=()=>{systemAdminUnlocked=false;teacherSessionEmail='';accessVault=[];updateSystemAdminUi();$('systemAdminGate')?.classList.add('hidden');$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})};
+  $('adminLogoutBtn').onclick=()=>{systemAdminUnlocked=false;teacherSessionEmail='';accessVault=[];qrReprintSelection.clear();updateSystemAdminUi();$('systemAdminGate')?.classList.add('hidden');$('adminApp').classList.add('hidden');$('adminGate').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})};
   document.querySelectorAll('.menuBtn').forEach(b=>b.onclick=()=>showSection(b.dataset.target));
   $('systemAdminBtn').onclick=()=>{if(systemAdminUnlocked){showSection('studentManager');return}$('systemAdminGate').classList.toggle('hidden');};
   $('systemAdminCancelBtn').onclick=()=>{$('systemAdminGate').classList.add('hidden');$('systemAdminMsg').textContent=''};
@@ -243,6 +244,9 @@ function bind(){
   if($('refreshOperationLogBtn'))$('refreshOperationLogBtn').onclick=loadOperationLogs;
   $('accessVaultClassFilter').onchange=renderAccessVaultManager;
   $('qrStudentSearch').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);renderAccessVaultManager()});
+  $('selectVisibleQrBtn')?.addEventListener('click',selectVisibleQrForReprint);
+  $('clearQrSelectionBtn')?.addEventListener('click',clearQrReprintSelection);
+  $('reprintSelectedCardsBtn')?.addEventListener('click',reprintSelectedCards);
 
   $('readPdfBtn').onclick=readPdf;
   $('parsePastedTextBtn').onclick=()=>analyzeAnswerSource('pasted');
@@ -633,32 +637,107 @@ function renderAccessVaultSummary(){
   root.innerHTML=`<div class="kpi"><div class="muted small">登録生徒</div><div class="value">${st.total}</div></div><div class="kpi"><div class="muted small">QR再印刷可能</div><div class="value">${st.known}</div></div><div class="kpi ${st.missing?'kpi-warn':''}"><div class="muted small">QR再印刷不可</div><div class="value">${st.missing+st.unissued}</div></div>`;
   const cache=$('qrCacheStatus');if(cache){cache.className='qr-cache-status '+(st.known?'ready':'');cache.innerHTML=st.known?`<span>READY</span> ${st.known}人をそのまま再印刷できます`:'<span>CHECK</span> システム管理者の初期設定が必要です';}
 }
+function updateQrReprintSelectionUi(){
+  const count=qrReprintSelection.size;
+  const status=$('qrSelectionStatus');
+  if(status)status.textContent=count?`${count}人選択中`:'0人選択';
+  const btn=$('reprintSelectedCardsBtn');
+  if(btn){btn.disabled=count===0;btn.textContent=count?`選択した${count}人をまとめて再印刷`:'選択したQRをまとめて再印刷';}
+  const clear=$('clearQrSelectionBtn');if(clear)clear.disabled=count===0;
+}
+function availableVisibleQrCodes(){
+  return currentManagedUsers().filter(u=>!!u.credential&&!!u.qrStored).map(u=>u.studentCode);
+}
+function selectVisibleQrForReprint(){
+  const codes=availableVisibleQrCodes();
+  if(!codes.length){setAccessMessage('現在の表示条件では、再印刷できる生徒がいません。','error');return}
+  if(codes.length>60){setAccessMessage(`表示中の再印刷可能者が ${codes.length}人います。安全のため、先にクラスで絞り込んでから一括選択してください。`,'error');return}
+  codes.forEach(code=>qrReprintSelection.add(code));
+  renderAccessVaultManager();
+  setAccessMessage(`${codes.length}人を選択しました。必要なら個別にチェックを外してから一括再印刷してください。`,'success');
+}
+function clearQrReprintSelection(){
+  qrReprintSelection.clear();renderAccessVaultManager();setAccessMessage('QR再印刷の選択を解除しました。','success');
+}
 function renderAccessVaultManager(){
   const root=$('accessVaultManager');if(!root)return;
   refreshAccessVaultClassFilter();renderAccessVaultSummary();updateAnnualMasterButtons();
+  const validCodes=new Set((usersData.users||[]).map(u=>u.studentCode));
+  [...qrReprintSelection].forEach(code=>{if(!validCodes.has(code))qrReprintSelection.delete(code)});
   const rows=currentManagedUsers(),m=accessSecretMap();
-  if(!usersData.users.length){root.innerHTML='<div class="notice small">生徒名簿がまだ登録されていません。システム管理者へ確認してください。</div>';return}
-  root.innerHTML=`<div class="table-shell"><table><thead><tr><th>4桁番号</th><th>クラス</th><th>状態</th><th>操作</th></tr></thead><tbody>${rows.map(u=>{
+  if(!usersData.users.length){root.innerHTML='<div class="notice small">生徒名簿がまだ登録されていません。システム管理者へ確認してください。</div>';updateQrReprintSelectionUi();return}
+  root.innerHTML=`<div class="table-shell"><table><thead><tr><th class="qr-select-col">選択</th><th>4桁番号</th><th>クラス</th><th>状態</th><th>個別操作</th></tr></thead><tbody>${rows.map(u=>{
     const secret=m.get(u.studentCode),issued=!!u.credential;
     const available=issued&&!!u.qrStored;
     const state=!issued?'<span class="master-status unissued">○ 未発行</span>':available?'<span class="master-status ready">✓ 再印刷可能</span>':'<span class="master-status missing">△ 管理者に確認</span>';
-    return `<tr><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td><button type="button" class="teacher-action qr-one-reprint" data-qr-reprint="${esc(u.studentCode)}" ${available?'':'disabled'}>QRを再印刷</button></td></tr>`
-  }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。一般教員が行うのは「同じQRの再印刷」だけです。アクセスキーを変更する必要がある場合はシステム管理者へ連絡してください。</p>`;
+    const checked=qrReprintSelection.has(u.studentCode)?'checked':'';
+    return `<tr><td class="qr-select-col"><input type="checkbox" class="qr-reprint-check" data-qr-select="${esc(u.studentCode)}" ${checked} ${available?'':'disabled'} aria-label="${esc(u.studentCode)}を一括再印刷の対象にする"></td><td><strong>${esc(u.studentCode)}</strong></td><td>${esc(u.classKey||u.studentCode.slice(0,2))}組</td><td>${state}</td><td><button type="button" class="teacher-action qr-one-reprint" data-qr-reprint="${esc(u.studentCode)}" ${available?'':'disabled'}>QRを再印刷</button></td></tr>`
+  }).join('')}</tbody></table></div><p class="small muted">${rows.length}人表示中。1人だけなら右端の「QRを再印刷」、複数人ならチェックして上の「まとめて再印刷」を使います。アクセスキーは変更されません。</p>`;
   root.querySelectorAll('[data-qr-reprint]').forEach(b=>b.onclick=()=>reprintOneCard(b.dataset.qrReprint));
+  root.querySelectorAll('[data-qr-select]').forEach(ch=>ch.onchange=()=>{
+    const code=ch.dataset.qrSelect;
+    if(ch.checked)qrReprintSelection.add(code);else qrReprintSelection.delete(code);
+    updateQrReprintSelectionUi();
+  });
+  updateQrReprintSelectionUi();
+}
+async function fetchQrSecretForReprint(code){
+  const cached=accessSecretMap().get(code);
+  if(cached)return cached;
+  const result=await TDX.gasJson({action:'getQrAccess',studentCode:code},15000);
+  if(!result?.ok||!result.entry)throw new Error(result?.message||'QR再印刷用キーを取得できませんでした。');
+  return {studentCode:String(result.entry.studentCode||code),accessCode:String(result.entry.accessCode||'').toUpperCase(),classKey:String(result.entry.classKey||code.slice(0,2))};
+}
+async function fetchQrSecretsForReprint(codes,onProgress){
+  const queue=[...codes],results=[],failures=[];
+  let done=0;
+  const workers=Array.from({length:Math.min(5,queue.length)},async()=>{
+    while(queue.length){
+      const code=queue.shift();
+      try{results.push(await fetchQrSecretForReprint(code))}catch(e){failures.push({code,error:e?.message||String(e)})}
+      done++;onProgress?.(done,codes.length);
+    }
+  });
+  await Promise.all(workers);
+  results.sort((a,b)=>a.studentCode.localeCompare(b.studentCode));
+  return {results,failures};
 }
 async function reprintOneCard(code){
-  let secret=accessSecretMap().get(code);
   try{
-    if(!secret){
-      const result=await TDX.gasJson({action:'getQrAccess',studentCode:code},15000);
-      if(!result?.ok||!result.entry)throw new Error(result?.message||'QR再印刷用キーを取得できませんでした。');
-      secret={studentCode:String(result.entry.studentCode||code),accessCode:String(result.entry.accessCode||'').toUpperCase(),classKey:String(result.entry.classKey||code.slice(0,2))};
-    }
+    const secret=await fetchQrSecretForReprint(code);
     await generateAccessCardsPdf([secret],`T-DX_Lab_QRカード_${code}_再印刷.pdf`);
     auditEvent('QR再印刷',code,'アクセスキーは変更せず同じQRカードを再生成');
     setAccessMessage(`${code} のQRカードを再印刷しました。アクセスキーは変更していません。`,'success');
   }catch(e){
     setAccessMessage(`${code} のQRカードを再印刷できませんでした：${e.message||e}`,'error');
+  }
+}
+async function reprintSelectedCards(){
+  const codes=[...qrReprintSelection].sort();
+  if(!codes.length){setAccessMessage('一括再印刷する生徒を選択してください。','error');return}
+  if(codes.length>60){setAccessMessage('一度に再印刷できるのは60人までです。クラスなどで絞り込んでください。','error');return}
+  const byClass={};codes.forEach(code=>{const u=usersData.users.find(x=>x.studentCode===code);const c=u?.classKey||code.slice(0,2);(byClass[c]||(byClass[c]=[])).push(code)});
+  const classText=Object.entries(byClass).map(([c,list])=>`${c}組 ${list.length}人`).join('、');
+  if(!confirm(`${codes.length}人分のQRカードを1つのPDFにまとめて再印刷します。\n${classText}\n\nアクセスキーは変更されません。よろしいですか？`))return;
+  const btn=$('reprintSelectedCardsBtn'),old=btn?.textContent||'';
+  try{
+    if(btn){btn.disabled=true;btn.textContent=`QR情報を取得中… 0/${codes.length}`}
+    const {results,failures}=await fetchQrSecretsForReprint(codes,(done,total)=>{if(btn)btn.textContent=`QR情報を取得中… ${done}/${total}`});
+    if(failures.length){
+      const detail=failures.map(x=>x.code).join('、');
+      throw new Error(`再印刷情報を取得できない生徒がいます：${detail}`);
+    }
+    if(btn)btn.textContent='PDF作成中…';
+    const classKeys=Object.keys(byClass);
+    const suffix=classKeys.length===1?`${classKeys[0]}組_${codes.length}人`:`${codes.length}人`;
+    await generateAccessCardsPdf(results,`T-DX_Lab_QRカード_${suffix}_一括再印刷.pdf`);
+    auditEvent('QR一括再印刷',`${codes.length}人`,`${classText}／アクセスキーは変更せず同じQRカードを再生成`);
+    qrReprintSelection.clear();renderAccessVaultManager();
+    setAccessMessage(`✓ ${codes.length}人分のQRカードPDFを作成しました。アクセスキーは変更していません。`,'success');
+  }catch(e){
+    setAccessMessage(`一括再印刷できませんでした：${e.message||e}`,'error');
+  }finally{
+    if(btn){btn.textContent=old||'選択したQRをまとめて再印刷';updateQrReprintSelectionUi()}
   }
 }
 async function reissueOneStudent(code){
@@ -2969,12 +3048,13 @@ const OPERATION_GUIDES={
   },
   'qr-reprint':{
     title:'QRカードを再印刷する手順',
-    intro:'生徒がQRカードを紛失・汚損した場合だけ使います。CSVなど別ファイルの読み込みは不要です。',
+    intro:'1人だけでも、複数人・クラス単位でも再印刷できます。CSVなど別ファイルの読み込みは不要です。',
     steps:[
-      ['STEP 1','生徒を探す','クラスを絞るか、4桁番号を入力して対象生徒を探します。'],
-      ['STEP 2','QRカードを再印刷','対象生徒の再印刷ボタンを押します。登録済みの年間アクセスキーを使って同じQRを再生成します。']
+      ['STEP 1','生徒を探す','クラスを絞るか、4桁番号を入力して対象生徒を表示します。'],
+      ['個別','1人だけ再印刷','対象生徒の「QRを再印刷」を押します。'],
+      ['一括','複数人をまとめて再印刷','チェックを付けるか「表示中をすべて選択」を押し、「選択したQRをまとめて再印刷」を押します。1つのPDFに2枚ずつ配置されます。']
     ],
-    warning:'再印刷だけではアクセスキーは変わりません。漏えいが疑われる場合はシステム管理者へ連絡してください。'
+    warning:'再印刷ではアクセスキーは変わりません。漏えいが疑われる場合は、再印刷ではなくシステム管理者へ連絡してください。'
   },
   'admin-overview':{
     title:'システム管理者が見る3つの場所',
