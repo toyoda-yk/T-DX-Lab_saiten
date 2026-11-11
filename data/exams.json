@@ -3,7 +3,7 @@
   "systemName": "T-DX Lab☆問題演習システム",
   "schoolYear": "2026",
   "resetEpoch": "c7926e5b-803d-4795-aff7-07c6c8642cf4",
-  "updatedAt": "2026-11-11T11:52:02.952Z",
+  "updatedAt": "2026-11-11T11:57:46.887Z",
   "exams": [
     {
       "id": "exam_20261013_v9zftc",
@@ -1518,8 +1518,8 @@
       "title": "2026年度【とうほう】第1回模擬試験",
       "subject": "情報Ⅰ",
       "schoolYear": "2026",
-      "status": "unpublished",
-      "published": false,
+      "status": "published",
+      "published": true,
       "totalPoints": 100,
       "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSdud5EgrGxxStgm5nzvLSNARFXDC979tR5JmO3pyZpTigo1Jg/viewform",
       "formSubmission": {
@@ -1809,7 +1809,11 @@
       },
       "access": {
         "mode": "restricted",
-        "classes": [],
+        "classes": [
+          "33",
+          "34",
+          "35"
+        ],
         "students": []
       },
       "sections": [
@@ -2701,8 +2705,13 @@
         }
       ],
       "createdAt": "2026-11-11T11:51:16.801Z",
-      "updatedAt": "2026-11-11T11:51:57.015Z",
-      "publishWindow": null
+      "updatedAt": "2026-11-11T11:57:39.860Z",
+      "publishWindow": {
+        "startAt": "2026-11-11T11:56:00.000Z",
+        "endAt": "2026-12-31T11:57:00.000Z",
+        "mode": "auto"
+      },
+      "endedAt": null
     }
   ]
 }
