@@ -10,7 +10,7 @@ let previewMode='before';
 let editingExamId='';
 let systemAdminUnlocked=false;
 let teacherSessionEmail='',dataLoaded=false;
-const APP_VERSION='1.27.7';
+const APP_VERSION='1.27.8';
 let dataVersionMeta={exams:'',users:'',examError:false,userError:false};
 
 function auditEvent(operation,target='',detail=''){
@@ -194,10 +194,16 @@ async function init(){
 }
 
 function refreshExamSelects(preferredPublishId=''){
+  const currentAnalysisId=$('analysisExam')?.value||'';
   const opts=exams.map(e=>`<option value="${e.id}">${esc(e.title)}</option>`).join('');
-  if($('analysisExam'))$('analysisExam').innerHTML=opts;
+  if($('analysisExam')){
+    $('analysisExam').innerHTML=opts;
+    const preferredAnalysisId=currentAnalysisId||analysisExam?.id||'';
+    if(preferredAnalysisId&&exams.some(e=>e.id===preferredAnalysisId))$('analysisExam').value=preferredAnalysisId;
+  }
   refreshBuilderExamSelector(editingExamId||preferredPublishId);
   refreshPublishSelectors(preferredPublishId);
+  refreshAnalysisPublishControls();
 }
 function refreshBuilderExamSelector(preferredId=''){
   const sel=$('builderExamSelect');if(!sel)return;
@@ -275,6 +281,9 @@ function bind(){
   $('analyzeBtn').onclick=analyzeFile;
   if($('resetAnalysisBtn'))$('resetAnalysisBtn').onclick=resetCurrentAnalysis;
   $('publishStudentAnalysisBtn').onclick=publishStudentAnalysisToGas;
+  if($('unpublishStudentAnalysisBtn'))$('unpublishStudentAnalysisBtn').onclick=unpublishStudentAnalysisFromGas;
+  if($('deleteStudentAnalysisBtn'))$('deleteStudentAnalysisBtn').onclick=deleteStudentAnalysisFromGas;
+  if($('analysisExam'))$('analysisExam').onchange=refreshAnalysisPublishControls;
   if($('exportStudentAnalysisBtn'))$('exportStudentAnalysisBtn').onclick=exportStudentAnalysisData;
   $('classFilter').onchange=()=>{closeStudentAnalysisDetail();renderAnalysis()};
   $('questionSort').onchange=renderAnalysis;
@@ -2222,6 +2231,7 @@ function resetCurrentAnalysis(){
   if($('questionSort'))$('questionSort').value='rate-asc';if($('questionFilter'))$('questionFilter').value='all';if($('studentSort'))$('studentSort').value='score-desc';
   $('analysisOutput')?.classList.add('hidden');closeStudentAnalysisDetail();
   setAnalysisPublishMessage('分析をリセットしました。公開済みの生徒向け分析はそのまま残っています。新しいExcelを選んで再分析できます。','muted');
+  refreshAnalysisPublishControls();
 }
 async function analyzeFile(){
   try{
@@ -2602,6 +2612,54 @@ async function annualReset(){
 function setAnalysisPublishMessage(text,type='muted'){
   const el=$('analysisPublishMsg');if(!el)return;el.className=`small ${type}`;el.textContent=text;
 }
+function selectedAnalysisExamId(){return String($('analysisExam')?.value||analysisExam?.id||'').trim()}
+function selectedAnalysisExam(){const id=selectedAnalysisExamId();return exams.find(e=>String(e.id)===id)||analysisExam||null}
+function publishedAnalysisForExam(examId){return (allAnalysisData.analyses||[]).find(x=>String(x?.examId||'')===String(examId||''))||null}
+function refreshAnalysisPublishControls(){
+  const exam=selectedAnalysisExam(),examId=exam?.id||'',published=publishedAnalysisForExam(examId);
+  const state=$('analysisPublishState'),unpub=$('unpublishStudentAnalysisBtn'),del=$('deleteStudentAnalysisBtn');
+  if(state){
+    state.className=`analysis-publish-state ${published?'published':'hidden-state'}`;
+    state.textContent=published?'公開状態：生徒に公開中':'公開状態：生徒には非公開';
+  }
+  if(unpub)unpub.hidden=!published;
+  // 削除は公開中でなくてもGAS側の保存分析を消せる。試験データには触れない。
+  if(del)del.hidden=!examId;
+}
+function removeLocalPublishedAnalysis(examId){
+  allAnalysisData={...allAnalysisData,updatedAt:new Date().toISOString(),analyses:(allAnalysisData.analyses||[]).filter(x=>String(x?.examId||'')!==String(examId||''))};
+  refreshAnalysisPublishControls();
+}
+async function unpublishStudentAnalysisFromGas(){
+  const exam=selectedAnalysisExam();if(!exam){alert('対象の試験を選択してください。');return}
+  if(!publishedAnalysisForExam(exam.id)){setAnalysisPublishMessage('この試験の分析は現在、生徒には公開されていません。','muted');refreshAnalysisPublishControls();return}
+  if(!confirm(`「${exam.title}」の分析を生徒画面から非公開にしますか？\n\n・試験登録は消えません\n・Googleフォーム連携は消えません\n・保存済み分析はGAS側に残ります\n・あとで再分析して公開し直せます`))return;
+  const btn=$('unpublishStudentAnalysisBtn'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='非公開処理中…'}
+  setAnalysisPublishMessage('生徒画面から分析を非公開にしています…');
+  try{
+    const token=newGasSyncToken();
+    const result=await postGasSync('unpublishAnalysis',{examId:exam.id,title:exam.title},token);
+    removeLocalPublishedAnalysis(exam.id);
+    setAnalysisPublishMessage(`✓ 分析を非公開にしました。試験「${exam.title}」はそのまま残っています。`,'success');
+    auditEvent('分析非公開',exam.title,'生徒画面からのみ非公開。試験登録は保持');
+    return result;
+  }catch(e){console.error(e);setAnalysisPublishMessage(`非公開にできませんでした：${e.message||e}`,'error');alert(`分析の非公開に失敗しました。\n\n${e.message||e}`)}finally{if(btn){btn.disabled=false;btn.textContent=old}}
+}
+async function deleteStudentAnalysisFromGas(){
+  const exam=selectedAnalysisExam();if(!exam){alert('対象の試験を選択してください。');return}
+  const ok=confirm(`「${exam.title}」の公開済み分析データを削除しますか？\n\n削除するもの：\n・生徒に公開している集計分析\n・GASに保存しているこの試験の分析データ\n\n削除しないもの：\n・試験登録／模範解答\n・Googleフォーム連携\n・公開期間の設定\n・Googleフォームに保存された回答\n\n今作った試験そのものは消えません。`);
+  if(!ok)return;
+  const btn=$('deleteStudentAnalysisBtn'),old=btn?.textContent;if(btn){btn.disabled=true;btn.textContent='分析削除中…'}
+  setAnalysisPublishMessage('公開済み分析データだけを削除しています…');
+  try{
+    const token=newGasSyncToken();
+    const result=await postGasSync('deleteAnalysis',{examId:exam.id,title:exam.title},token);
+    removeLocalPublishedAnalysis(exam.id);
+    setAnalysisPublishMessage(`✓ 公開済み分析を削除しました。試験「${exam.title}」は残っています。`,'success');
+    auditEvent('公開分析削除',exam.title,'分析データのみ削除。試験登録・Googleフォーム連携は保持');
+    return result;
+  }catch(e){console.error(e);setAnalysisPublishMessage(`分析を削除できませんでした：${e.message||e}`,'error');alert(`公開済み分析の削除に失敗しました。\n\n${e.message||e}`)}finally{if(btn){btn.disabled=false;btn.textContent=old}}
+}
 async function publishStudentAnalysisToGas(){
   if(!analysisExam||!analysisRows.length){alert('先に回答Excel / CSVを読み込んで分析してください。');return}
   const btn=$('publishStudentAnalysisBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='公開処理中…';
@@ -2615,6 +2673,7 @@ async function publishStudentAnalysisToGas(){
     const analyses=(allAnalysisData.analyses||[]).filter(x=>x.examId!==entry.examId);
     analyses.push(entry);
     allAnalysisData={version:3,systemName:'T-DX Lab☆問題演習システム',schoolYear:String(usersData.schoolYear||new Date().getFullYear()),resetEpoch:String(usersData.resetEpoch||''),updatedAt:new Date().toISOString(),analyses};
+    refreshAnalysisPublishControls();
 
     const stamp=new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(entry.generatedAt||Date.now()));
     setAnalysisPublishMessage(`✓ 生徒へ公開しました　${result.publishedBy||who.user||''} ／ ${stamp}　※生徒はGoogleログイン不要`,'success');

@@ -1139,3 +1139,7 @@ table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--li
 .qr-reprint-steps{grid-template-columns:1fr auto 1fr auto 1fr}
 .qr-bulk-actions .teacher-action.secondary{background:#e9eef5!important;color:#1f2937!important;box-shadow:none!important}
 @media(max-width:900px){.qr-reprint-steps{grid-template-columns:1fr}}
+
+
+/* v1.27.8 - analysis visibility/delete controls + score ring fix */
+.analysis-publish-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.analysis-publish-state{display:inline-flex;margin-top:5px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;background:#eef3f8;color:#667b90}.analysis-publish-state.published{background:#e5f7ee;color:#168055}.analysis-publish-state.hidden-state{background:#fff3df;color:#926400}.analysis-publish-actions{margin-top:8px;align-items:center;flex-wrap:wrap}.analysis-publish-actions .danger-outline{padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}.analysis-publish-actions button[hidden]{display:none!important}@media(max-width:760px){.analysis-publish-head{flex-direction:column}.analysis-publish-actions{align-items:stretch;flex-direction:column}.analysis-publish-actions button{width:100%}}

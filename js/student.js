@@ -1,7 +1,7 @@
 let exams=[], users=[], analysisData={version:1,analyses:[]}, currentUser=null, currentExam=null, accessibleExams=[], lastResult=null, currentStudentName='', lastFormSendState=null, publicAnalysisScope='class';
 const $=id=>document.getElementById(id);
 let qrScanner=null;
-const APP_VERSION='1.27.7';
+const APP_VERSION='1.27.8';
 let dataVersionMeta={exams:'',users:'',analysis:'',analysisSource:'',examError:false,userError:false,analysisError:false};
 function formatDataVersionTime(value){
   if(!value)return '日時情報なし';
@@ -363,6 +363,14 @@ function sectionStat(section,r){
 function renderResult(r,answers){
   const totalPoints=currentExam.totalPoints||currentExam.sections.reduce((sum,s)=>sum+(Number(s.points)||0),0)||100;
   $('resultTitle').textContent=currentExam.title;$('scoreValue').textContent=r.total;$('scoreDen').textContent=` / ${totalPoints}`;$('resultCode').textContent=currentStudentName?`氏名：${currentStudentName}　｜　4桁番号：${currentUser.studentCode}`:`4桁番号：${currentUser.studentCode}`;
+  const scorePct=totalPoints>0?Math.max(0,Math.min(100,(Number(r.total||0)/Number(totalPoints))*100)):0;
+  const scoreOrbit=document.querySelector('#resultSheet .score-orbit');
+  if(scoreOrbit){
+    scoreOrbit.style.background=scorePct>=99.999
+      ? 'conic-gradient(#3de5ff 0%, #4a72ff 100%)'
+      : `conic-gradient(#3de5ff 0%, #4a72ff ${scorePct.toFixed(3)}%, rgba(255,255,255,.1) ${scorePct.toFixed(3)}% 100%)`;
+    scoreOrbit.setAttribute('aria-label',`得点率 ${Math.round(scorePct)}%`);
+  }
   const analysisBtn=$('resultAnalysisBtn');if(analysisBtn){analysisBtn.classList.toggle('hidden',!analysisEntryFor(currentExam.id));analysisBtn.onclick=()=>openStudentAnalysis(currentExam.id)}
   const sendBox=$('formSendResult');if(currentExam.formSubmission){sendBox.classList.remove('hidden');if(lastFormSendState?.sent){sendBox.className='form-send-result success';sendBox.innerHTML='<strong>✓ Googleフォーム送信</strong><span>回答の送信処理を実行しました。速報PDFには氏名と4桁番号も記載されます。</span>'}else{sendBox.className='form-send-result error';sendBox.innerHTML=`<strong>⚠ Googleフォーム未送信</strong><span>${lastFormSendState?.error||'送信状態を確認できませんでした。'} 担当の先生に知らせてください。</span>`}}else{sendBox.classList.add('hidden');sendBox.innerHTML=''};
   const bars=$('sectionBars');bars.innerHTML='';currentExam.sections.forEach(s=>{const st=sectionStat(s,r);bars.insertAdjacentHTML('beforeend',`<div class="bar-row"><strong>${s.name}</strong><div class="bar"><div style="width:${st.rate}%"></div></div><div>${st.score}/${st.points}点<br><span class="small muted">正答率 ${st.rate}%</span></div></div>`) });

@@ -1,4 +1,4 @@
-// T-DX Lab 公開同期GAS v1.4 - OEN操作ログ対応
+// T-DX Lab 公開同期GAS v1.5 - 分析の非公開・削除対応
 const TDX_CONFIG = {
   PROP_SS_ID: 'TDX_SPREADSHEET_ID',
   PROP_GH_OWNER: 'TDX_GITHUB_OWNER',
@@ -253,7 +253,9 @@ function doGet(e) {
 
 /**
  * POST:
- * - publishAnalysis : 集計結果を保存し、GitHub data/analysis.json へ自動反映
+ * - publishAnalysis   : 集計結果を保存し、GitHub data/analysis.json へ自動反映
+ * - unpublishAnalysis : 公開JSONからのみ除外（GAS保存分析・試験登録は保持）
+ * - deleteAnalysis    : 公開JSONとGAS保存分析を削除（試験登録は保持）
  * - publishExams    : 最新の試験データを GitHub data/exams.json へ自動反映
  * - publishUsers    : 生徒認証用の公開データを data/users.json へ反映し、QR用の平文キーはGAS側だけに保管
  * - currentYearReset: 現年度のまま公開データ・分析保管・QR保管庫を完全初期化
@@ -298,6 +300,44 @@ function doPost(e) {
         publishToken: clean.publishToken,
         publishedBy: email,
         github: gh
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
+    } else if (action === 'unpublishAnalysis') {
+      const raw = String(p.payload || '');
+      const body = raw ? JSON.parse(raw) : {};
+      const examId = text_(body.examId || '', 120);
+      const title = text_(body.title || examId, 200);
+      if (!examId) throw new Error('examId がありません。');
+
+      const gh = removeAnalysisFromGitHub_(examId, email, 'unpublish');
+      logSync_('分析非公開', examId, email, '成功', gh.message);
+      logOperation_('分析非公開', title, email, '成功', '生徒用公開JSONからのみ除外。試験登録・GAS保存分析は保持');
+      const result = {
+        ok: true, done: true, action: action, examId: examId,
+        message: '分析を生徒画面から非公開にしました。試験登録は保持されています。',
+        publishedBy: email, github: gh
+      };
+      if (token) writeSyncStatus_(token, result);
+      return output_(result);
+
+    } else if (action === 'deleteAnalysis') {
+      const raw = String(p.payload || '');
+      const body = raw ? JSON.parse(raw) : {};
+      const examId = text_(body.examId || '', 120);
+      const title = text_(body.title || examId, 200);
+      if (!examId) throw new Error('examId がありません。');
+
+      // 先に公開JSONから除外し、その後GAS側の分析保管だけを削除する。exams.json は一切変更しない。
+      const gh = removeAnalysisFromGitHub_(examId, email, 'delete');
+      deleteStoredAnalysis_(examId);
+      logSync_('分析削除', examId, email, '成功', gh.message);
+      logOperation_('公開分析削除', title, email, '成功', '公開分析・GAS保存分析のみ削除。試験登録・Googleフォーム連携は保持');
+      const result = {
+        ok: true, done: true, action: action, examId: examId,
+        message: '公開済み分析データを削除しました。試験登録は保持されています。',
+        publishedBy: email, github: gh
       };
       if (token) writeSyncStatus_(token, result);
       return output_(result);
@@ -955,6 +995,46 @@ function syncAnalysisToGitHub_(analysis, email) {
     payload,
     'T-DX Lab: publish analysis ' + analysis.examId + ' (' + email + ')'
   );
+}
+
+function removeAnalysisFromGitHub_(examId, email, mode) {
+  const current = githubReadJson_(TDX_CONFIG.ANALYSIS_PATH, {
+    version: 3,
+    systemName: 'T-DX Lab☆問題演習システム',
+    schoolYear: currentSchoolYear_(),
+    resetEpoch: currentResetEpoch_(),
+    updatedAt: null,
+    analyses: []
+  });
+  const list = Array.isArray(current.analyses) ? current.analyses : [];
+  const next = list.filter(function(item) {
+    return String(item && item.examId || '') !== String(examId);
+  });
+  const payload = {
+    version: 3,
+    systemName: 'T-DX Lab☆問題演習システム',
+    schoolYear: currentSchoolYear_(),
+    resetEpoch: currentResetEpoch_(),
+    updatedAt: new Date().toISOString(),
+    analyses: next
+  };
+  const label = mode === 'delete' ? 'delete public analysis ' : 'unpublish analysis ';
+  return githubPutJson_(TDX_CONFIG.ANALYSIS_PATH, payload, 'T-DX Lab: ' + label + examId + ' (' + email + ')');
+}
+
+function deleteStoredAnalysis_(examId) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const ss = getTDXSpreadsheet_();
+    const dataSheet = ss.getSheetByName(TDX_CONFIG.DATA_SHEET);
+    const indexSheet = ss.getSheetByName(TDX_CONFIG.INDEX_SHEET);
+    if (dataSheet) deleteRowsForExam_(dataSheet, examId);
+    if (indexSheet) deleteRowsForExam_(indexSheet, examId);
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function githubConfigured_() {

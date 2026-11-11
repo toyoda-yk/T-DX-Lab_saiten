@@ -8,7 +8,7 @@
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <title>教員管理 | T-DX Lab☆問題演習システム</title>
-<link href="css/style.css?v=1.27.7" rel="stylesheet"/>
+<link href="css/style.css?v=1.27.8" rel="stylesheet"/>
 </head>
 <body class="future-app teacher-app tdx-v09-teacher">
 <header class="future-app-header portal-header teacher-portal-header">
@@ -19,7 +19,7 @@
 </a>
 <div class="app-header-tools">
 <div aria-label="システム更新状況" class="tdx-version-status">
-<span class="tdx-version-pill">v1.27.7</span>
+<span class="tdx-version-pill">v1.27.8</span>
 <button class="tdx-reload-btn" id="tdxReloadBtn" type="button">最新状態を再読込</button>
 </div>
 <a class="app-home-link portal-home-link" href="index.html">トップへ</a>
@@ -360,7 +360,7 @@
 </div>
 <div class="grid two admin-form-grid analysis-upload-grid">
 <div><label>試験</label><select id="analysisExam"></select><label>回答Excel / CSV</label><input accept=".xlsx,.xls,.csv" id="responseFile" type="file"/><div class="actions"><button class="teacher-action" id="analyzeBtn">分析する</button><button class="secondary glass-btn" id="resetAnalysisBtn" type="button">分析をリセット</button></div></div>
-<div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><strong>生徒へ集計結果を公開</strong><button class="text-guide-btn" data-guide="analysis-publish" type="button">？ 公開するとどうなる？</button><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。</p><button class="teacher-action" id="publishStudentAnalysisBtn" type="button">生徒に分析を公開</button><div aria-live="polite" class="small muted" id="analysisPublishMsg">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
+<div><label>表示対象</label><select id="classFilter"><option value="ALL">全クラス</option></select><div class="info-strip teacher-strip"><span>RULE</span> 同一4桁番号で複数回答がある場合は、タイムスタンプが最も新しい回答だけを採用します。システムの「T-DXテスト」送信は自動で除外します。</div><div class="analysis-publish-box"><div class="analysis-publish-head"><div><strong>生徒へ集計結果を公開</strong><div class="analysis-publish-state" id="analysisPublishState">公開状態：未確認</div></div><button class="text-guide-btn" data-guide="analysis-publish" type="button">？ 公開するとどうなる？</button></div><p>氏名・個人回答は公開せず、クラス別／全体の集計結果だけを生徒画面へ反映します。非公開・削除を行っても、試験登録やGoogleフォーム連携は消えません。</p><div class="actions analysis-publish-actions"><button class="teacher-action" id="publishStudentAnalysisBtn" type="button">生徒に分析を公開</button><button class="secondary glass-btn" id="unpublishStudentAnalysisBtn" type="button">分析を非公開にする</button><button class="danger-outline" id="deleteStudentAnalysisBtn" type="button">公開済み分析を削除</button></div><div aria-live="polite" class="small muted" id="analysisPublishMsg">回答Excelを分析したあと、このボタンを1回押すだけで生徒画面へ公開できます。</div></div></div>
 </div>
 <div class="hidden analysis-console" id="analysisOutput">
 <div class="analysis-import-summary" id="analysisImportSummary"></div>
@@ -491,8 +491,8 @@
 <div class="operation-guide-body" id="operationGuideBody"></div>
 </section>
 </div>
-<script src="js/common.js?v=1.27.7"></script>
-<script src="js/teacher.js?v=1.27.7"></script>
+<script src="js/common.js?v=1.27.8"></script>
+<script src="js/teacher.js?v=1.27.8"></script>
 <!-- Optional feature libraries load after the core UI. -->
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer="" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
